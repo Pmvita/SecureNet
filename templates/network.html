@@ -287,6 +287,12 @@ let monitoringStatus = {
     }
 };
 
+// WebSocket connection management
+let ws = null;
+let isLive = true;
+let messageBuffer = [];
+const MAX_BUFFER_SIZE = 1000;
+
 // Initialize the page
 document.addEventListener('DOMContentLoaded', function() {
     initializeCharts();
@@ -512,7 +518,7 @@ function updateNetworkDisplay(overview, traffic, protocols, devices, connections
     updateProtocolChart(protocols);
 
     // Update network map
-    updateNetworkMap(devices, connections);
+    updateNetworkMap(devices);
 
     // Update connections table
     updateConnectionsTable(connections);
@@ -558,7 +564,7 @@ function updateProtocolChart(protocolData) {
 }
 
 // Update network map
-function updateNetworkMap(devices, connections) {
+function updateNetworkMap(devices) {
     const nodes = new vis.DataSet(devices.map(device => ({
         id: device.id,
         label: device.name,
@@ -567,15 +573,17 @@ function updateNetworkMap(devices, connections) {
         shape: getDeviceShape(device)
     })));
 
-    const edges = new vis.DataSet(connections.map(conn => ({
-        from: conn.source_id,
-        to: conn.destination_id,
-        label: `${conn.protocol}/${conn.port}`,
-        color: getConnectionColor(conn),
-        arrows: {
-            to: { enabled: true, scaleFactor: 1 }
-        }
-    })));
+    const edges = new vis.DataSet(devices.flatMap(device => 
+        device.connections.map(conn => ({
+            from: device.id,
+            to: conn.target_id,
+            label: `${conn.protocol}/${conn.port}`,
+            color: getConnectionColor(conn),
+            arrows: {
+                to: { enabled: true, scaleFactor: 1 }
+            }
+        }))
+    ));
 
     networkMap.setData({ nodes, edges });
 }
@@ -677,20 +685,74 @@ function formatDataTransferred(bytes) {
 
 // Setup WebSocket connection for real-time updates
 function setupWebSocket() {
-    const ws = new WebSocket(`ws://${window.location.host}/ws/notifications?api_key=${API_KEY}`);
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/network?api_key=${API_KEY}`;
     
-    ws.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        if (data.type === 'network_update') {
-            // Update network data
-            updateNetworkDisplay(data.data);
-        }
+    ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+        document.getElementById('wsStatus').className = 'badge bg-success';
+        document.getElementById('wsStatus').textContent = 'Connected';
+        console.log('WebSocket connected');
     };
-
-    ws.onclose = function() {
-        console.log('WebSocket connection closed. Retrying in 5 seconds...');
+    
+    ws.onclose = () => {
+        document.getElementById('wsStatus').className = 'badge bg-danger';
+        document.getElementById('wsStatus').textContent = 'Disconnected';
+        console.log('WebSocket disconnected');
+        // Attempt to reconnect after 5 seconds
         setTimeout(setupWebSocket, 5000);
     };
+    
+    ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+    };
+    
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        if (!isLive) {
+            // Buffer messages when paused
+            messageBuffer.push(data);
+            if (messageBuffer.length > MAX_BUFFER_SIZE) {
+                messageBuffer.shift();
+            }
+            return;
+        }
+        
+        handleWebSocketMessage(data);
+    };
+}
+
+// Handle incoming WebSocket messages
+function handleWebSocketMessage(data) {
+    switch (data.type) {
+        case 'initial_state':
+            updateNetworkMap(data.payload.devices);
+            updateTrafficChart(data.payload.traffic);
+            updateProtocolChart(data.payload.protocols);
+            updateConnectionsTable(data.payload.connections);
+            break;
+            
+        case 'network_update':
+            updateNetworkMap(data.payload.devices);
+            updateTrafficChart(data.payload.traffic);
+            updateProtocolChart(data.payload.protocols);
+            updateConnectionsTable(data.payload.connections);
+            break;
+            
+        case 'new_connection':
+            addConnection(data.payload);
+            break;
+            
+        case 'connection_closed':
+            removeConnection(data.payload.connection_id);
+            break;
+            
+        case 'device_update':
+            updateDevice(data.payload);
+            break;
+    }
 }
 
 // View device details

@@ -1725,5 +1725,145 @@
             });
         }
     }
+
+    // WebSocket connection management
+    let ws = null;
+    let isLive = true;
+    let messageBuffer = [];
+    const MAX_BUFFER_SIZE = 1000;
+    let currentFilters = {
+        level: '',
+        source: '',
+        search: ''
+    };
+
+    // Initialize WebSocket connection
+    function initWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/logs?api_key={{ api_key }}`;
+        
+        ws = new WebSocket(wsUrl);
+        
+        ws.onopen = () => {
+            document.getElementById('wsStatus').className = 'badge bg-success';
+            document.getElementById('wsStatus').textContent = 'Connected';
+            console.log('WebSocket connected');
+        };
+        
+        ws.onclose = () => {
+            document.getElementById('wsStatus').className = 'badge bg-danger';
+            document.getElementById('wsStatus').textContent = 'Disconnected';
+            console.log('WebSocket disconnected');
+            // Attempt to reconnect after 5 seconds
+            setTimeout(initWebSocket, 5000);
+        };
+        
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (!isLive) {
+                // Buffer messages when paused
+                messageBuffer.push(data);
+                if (messageBuffer.length > MAX_BUFFER_SIZE) {
+                    messageBuffer.shift();
+                }
+                return;
+            }
+            
+            handleWebSocketMessage(data);
+        };
+    }
+
+    // Handle incoming WebSocket messages
+    function handleWebSocketMessage(data) {
+        switch (data.type) {
+            case 'initial_logs':
+                updateLogsTable(data.payload);
+                break;
+            
+            case 'new_log':
+                if (shouldDisplayLog(data.payload)) {
+                    appendLog(data.payload);
+                }
+                break;
+            
+            case 'log_sources':
+                updateLogSources(data.payload);
+                break;
+        }
+    }
+
+    // Update log sources dropdown
+    function updateLogSources(sources) {
+        const select = document.getElementById('source-filter');
+        select.innerHTML = '<option value="">All Sources</option>';
+        
+        sources.forEach(source => {
+            const option = document.createElement('option');
+            option.value = source.id;
+            option.textContent = source.name;
+            select.appendChild(option);
+        });
+    }
+
+    // Update logs table with initial data
+    function updateLogsTable(logs) {
+        const tbody = document.querySelector('#log-sources tbody');
+        tbody.innerHTML = '';
+        
+        logs.forEach(log => {
+            if (shouldDisplayLog(log)) {
+                appendLog(log);
+            }
+        });
+    }
+
+    // Append a single log entry
+    function appendLog(log) {
+        const tbody = document.querySelector('#log-sources tbody');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${log.name}</td>
+            <td>${log.type}</td>
+            <td>${log.logs_per_minute}</td>
+            <td>
+                <div class="source-actions">
+                    <button class="button" onclick="editLogSource('${log.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="button" onclick="toggleLogSource('${log.id}')">
+                        <i class="fas fa-${log.status === 'active' ? 'pause' : 'play'}"></i>
+                    </button>
+                    <button class="button button-danger" onclick="deleteLogSource('${log.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    }
+
+    // Check if log should be displayed based on current filters
+    function shouldDisplayLog(log) {
+        if (currentFilters.level && log.level !== currentFilters.level) {
+            return false;
+        }
+        
+        if (currentFilters.source && log.source !== currentFilters.source) {
+            return false;
+        }
+        
+        if (currentFilters.search) {
+            const searchLower = currentFilters.search.toLowerCase();
+            return log.message.toLowerCase().includes(searchLower) ||
+                   log.source.toLowerCase().includes(searchLower);
+        }
+        
+        return true;
+    }
 </script>
 {% endblock %} 

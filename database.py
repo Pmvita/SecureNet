@@ -1150,6 +1150,20 @@ class Database:
                     last_updated TEXT
                 );
 
+                -- Alerts table
+                CREATE TABLE IF NOT EXISTS alerts (
+                    id TEXT PRIMARY KEY,
+                    timestamp TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    severity TEXT NOT NULL,
+                    source TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'new',
+                    metadata TEXT,
+                    resolved_at TEXT,
+                    resolution TEXT
+                );
+
                 -- Security scans table
                 CREATE TABLE IF NOT EXISTS scans (
                     id TEXT PRIMARY KEY,
@@ -1234,6 +1248,9 @@ class Database:
                 CREATE INDEX IF NOT EXISTS idx_scans_timestamp ON scans(timestamp);
                 CREATE INDEX IF NOT EXISTS idx_scan_schedules_status ON scan_schedules(status);
                 CREATE INDEX IF NOT EXISTS idx_scan_schedules_next_run ON scan_schedules(next_run);
+                CREATE INDEX IF NOT EXISTS idx_alerts_timestamp ON alerts(timestamp);
+                CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status);
+                CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts(severity);
             """)
             
             # Initialize network monitoring status if not exists
@@ -1952,28 +1969,88 @@ class Database:
             else:
                 raise ValueError(f"Unsupported report type: {report_type}")
 
-    def update_network_metrics(self, metrics_data):
-        """Update network metrics."""
+    def get_alerts(self, start_time=None, end_time=None, severity=None, status=None, limit=100):
+        """Get security alerts with optional filtering."""
         with self.get_db() as db:
             cursor = db.cursor()
-            metrics_id = str(uuid.uuid4())
+            query = ["SELECT * FROM alerts WHERE 1=1"]
+            params = []
             
-            cursor.execute("""
-                INSERT INTO network_metrics (
-                    id, timestamp, load, latency,
-                    packet_loss, bandwidth_usage,
-                    active_connections, metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                metrics_id,
-                metrics_data['timestamp'],
-                metrics_data['load'],
-                metrics_data.get('latency'),
-                metrics_data.get('packet_loss'),
-                metrics_data.get('bandwidth_usage'),
-                metrics_data.get('active_connections'),
-                json.dumps(metrics_data.get('metadata', {}))
-            ))
+            if start_time:
+                query.append("AND timestamp >= ?")
+                params.append(start_time)
+            if end_time:
+                query.append("AND timestamp <= ?")
+                params.append(end_time)
+            if severity:
+                query.append("AND severity = ?")
+                params.append(severity)
+            if status:
+                query.append("AND status = ?")
+                params.append(status)
             
-            db.commit()
-            return metrics_id 
+            query.append("ORDER BY timestamp DESC LIMIT ?")
+            params.append(limit)
+            
+            cursor.execute(" ".join(query), params)
+            alerts = []
+            for row in cursor.fetchall():
+                alert = {
+                    'id': row[0],
+                    'timestamp': row[1],
+                    'type': row[2],
+                    'severity': row[3],
+                    'source': row[4],
+                    'message': row[5],
+                    'status': row[6],
+                    'metadata': json.loads(row[7]) if row[7] else {},
+                    'resolved_at': row[8],
+                    'resolution': row[9]
+                }
+                alerts.append(alert)
+            return alerts
+
+    def get_network_protocols(self):
+        """Get network protocol distribution from traffic data."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Get protocol distribution from traffic data for the last 24 hours
+                cursor.execute("""
+                    SELECT protocol, COUNT(*) as count
+                    FROM network_traffic
+                    WHERE timestamp >= datetime('now', '-24 hours')
+                    GROUP BY protocol
+                """)
+                
+                protocols = {
+                    'http_https': 0,
+                    'dns': 0,
+                    'ssh': 0,
+                    'smtp': 0,
+                    'other': 0
+                }
+                
+                for protocol, count in cursor.fetchall():
+                    if protocol in ['http', 'https']:
+                        protocols['http_https'] += count
+                    elif protocol == 'dns':
+                        protocols['dns'] = count
+                    elif protocol == 'ssh':
+                        protocols['ssh'] = count
+                    elif protocol == 'smtp':
+                        protocols['smtp'] = count
+                    else:
+                        protocols['other'] += count
+                
+                return protocols
+        except Exception as e:
+            logger.error(f"Error getting network protocols: {str(e)}")
+            return {
+                'http_https': 0,
+                'dns': 0,
+                'ssh': 0,
+                'smtp': 0,
+                'other': 0
+            } 

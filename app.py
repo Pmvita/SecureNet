@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Depends, Header, Query
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Depends, Header, Query, status
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -66,66 +66,215 @@ templates = Jinja2Templates(directory="templates")
 # Static files setup - mount before other routes
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# WebSocket connection manager
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
-        self._lock = asyncio.Lock()  # Add lock for thread safety
+# WebSocket connection management
+active_connections = {
+    'notifications': set(),
+    'network': set(),
+    'logs': set(),
+    'alerts': set()
+}
 
-    async def connect(self, websocket: WebSocket):
-        """Connect a new WebSocket client."""
+# WebSocket message queues
+message_queues = {
+    'network': asyncio.Queue(),
+    'logs': asyncio.Queue(),
+    'alerts': asyncio.Queue()
+}
+
+async def broadcast_message(websocket_type: str, message: dict):
+    """Broadcast message to all connected clients of a specific type."""
+    if websocket_type not in active_connections:
+        return
+    
+    disconnected = set()
+    for connection in active_connections[websocket_type]:
         try:
-            await websocket.accept()
-            async with self._lock:
-                self.active_connections.append(websocket)
-            logger.info(f"New WebSocket connection added. Total connections: {len(self.active_connections)}")
-        except Exception as e:
-            logger.error(f"Error accepting WebSocket connection: {str(e)}")
-            raise
+            await connection.send_json(message)
+        except WebSocketDisconnect:
+            disconnected.add(connection)
+    
+    # Clean up disconnected clients
+    active_connections[websocket_type] -= disconnected
 
-    async def disconnect(self, websocket: WebSocket):
-        """Disconnect a WebSocket client."""
+async def websocket_auth(websocket: WebSocket) -> bool:
+    """Authenticate WebSocket connection using API key."""
+    try:
+        api_key = websocket.query_params.get('api_key')
+        if not api_key or api_key != API_KEY:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return False
+        return True
+    except Exception as e:
+        logger.error(f"WebSocket authentication error: {str(e)}")
         try:
-            async with self._lock:
-                if websocket in self.active_connections:
-                    self.active_connections.remove(websocket)
-            logger.info(f"WebSocket connection removed. Total connections: {len(self.active_connections)}")
-        except Exception as e:
-            logger.error(f"Error removing WebSocket connection: {str(e)}")
+            await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+        except:
+            pass
+        return False
 
-    async def broadcast(self, message: str):
-        """Broadcast a message to all connected clients."""
-        if not self.active_connections:
-            return
+@app.websocket("/ws/network")
+async def websocket_network(websocket: WebSocket):
+    """WebSocket endpoint for real-time network updates."""
+    if not await websocket_auth(websocket):
+        return
+    
+    await websocket.accept()
+    active_connections['network'].add(websocket)
+    logger.info(f"New network WebSocket connection. Total connections: {len(active_connections['network'])}")
+    
+    try:
+        while True:
+            # Send initial network state
+            network_state = await get_network_state()
+            await websocket.send_json({
+                "type": "initial_state",
+                "payload": network_state
+            })
+            
+            # Process queued messages
+            while True:
+                message = await message_queues['network'].get()
+                await websocket.send_json(message)
+    except WebSocketDisconnect:
+        active_connections['network'].remove(websocket)
+        logger.info(f"Network WebSocket disconnected. Total connections: {len(active_connections['network'])}")
+    except Exception as e:
+        logger.error(f"Network WebSocket error: {str(e)}")
+        if websocket in active_connections['network']:
+            active_connections['network'].remove(websocket)
 
-        disconnected = []
-        async with self._lock:
-            for connection in self.active_connections:
-                try:
-                    await connection.send_text(message)
-                except WebSocketDisconnect:
-                    disconnected.append(connection)
-                except Exception as e:
-                    logger.error(f"Error broadcasting to WebSocket: {str(e)}")
-                    disconnected.append(connection)
+@app.websocket("/ws/logs")
+async def websocket_logs(websocket: WebSocket):
+    """WebSocket endpoint for real-time log streaming."""
+    if not await websocket_auth(websocket):
+        return
+    
+    await websocket.accept()
+    active_connections['logs'].add(websocket)
+    logger.info(f"New logs WebSocket connection. Total connections: {len(active_connections['logs'])}")
+    
+    try:
+        while True:
+            # Send recent logs
+            recent_logs = await get_recent_logs(limit=50)
+            await websocket.send_json({
+                "type": "initial_logs",
+                "payload": recent_logs
+            })
+            
+            # Process queued messages
+            while True:
+                message = await message_queues['logs'].get()
+                await websocket.send_json(message)
+    except WebSocketDisconnect:
+        active_connections['logs'].remove(websocket)
+        logger.info(f"Logs WebSocket disconnected. Total connections: {len(active_connections['logs'])}")
+    except Exception as e:
+        logger.error(f"Logs WebSocket error: {str(e)}")
+        if websocket in active_connections['logs']:
+            active_connections['logs'].remove(websocket)
 
-            # Clean up disconnected clients
-            for connection in disconnected:
-                if connection in self.active_connections:
-                    self.active_connections.remove(connection)
+@app.websocket("/ws/alerts")
+async def websocket_alerts(websocket: WebSocket):
+    """WebSocket endpoint for real-time alert streaming."""
+    if not await websocket_auth(websocket):
+        return
+    
+    await websocket.accept()
+    active_connections['alerts'].add(websocket)
+    logger.info(f"New alerts WebSocket connection. Total connections: {len(active_connections['alerts'])}")
+    
+    try:
+        while True:
+            # Send recent alerts
+            recent_alerts = await get_recent_alerts(limit=50)
+            await websocket.send_json({
+                "type": "initial_alerts",
+                "payload": recent_alerts
+            })
+            
+            # Process queued messages
+            while True:
+                message = await message_queues['alerts'].get()
+                await websocket.send_json(message)
+    except WebSocketDisconnect:
+        active_connections['alerts'].remove(websocket)
+        logger.info(f"Alerts WebSocket disconnected. Total connections: {len(active_connections['alerts'])}")
+    except Exception as e:
+        logger.error(f"Alerts WebSocket error: {str(e)}")
+        if websocket in active_connections['alerts']:
+            active_connections['alerts'].remove(websocket)
 
-        if disconnected:
-            logger.info(f"Cleaned up {len(disconnected)} disconnected WebSocket clients")
+@app.websocket("/ws/notifications")
+async def websocket_notifications(websocket: WebSocket):
+    """WebSocket endpoint for real-time notifications."""
+    if not await websocket_auth(websocket):
+        return
+    
+    await websocket.accept()
+    active_connections['notifications'].add(websocket)
+    logger.info(f"New notifications WebSocket connection. Total connections: {len(active_connections['notifications'])}")
+    
+    try:
+        while True:
+            # Keep connection alive and wait for messages
+            data = await websocket.receive_text()
+            # Process any incoming messages if needed
+    except WebSocketDisconnect:
+        active_connections['notifications'].remove(websocket)
+        logger.info(f"Notifications WebSocket disconnected. Total connections: {len(active_connections['notifications'])}")
+    except Exception as e:
+        logger.error(f"Notifications WebSocket error: {str(e)}")
+        if websocket in active_connections['notifications']:
+            active_connections['notifications'].remove(websocket)
 
-    async def broadcast_json(self, data: dict):
-        """Broadcast a JSON message to all connected clients."""
+# Background tasks for updating WebSocket clients
+async def update_network_state():
+    """Background task to update network state and broadcast to WebSocket clients."""
+    while True:
         try:
-            message = json.dumps(data)
-            await self.broadcast(message)
+            network_state = await get_network_state()
+            await message_queues['network'].put({
+                "type": "network_update",
+                "payload": network_state
+            })
+            await asyncio.sleep(1)  # Update every second
         except Exception as e:
-            logger.error(f"Error broadcasting JSON message: {str(e)}")
+            logger.error(f"Error updating network state: {str(e)}")
+            await asyncio.sleep(5)  # Back off on error
 
-manager = ConnectionManager()
+async def process_log_stream():
+    """Background task to process log stream and broadcast to WebSocket clients."""
+    while True:
+        try:
+            async for log_entry in get_log_stream():
+                await message_queues['logs'].put({
+                    "type": "new_log",
+                    "payload": log_entry
+                })
+        except Exception as e:
+            logger.error(f"Error processing log stream: {str(e)}")
+            await asyncio.sleep(5)
+
+async def process_alert_stream():
+    """Background task to process alert stream and broadcast to WebSocket clients."""
+    while True:
+        try:
+            async for alert in get_alert_stream():
+                await message_queues['alerts'].put({
+                    "type": "new_alert",
+                    "payload": alert
+                })
+        except Exception as e:
+            logger.error(f"Error processing alert stream: {str(e)}")
+            await asyncio.sleep(5)
+
+@app.on_event("startup")
+async def startup_event():
+    """Start background tasks on application startup."""
+    asyncio.create_task(update_network_state())
+    asyncio.create_task(process_log_stream())
+    asyncio.create_task(process_alert_stream())
 
 # API key verification decorator
 def require_api_key(func):
@@ -765,7 +914,7 @@ async def start_scan(
         background_tasks.add_task(run_security_scan, scan_id)
         
         # Notify connected clients
-        await manager.broadcast(json.dumps({
+        await broadcast_message('notifications', json.dumps({
             "type": "security_scan_started",
             "scan_id": scan_id,
             "status": "running"
@@ -778,6 +927,14 @@ async def start_scan(
         }
     except Exception as e:
         logger.error(f"Error starting security scan: {str(e)}")
+        db.update_scan_status(scan_id, "failed", 0, error_message=str(e))
+        
+        # Notify connected clients
+        await broadcast_message('notifications', json.dumps({
+            "type": "security_scan_failed",
+            "scan_id": scan_id,
+            "error": str(e)
+        }))
         raise HTTPException(status_code=500, detail="Error starting security scan")
 
 @app.get("/api/security/scan/{scan_id}")
@@ -831,7 +988,7 @@ async def add_finding(
         db.add_scan_finding(finding_data)
         
         # Notify connected clients
-        await manager.broadcast(json.dumps({
+        await broadcast_message('notifications', json.dumps({
             "type": "scan_finding_added",
             "scan_id": scan_id,
             "finding_id": finding_id,
@@ -867,7 +1024,7 @@ async def update_finding_status(
         db.update_finding_status(finding_id, status_update["status"])
         
         # Notify connected clients
-        await manager.broadcast(json.dumps({
+        await broadcast_message('notifications', json.dumps({
             "type": "finding_status_updated",
             "scan_id": scan_id,
             "finding_id": finding_id,
@@ -994,7 +1151,7 @@ async def run_security_scan(scan_id: str):
         db.update_scan_status(scan_id, "completed", 100, end_time=datetime.now().isoformat())
         
         # Notify connected clients
-        await manager.broadcast(json.dumps({
+        await broadcast_message('notifications', json.dumps({
             "type": "security_scan_completed",
             "scan_id": scan_id,
             "status": "completed"
@@ -1004,7 +1161,7 @@ async def run_security_scan(scan_id: str):
         db.update_scan_status(scan_id, "failed", 0, error_message=str(e))
         
         # Notify connected clients
-        await manager.broadcast(json.dumps({
+        await broadcast_message('notifications', json.dumps({
             "type": "security_scan_failed",
             "scan_id": scan_id,
             "error": str(e)
@@ -1026,81 +1183,6 @@ class ScanFinding(BaseModel):
     evidence: Optional[str] = None
     status: str = "new"
     metadata: Optional[Dict[str, Any]] = None
-
-# WebSocket endpoints
-@app.websocket("/ws/logs")
-async def websocket_logs(websocket: WebSocket):
-    """WebSocket endpoint for real-time logs."""
-    await manager.connect(websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            # Process and broadcast log data
-            await manager.broadcast(data)
-    except Exception as e:
-        logger.error(f"WebSocket error: {str(e)}")
-    finally:
-        manager.disconnect(websocket)
-
-@app.websocket("/ws/notifications")
-async def websocket_notifications(websocket: WebSocket):
-    """WebSocket endpoint for real-time notifications."""
-    try:
-        await manager.connect(websocket)
-        logger.info(f"WebSocket connection established: {websocket.client}")
-        
-        # Send initial connection success message
-        await websocket.send_json({
-            "type": "connection_status",
-            "status": "connected",
-            "message": "WebSocket connection established"
-        })
-        
-        # Keep connection alive and handle messages
-        while True:
-            try:
-                data = await websocket.receive_text()
-                # Process and broadcast notification data
-                await manager.broadcast(data)
-            except WebSocketDisconnect:
-                logger.info(f"WebSocket disconnected normally: {websocket.client}")
-                break
-            except Exception as e:
-                logger.error(f"Error processing WebSocket message: {str(e)}")
-                # Send error to client
-                try:
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": "Error processing message"
-                    })
-                except:
-                    break
-    except WebSocketDisconnect:
-        logger.info(f"WebSocket disconnected during connection: {websocket.client}")
-    except Exception as e:
-        logger.error(f"WebSocket error during connection: {str(e)}")
-    finally:
-        try:
-            await manager.disconnect(websocket)
-            logger.info(f"WebSocket connection cleaned up: {websocket.client}")
-        except Exception as e:
-            logger.error(f"Error during WebSocket cleanup: {str(e)}")
-
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    """Initialize the application on startup."""
-    logger.info("Starting SecureNet application...")
-    # Database is already initialized in the Database class constructor
-    logger.info("Application startup complete")
-
-# Shutdown event
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Clean up resources on shutdown."""
-    logger.info("Shutting down SecureNet application...")
-    # No cleanup needed as SQLite connections are managed by context managers
-    logger.info("Application shutdown complete")
 
 # Template middleware
 @app.middleware("http")
@@ -1407,7 +1489,7 @@ async def network_monitoring_task():
             
             # Broadcast updates via WebSocket
             try:
-                await manager.broadcast_json({
+                await broadcast_message('network', {
                     "type": "network_update",
                     "data": {
                         "devices": len(devices),
@@ -1998,4 +2080,99 @@ def apply_aggregation(logs: List[Dict[str, Any]], aggregation_type: str) -> List
         
         return [numeric_fields]
     
-    return logs 
+    return logs
+
+async def get_network_state() -> dict:
+    """Get current network state including active connections, traffic stats, and device status."""
+    try:
+        # Get network connections
+        connections = db.get_network_connections(status='active', limit=100)
+        
+        # Get network traffic stats for the last hour
+        now = datetime.now()
+        start_time = now - timedelta(hours=1)
+        traffic_stats = db.get_network_traffic(
+            start_time=start_time,
+            interval="5m",
+            points=12  # 12 points for 1 hour with 5-minute intervals
+        )
+        
+        # Get device status
+        devices = db.get_network_devices()
+        
+        # Get protocol distribution
+        protocols = db.get_network_protocols()
+        
+        return {
+            'connections': connections,
+            'traffic': traffic_stats,
+            'devices': devices,
+            'protocols': protocols,
+            'timestamp': now.isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting network state: {str(e)}")
+        return {
+            'connections': [],
+            'traffic': {},
+            'devices': [],
+            'protocols': {},
+            'timestamp': datetime.now().isoformat(),
+            'error': str(e)
+        }
+
+async def get_log_stream():
+    """Async generator that yields new log entries as they arrive."""
+    try:
+        last_log_id = None
+        while True:
+            # Get new logs since last check
+            new_logs = db.get_logs(
+                start_time=(datetime.now() - timedelta(seconds=5)).isoformat(),
+                limit=100
+            )
+            
+            if new_logs:
+                # Filter out logs we've already seen
+                if last_log_id:
+                    new_logs = [log for log in new_logs if log['id'] > last_log_id]
+                
+                if new_logs:
+                    last_log_id = new_logs[-1]['id']
+                    for log in new_logs:
+                        yield log
+            
+            await asyncio.sleep(1)  # Check every second
+    except Exception as e:
+        logger.error(f"Error in log stream: {str(e)}")
+        await asyncio.sleep(5)  # Back off on error
+        async for log in get_log_stream():  # Retry
+            yield log
+
+async def get_alert_stream():
+    """Async generator that yields new security alerts as they are generated."""
+    try:
+        last_alert_id = None
+        while True:
+            # Get new alerts since last check
+            new_alerts = db.get_alerts(
+                start_time=(datetime.now() - timedelta(seconds=5)).isoformat(),
+                limit=100
+            )
+            
+            if new_alerts:
+                # Filter out alerts we've already seen
+                if last_alert_id:
+                    new_alerts = [alert for alert in new_alerts if alert['id'] > last_alert_id]
+                
+                if new_alerts:
+                    last_alert_id = new_alerts[-1]['id']
+                    for alert in new_alerts:
+                        yield alert
+            
+            await asyncio.sleep(1)  # Check every second
+    except Exception as e:
+        logger.error(f"Error in alert stream: {str(e)}")
+        await asyncio.sleep(5)  # Back off on error
+        async for alert in get_alert_stream():  # Retry
+            yield alert 
