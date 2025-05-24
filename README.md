@@ -35,6 +35,14 @@
   - Security incident tracking
   - Live threat feed with real-time updates
   - Severity-based threat categorization
+  - Enhanced anomaly visualization with:
+    - Interactive timeline charts
+    - Severity distribution analysis
+    - Real-time anomaly updates
+    - Advanced filtering and search
+    - Detailed anomaly inspection
+    - Export capabilities
+    - Trend analysis and statistics
 
 - 📊 **Interactive Dashboard**
   - Real-time security metrics and statistics
@@ -60,6 +68,15 @@
   - Connection blocking capabilities
   - Network scan scheduling
   - Maintenance window management
+  - Enhanced network visualization with:
+    - Interactive network map (physical/logical views)
+    - Real-time device status monitoring
+    - Protocol distribution analysis
+    - Traffic pattern visualization
+    - Connection filtering and search
+    - Device details inspection
+    - Network data export
+    - Performance trend tracking
 
 - 📝 **Advanced Log Management**
   - Multiple log source types:
@@ -216,16 +233,33 @@ uvicorn app:app --reload
 *Service control panel with real-time status indicators and statistics*
 
 ### Log Stream
-![Log Stream](screenshots/log_stream.png)
+![Log Stream](screenshots/log.png)
 *Real-time log streaming with color-coded log levels*
 
 ### Anomalies View
-![Anomalies View](screenshots/anomalies_view.png)
-*Anomaly dashboard with severity highlighting and action buttons*
+![Anomalies View](screenshots/anomalies.png)
+*Enhanced anomaly dashboard featuring:
+- Real-time anomaly statistics with trend indicators
+- Interactive timeline visualization
+- Severity-based distribution analysis
+- Advanced filtering and search capabilities
+- Detailed anomaly inspection modal
+- Export functionality for analysis*
 
-### Notification Center
-![Notification Center](screenshots/notification_center.png)
-*Real-time notification center with unread counter*
+### Network Monitoring 
+![Network Monitoring](screenshots/Network-monitoring.png)
+*Advanced Network Monitoring center featuring:
+- Real-time device and connection statistics
+- Interactive network traffic visualization
+- Protocol distribution analysis
+- Dynamic network map with device discovery
+- Connection filtering and management
+- Device details inspection
+- Network data export capabilities*
+
+### Settings
+![Settings](screenshots/settings.png)
+*Settings page with log source configuration and notification settings*
 
 ## 📚 Documentation
 
@@ -278,6 +312,15 @@ SecureNet follows a modular architecture:
   - Security metrics storage
   - Asset management
   - Statistics and monitoring
+- **UI Components:**
+  - Modern, responsive dashboard with real-time updates
+  - Interactive visualizations using Chart.js
+  - Dynamic network mapping with vis.js
+  - Real-time WebSocket notifications
+  - Advanced filtering and search capabilities
+  - Modal-based detailed views
+  - Export functionality for data analysis
+  - Consistent design language across all screens
 
 ### API Reference
 

@@ -1,14 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}SecureNet - Log Ingestion{% endblock %}
+{% block title %}SecureNet - Log Management{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">
         <i class="fas fa-database"></i>
-        Log Ingestion
+        Log Management
     </h1>
     <div class="header-actions">
+        <button class="button button-secondary" onclick="exportLogs()">
+            <i class="fas fa-download"></i>
+            Export Logs
+        </button>
         <button class="button button-primary" onclick="addLogSource()">
             <i class="fas fa-plus"></i>
             Add Log Source
@@ -16,14 +20,99 @@
     </div>
 </div>
 
+<!-- Log Statistics -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <!-- Total Logs -->
+    <div class="card">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-medium text-gray-400">Total Logs (24h)</h3>
+                <p class="text-2xl font-semibold text-white" id="total-logs">-</p>
+                <p class="text-sm text-gray-400" id="total-logs-trend"></p>
+            </div>
+            <div class="p-3 bg-primary-500/10 rounded-lg">
+                <i class="fas fa-file-alt text-primary-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Sources -->
+    <div class="card">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-medium text-gray-400">Active Sources</h3>
+                <p class="text-2xl font-semibold text-white" id="active-sources">-</p>
+                <p class="text-sm text-gray-400" id="active-sources-trend"></p>
+            </div>
+            <div class="p-3 bg-green-500/10 rounded-lg">
+                <i class="fas fa-server text-green-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Rate -->
+    <div class="card">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-medium text-gray-400">Current Log Rate</h3>
+                <p class="text-2xl font-semibold text-white" id="log-rate">-</p>
+                <p class="text-sm text-gray-400">logs/minute</p>
+            </div>
+            <div class="p-3 bg-blue-500/10 rounded-lg">
+                <i class="fas fa-tachometer-alt text-blue-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Rate -->
+    <div class="card">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-medium text-gray-400">Error Rate (24h)</h3>
+                <p class="text-2xl font-semibold text-white" id="error-rate">-</p>
+                <p class="text-sm text-gray-400" id="error-rate-trend"></p>
+            </div>
+            <div class="p-3 bg-red-500/10 rounded-lg">
+                <i class="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Log Rate Chart -->
+<div class="card mb-6">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-chart-line"></i>
+            Log Rate Trend
+        </h2>
+        <div class="card-actions">
+            <div class="flex space-x-2">
+                <button onclick="updateLogRateChart('1h')" class="button button-secondary text-xs" id="rateRange1h">1H</button>
+                <button onclick="updateLogRateChart('24h')" class="button button-primary text-xs" id="rateRange24h">24H</button>
+                <button onclick="updateLogRateChart('7d')" class="button button-secondary text-xs" id="rateRange7d">7D</button>
+            </div>
+        </div>
+    </div>
+    <div class="h-64">
+        <canvas id="logRateChart"></canvas>
+    </div>
+</div>
+
 <!-- Log Sources -->
-<div class="card">
+<div class="card mb-6">
     <div class="card-header">
         <h2 class="card-title">
             <i class="fas fa-list"></i>
             Log Sources
         </h2>
         <div class="card-actions">
+            <div class="input-group" style="width: 300px;">
+                <input type="text" class="form-control" id="source-filter" placeholder="Filter sources...">
+                <button class="button" onclick="clearSourceFilter()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
             <button class="button" onclick="refreshLogSources()">
                 <i class="fas fa-sync-alt"></i>
                 Refresh
@@ -57,20 +146,33 @@
             Live Log Feed
         </h2>
         <div class="card-actions">
-            <div class="input-group" style="width: 300px;">
-                <input type="text" class="form-control" id="log-filter" placeholder="Filter logs...">
-                <button class="button" onclick="clearLogFilter()">
-                    <i class="fas fa-times"></i>
+            <div class="flex space-x-2">
+                <select class="form-select" id="log-level-filter">
+                    <option value="all">All Levels</option>
+                    <option value="error">Error</option>
+                    <option value="warning">Warning</option>
+                    <option value="info">Info</option>
+                    <option value="debug">Debug</option>
+                </select>
+                <select class="form-select" id="source-filter">
+                    <option value="all">All Sources</option>
+                    <!-- Filled by JavaScript -->
+                </select>
+                <div class="input-group" style="width: 300px;">
+                    <input type="text" class="form-control" id="log-filter" placeholder="Search logs...">
+                    <button class="button" onclick="clearLogFilter()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <button class="button" onclick="clearLogFeed()">
+                    <i class="fas fa-trash"></i>
+                    Clear
+                </button>
+                <button class="button" onclick="toggleLogFeed()">
+                    <i class="fas fa-pause" id="feed-toggle-icon"></i>
+                    <span id="feed-toggle-text">Pause</span>
                 </button>
             </div>
-            <button class="button" onclick="clearLogFeed()">
-                <i class="fas fa-trash"></i>
-                Clear
-            </button>
-            <button class="button" onclick="toggleLogFeed()">
-                <i class="fas fa-pause" id="feed-toggle-icon"></i>
-                <span id="feed-toggle-text">Pause</span>
-            </button>
         </div>
     </div>
     <div class="log-feed" id="log-feed">
@@ -238,58 +340,81 @@
 {% block extra_css %}
 <style>
     .log-feed {
-        height: 500px;
+        height: 600px;
         overflow-y: auto;
         background: var(--neutral-900);
         color: var(--neutral-100);
         font-family: 'JetBrains Mono', monospace;
         padding: 1rem;
         border-radius: var(--radius);
+        position: relative;
     }
 
     .log-entry {
         margin: 0.25rem 0;
-        padding: 0.5rem;
+        padding: 0.75rem;
         border-radius: var(--radius-sm);
         font-size: 0.875rem;
         line-height: 1.5;
-        display: flex;
-        align-items: flex-start;
-        gap: 0.5rem;
+        display: grid;
+        grid-template-columns: auto 80px 120px 1fr;
+        gap: 1rem;
+        align-items: start;
+        transition: background-color 0.2s;
     }
 
     .log-entry:hover {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .log-entry.expanded {
+        background: rgba(255, 255, 255, 0.05);
     }
 
     .log-timestamp {
         color: var(--neutral-400);
-        flex-shrink: 0;
+        font-size: 0.75rem;
+        white-space: nowrap;
     }
 
     .log-level {
         font-weight: 600;
-        flex-shrink: 0;
-        width: 4rem;
         text-align: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
     }
 
-    .log-level.info { color: #60a5fa; }
-    .log-level.warning { color: #fbbf24; }
-    .log-level.error { color: #f87171; }
-    .log-level.debug { color: #a3a3a3; }
+    .log-level.error {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+
+    .log-level.warning {
+        background: rgba(234, 179, 8, 0.1);
+        color: #eab308;
+    }
+
+    .log-level.info {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+
+    .log-level.debug {
+        background: rgba(156, 163, 175, 0.1);
+        color: #9ca3af;
+    }
 
     .log-source {
         color: var(--neutral-400);
-        flex-shrink: 0;
-        width: 8rem;
+        font-size: 0.75rem;
+        white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
     }
 
     .log-message {
-        flex: 1;
+        color: var(--neutral-100);
         overflow: hidden;
         text-overflow: ellipsis;
     }
@@ -299,29 +424,43 @@
         overflow: visible;
     }
 
+    .log-entry .log-details {
+        display: none;
+        grid-column: 1 / -1;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--neutral-800);
+        font-size: 0.75rem;
+        color: var(--neutral-400);
+    }
+
+    .log-entry.expanded .log-details {
+        display: block;
+    }
+
     .source-status {
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: var(--radius-sm);
-        font-size: 0.875rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--radius-full);
+        font-size: 0.75rem;
         font-weight: 500;
     }
 
     .source-status.active {
-        background: #dcfce7;
-        color: var(--success-color);
+        background: rgba(34, 197, 94, 0.1);
+        color: #22c55e;
     }
 
     .source-status.inactive {
-        background: #fee2e2;
-        color: var(--danger-color);
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
     }
 
     .source-status.warning {
-        background: #fef3c7;
-        color: var(--warning-color);
+        background: rgba(234, 179, 8, 0.1);
+        color: #eab308;
     }
 
     .source-actions {
@@ -347,6 +486,33 @@
         border-color: var(--primary-color);
         box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
     }
+
+    /* Loading animation */
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+
+    .loading-spinner {
+        width: 2rem;
+        height: 2rem;
+        border: 3px solid var(--neutral-700);
+        border-top-color: var(--primary-500);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
 </style>
 {% endblock %}
 
@@ -355,6 +521,13 @@
     let logFeedActive = true;
     let logFilter = '';
     let logSources = [];
+    let logRateChart = null;
+    let logStats = {
+        totalLogs: 0,
+        activeSources: 0,
+        logRate: 0,
+        errorRate: 0
+    };
 
     // Initialize page
     function initializePage() {
@@ -777,5 +950,229 @@
             }
         }
     }
+
+    // Initialize charts and stats
+    async function initializeCharts() {
+        // Initialize log rate chart
+        const ctx = document.getElementById('logRateChart').getContext('2d');
+        logRateChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Log Rate',
+                    data: [],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#9ca3af'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#9ca3af'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Initial data load
+        await Promise.all([
+            updateLogStats(),
+            updateLogRateChart('24h')
+        ]);
+
+        // Set up periodic updates
+        setInterval(updateLogStats, 30000); // Update stats every 30 seconds
+        setInterval(updateLogRateChart, 60000); // Update chart every minute
+    }
+
+    // Update log statistics
+    async function updateLogStats() {
+        try {
+            const response = await fetch('/api/logs/stats', {
+                headers: {
+                    'X-API-Key': '{{ api_key }}'
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to fetch log stats');
+            
+            const stats = await response.json();
+            
+            // Update stats display
+            document.getElementById('total-logs').textContent = stats.total_logs.toLocaleString();
+            document.getElementById('active-sources').textContent = stats.active_sources;
+            document.getElementById('log-rate').textContent = stats.current_rate.toFixed(1);
+            document.getElementById('error-rate').textContent = stats.error_rate.toFixed(1) + '%';
+            
+            // Update trends
+            updateTrend('total-logs-trend', stats.total_logs_trend);
+            updateTrend('active-sources-trend', stats.active_sources_trend);
+            updateTrend('error-rate-trend', stats.error_rate_trend);
+            
+            // Update source filter options
+            updateSourceFilterOptions(stats.sources);
+            
+        } catch (error) {
+            console.error('Error updating log stats:', error);
+            showNotification({
+                title: 'Error',
+                message: 'Failed to update log statistics',
+                level: 'error'
+            });
+        }
+    }
+
+    // Update log rate chart
+    async function updateLogRateChart(range = '24h') {
+        try {
+            const response = await fetch(`/api/logs/rate?range=${range}`, {
+                headers: {
+                    'X-API-Key': '{{ api_key }}'
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to fetch log rate data');
+            
+            const data = await response.json();
+            
+            // Update chart data
+            logRateChart.data.labels = data.labels;
+            logRateChart.data.datasets[0].data = data.values;
+            logRateChart.update();
+            
+            // Update active button
+            document.querySelectorAll('[id^="rateRange"]').forEach(btn => {
+                btn.classList.remove('button-primary');
+                btn.classList.add('button-secondary');
+            });
+            document.getElementById(`rateRange${range}`).classList.remove('button-secondary');
+            document.getElementById(`rateRange${range}`).classList.add('button-primary');
+            
+        } catch (error) {
+            console.error('Error updating log rate chart:', error);
+            showNotification({
+                title: 'Error',
+                message: 'Failed to update log rate chart',
+                level: 'error'
+            });
+        }
+    }
+
+    // Export logs
+    async function exportLogs() {
+        try {
+            const response = await fetch('/api/logs/export', {
+                headers: {
+                    'X-API-Key': '{{ api_key }}'
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to export logs');
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `securenet-logs-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+        } catch (error) {
+            console.error('Error exporting logs:', error);
+            showNotification({
+                title: 'Error',
+                message: 'Failed to export logs',
+                level: 'error'
+            });
+        }
+    }
+
+    // Update source filter options
+    function updateSourceFilterOptions(sources) {
+        const select = document.getElementById('source-filter');
+        const currentValue = select.value;
+        
+        // Clear existing options except "All Sources"
+        while (select.options.length > 1) {
+            select.remove(1);
+        }
+        
+        // Add new options
+        sources.forEach(source => {
+            const option = document.createElement('option');
+            option.value = source.id;
+            option.textContent = source.name;
+            select.appendChild(option);
+        });
+        
+        // Restore previous selection if possible
+        if (currentValue !== 'all') {
+            select.value = currentValue;
+        }
+    }
+
+    // Enhanced log entry display
+    function createLogEntry(log) {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        
+        const details = {
+            timestamp: new Date(log.timestamp).toLocaleString(),
+            level: log.level.toLowerCase(),
+            source: log.source,
+            message: log.message,
+            metadata: log.metadata || {}
+        };
+        
+        entry.innerHTML = `
+            <span class="log-timestamp">${details.timestamp}</span>
+            <span class="log-level ${details.level}">${details.level.toUpperCase()}</span>
+            <span class="log-source">${details.source}</span>
+            <span class="log-message">${details.message}</span>
+            <div class="log-details">
+                ${Object.entries(details.metadata).map(([key, value]) => `
+                    <div><strong>${key}:</strong> ${value}</div>
+                `).join('')}
+            </div>
+        `;
+        
+        entry.addEventListener('click', function() {
+            this.classList.toggle('expanded');
+        });
+        
+        return entry;
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        initializePage();
+        initializeCharts();
+        setupWebSocket();
+    });
 </script>
 {% endblock %} 

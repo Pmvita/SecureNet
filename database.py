@@ -5,6 +5,7 @@ import secrets
 import sqlite3
 import os
 import logging
+from typing import Optional, List
 
 # Configure logging for the database module
 logger = logging.getLogger(__name__)
@@ -1089,4 +1090,100 @@ class Database:
             """)
             
             db.commit()
-            logger.info("Database schema initialized successfully") 
+            logger.info("Database schema initialized successfully")
+
+    def get_log_count(self, source_id: Optional[str] = None, level: Optional[str] = None,
+                     start_time: Optional[str] = None, end_time: Optional[str] = None) -> int:
+        """Get the count of logs matching the specified criteria."""
+        try:
+            query = "SELECT COUNT(*) FROM logs WHERE 1=1"
+            params = []
+            
+            if source_id:
+                query += " AND source_id = ?"
+                params.append(source_id)
+            
+            if level:
+                query += " AND level = ?"
+                params.append(level.upper())
+            
+            if start_time:
+                query += " AND timestamp >= ?"
+                params.append(start_time)
+            
+            if end_time:
+                query += " AND timestamp <= ?"
+                params.append(end_time)
+            
+            with self.get_db() as conn:
+                cursor = conn.execute(query, params)
+                return cursor.fetchone()[0]
+        except Exception as e:
+            logger.error(f"Error getting log count: {str(e)}")
+            raise
+
+    def get_current_log_rate(self) -> float:
+        """Get the current log ingestion rate (logs per minute)."""
+        try:
+            # Get logs from the last minute
+            one_minute_ago = (datetime.now() - timedelta(minutes=1)).isoformat()
+            
+            with self.get_db() as conn:
+                cursor = conn.execute(
+                    "SELECT COUNT(*) FROM logs WHERE timestamp >= ?",
+                    [one_minute_ago]
+                )
+                return cursor.fetchone()[0]
+        except Exception as e:
+            logger.error(f"Error getting current log rate: {str(e)}")
+            raise
+
+    def get_log_rate_data(self, start_time: datetime, interval: str, points: int) -> List[float]:
+        """Get log rate data points for the specified time range and interval."""
+        try:
+            # Convert interval to SQLite datetime format
+            interval_map = {
+                "1m": "1 minute",
+                "5m": "5 minutes",
+                "1h": "1 hour"
+            }
+            sql_interval = interval_map.get(interval, "5 minutes")
+            
+            # Generate time buckets
+            buckets = []
+            current = start_time
+            for _ in range(points):
+                if interval == "1m":
+                    next_time = current + timedelta(minutes=1)
+                elif interval == "5m":
+                    next_time = current + timedelta(minutes=5)
+                else:  # 1h
+                    next_time = current + timedelta(hours=1)
+                
+                buckets.append((current.isoformat(), next_time.isoformat()))
+                current = next_time
+            
+            # Get log counts for each bucket
+            rates = []
+            with self.get_db() as conn:
+                for start, end in buckets:
+                    cursor = conn.execute(
+                        "SELECT COUNT(*) FROM logs WHERE timestamp >= ? AND timestamp < ?",
+                        [start, end]
+                    )
+                    count = cursor.fetchone()[0]
+                    
+                    # Convert to rate per minute
+                    if interval == "1m":
+                        rate = count
+                    elif interval == "5m":
+                        rate = count / 5
+                    else:  # 1h
+                        rate = count / 60
+                    
+                    rates.append(rate)
+            
+            return rates
+        except Exception as e:
+            logger.error(f"Error getting log rate data: {str(e)}")
+            raise 

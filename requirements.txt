@@ -5,7 +5,7 @@ matplotlib>=3.8.0
 fastapi==0.104.1
 uvicorn==0.24.0
 slack-sdk==3.26.1
-python-dotenv==1.0.0
+python-dotenv==1.0.1
 boto3>=1.34.0
 email-validator>=2.1.0
 pytest>=8.0.0

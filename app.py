@@ -4,12 +4,18 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.cors import CORSMiddleware
 import os
+from dotenv import load_dotenv
 import uuid
 from datetime import datetime, timedelta
 import logging
 from typing import Dict, List, Optional, Any
 from database import Database
 import json
+import io
+import csv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -171,19 +177,95 @@ async def get_logs(
         raise HTTPException(status_code=500, detail="Error retrieving logs")
 
 @app.get("/api/logs/stats")
-async def get_log_stats(
-    source_id: Optional[str] = None,
-    start_time: Optional[str] = None,
-    end_time: Optional[str] = None,
-    api_key: str = Depends(verify_api_key)
-):
-    """Get log statistics."""
+async def get_log_stats(api_key: str = Depends(verify_api_key)):
+    """Get comprehensive log statistics."""
     try:
-        stats = db.get_log_stats(source_id, start_time, end_time)
-        return stats
+        # Get basic stats
+        total_logs = db.get_log_count(start_time=(datetime.now() - timedelta(days=1)).isoformat())
+        total_logs_prev = db.get_log_count(
+            start_time=(datetime.now() - timedelta(days=2)).isoformat(),
+            end_time=(datetime.now() - timedelta(days=1)).isoformat()
+        )
+        
+        # Calculate trends
+        total_logs_trend = ((total_logs - total_logs_prev) / total_logs_prev * 100) if total_logs_prev > 0 else 0
+        
+        # Get active sources
+        sources = db.get_log_sources()
+        active_sources = len([s for s in sources if s['status'] == 'active'])
+        active_sources_prev = len([s for s in sources if s['status'] == 'active' and 
+                                 datetime.fromisoformat(s['last_update']) < datetime.now() - timedelta(days=1)])
+        active_sources_trend = ((active_sources - active_sources_prev) / active_sources_prev * 100) if active_sources_prev > 0 else 0
+        
+        # Get current log rate
+        current_rate = db.get_current_log_rate()
+        
+        # Get error rate
+        error_count = db.get_log_count(
+            start_time=(datetime.now() - timedelta(days=1)).isoformat(),
+            level='error'
+        )
+        error_rate = (error_count / total_logs * 100) if total_logs > 0 else 0
+        error_count_prev = db.get_log_count(
+            start_time=(datetime.now() - timedelta(days=2)).isoformat(),
+            end_time=(datetime.now() - timedelta(days=1)).isoformat(),
+            level='error'
+        )
+        error_rate_trend = ((error_rate - (error_count_prev / total_logs_prev * 100 if total_logs_prev > 0 else 0)) / 
+                           (error_count_prev / total_logs_prev * 100 if total_logs_prev > 0 else 1) * 100)
+        
+        return {
+            "total_logs": total_logs,
+            "total_logs_trend": total_logs_trend,
+            "active_sources": active_sources,
+            "active_sources_trend": active_sources_trend,
+            "current_rate": current_rate,
+            "error_rate": error_rate,
+            "error_rate_trend": error_rate_trend,
+            "sources": sources
+        }
     except Exception as e:
         logger.error(f"Error getting log stats: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving log statistics")
+
+@app.get("/api/logs/rate")
+async def get_log_rate(
+    range: str = "24h",
+    api_key: str = Depends(verify_api_key)
+):
+    """Get log rate data for the specified time range."""
+    try:
+        now = datetime.now()
+        if range == "1h":
+            start_time = now - timedelta(hours=1)
+            interval = "1m"
+            points = 60
+        elif range == "7d":
+            start_time = now - timedelta(days=7)
+            interval = "1h"
+            points = 168
+        else:  # 24h
+            start_time = now - timedelta(hours=24)
+            interval = "5m"
+            points = 288
+            
+        rate_data = db.get_log_rate_data(start_time, interval, points)
+        
+        # Format labels based on range
+        if range == "1h":
+            labels = [(start_time + timedelta(minutes=i)).strftime("%H:%M") for i in range(points)]
+        elif range == "7d":
+            labels = [(start_time + timedelta(hours=i)).strftime("%m/%d %H:00") for i in range(points)]
+        else:
+            labels = [(start_time + timedelta(minutes=i*5)).strftime("%H:%M") for i in range(points)]
+            
+        return {
+            "labels": labels,
+            "values": rate_data
+        }
+    except Exception as e:
+        logger.error(f"Error getting log rate data: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving log rate data")
 
 @app.get("/api/logs/sources")
 async def get_log_sources(api_key: str = Depends(verify_api_key)):
@@ -537,6 +619,49 @@ def generate_pdf_report(report_data: Dict[str, Any]) -> bytes:
     # This is a placeholder - implement actual PDF generation
     # You might want to use a library like reportlab or WeasyPrint
     return b"PDF content would go here"
+
+@app.get("/api/logs/export")
+async def export_logs(
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None,
+    level: Optional[str] = None,
+    source_id: Optional[str] = None,
+    api_key: str = Depends(verify_api_key)
+):
+    """Export logs to CSV format."""
+    try:
+        logs = db.get_logs(source_id, level, start_time, end_time, limit=None)
+        
+        # Create CSV content
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow(['Timestamp', 'Level', 'Source', 'Message', 'Metadata'])
+        
+        # Write data
+        for log in logs:
+            writer.writerow([
+                log['timestamp'],
+                log['level'],
+                log['source'],
+                log['message'],
+                json.dumps(log.get('metadata', {}))
+            ])
+        
+        # Create response
+        response = Response(
+            content=output.getvalue(),
+            media_type='text/csv',
+            headers={
+                'Content-Disposition': f'attachment; filename=securenet-logs-{datetime.now().strftime("%Y%m%d")}.csv'
+            }
+        )
+        
+        return response
+    except Exception as e:
+        logger.error(f"Error exporting logs: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error exporting logs")
 
 # WebSocket endpoints
 @app.websocket("/ws/logs")
