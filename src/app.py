@@ -391,31 +391,77 @@ log_sources: Dict[str, LogSource] = {}
 
 @app.websocket("/ws/logs")
 async def websocket_log_endpoint(websocket: WebSocket):
-    # Add token validation for WebSocket connections
-    token = websocket.headers.get("X-API-Key")
-    if token != API_KEY:
-        await websocket.close(code=4003, reason="Invalid API Key")
-        return
-    await manager.connect(websocket, "logs")
     try:
-        while True:
-            await websocket.receive_text()  # Keep connection alive
-    except WebSocketDisconnect:
-        manager.disconnect(websocket, "logs")
+        # Get API key from query parameters
+        api_key = websocket.query_params.get('api_key')
+        if not api_key:
+            logger.warning("WebSocket connection attempt without API key")
+            await websocket.close(code=4003, reason="API key required")
+            return
+
+        # Verify API key
+        if api_key != API_KEY:
+            logger.warning(f"Invalid API key attempt: {api_key[:8]}...")
+            await websocket.close(code=4003, reason="Invalid API key")
+            return
+
+        # Accept connection
+        await manager.connect(websocket, "logs")
+        logger.info(f"WebSocket connection established with API key: {api_key[:8]}...")
+
+        try:
+            while True:
+                # Keep connection alive and handle any client messages
+                data = await websocket.receive_text()
+                if data == "ping":
+                    await websocket.send_text("pong")
+        except WebSocketDisconnect:
+            logger.info("WebSocket client disconnected")
+        finally:
+            manager.disconnect(websocket, "logs")
+    except Exception as e:
+        logger.error(f"WebSocket error: {str(e)}")
+        try:
+            await websocket.close(code=1011, reason="Internal server error")
+        except:
+            pass
 
 @app.websocket("/ws/notifications")
 async def websocket_notification_endpoint(websocket: WebSocket):
-    # Add token validation for WebSocket connections
-    token = websocket.headers.get("X-API-Key")
-    if token != API_KEY:
-        await websocket.close(code=4003, reason="Invalid API Key")
-        return
-    await manager.connect(websocket, "notifications")
     try:
-        while True:
-            await websocket.receive_text()  # Keep connection alive
-    except WebSocketDisconnect:
-        manager.disconnect(websocket, "notifications")
+        # Get API key from query parameters
+        api_key = websocket.query_params.get('api_key')
+        if not api_key:
+            logger.warning("WebSocket connection attempt without API key")
+            await websocket.close(code=4003, reason="API key required")
+            return
+
+        # Verify API key
+        if api_key != API_KEY:
+            logger.warning(f"Invalid API key attempt: {api_key[:8]}...")
+            await websocket.close(code=4003, reason="Invalid API key")
+            return
+
+        # Accept connection
+        await manager.connect(websocket, "notifications")
+        logger.info(f"WebSocket notification connection established with API key: {api_key[:8]}...")
+
+        try:
+            while True:
+                # Keep connection alive and handle any client messages
+                data = await websocket.receive_text()
+                if data == "ping":
+                    await websocket.send_text("pong")
+        except WebSocketDisconnect:
+            logger.info("WebSocket notification client disconnected")
+        finally:
+            manager.disconnect(websocket, "notifications")
+    except Exception as e:
+        logger.error(f"WebSocket error: {str(e)}")
+        try:
+            await websocket.close(code=1011, reason="Internal server error")
+        except:
+            pass
 
 @app.post("/api/log-sources")
 @limiter.limit("10/minute")

@@ -7,7 +7,7 @@
 [![Security](https://img.shields.io/badge/security-enhanced-blue.svg)](SECURITY.md)
 [![Status](https://img.shields.io/badge/status-active-success.svg)]()
 
-> AI-powered threat detection system for identifying anomalies in system and cloud logs using machine learning.
+> AI-powered network security monitoring and management system with real-time threat detection, network health monitoring, and comprehensive security management.
 
 ## 📌 Quick Links
 
@@ -15,6 +15,7 @@
 - [Getting Started](#-getting-started)
 - [Documentation](#-documentation)
 - [Screenshots](#-screenshots)
+- [API Reference](#-api-reference)
 - [Testing](#-testing)
 - [Roadmap](#️-roadmap)
 - [Contributing](#-contributing)
@@ -24,24 +25,41 @@
 ## ✨ Features
 
 ### Core Capabilities
-- 🔍 **Real-time Anomaly Detection**
-  - ML-based detection using scikit-learn
-  - Isolation Forest algorithm for zero-day threat detection
-  - Configurable detection thresholds
+- 🔍 **Real-time Security Monitoring**
+  - ML-based threat detection using scikit-learn
+  - Network health monitoring and scoring
+  - Real-time security metrics
+  - Asset protection status tracking
+  - Vulnerability assessment
+  - Patch status monitoring
+  - Security incident tracking
   - Live threat feed with real-time updates
   - Severity-based threat categorization
 
 - 📊 **Interactive Dashboard**
-  - Real-time service control panel
+  - Real-time security metrics and statistics
+  - Network health visualization
+  - Active threat monitoring
+  - Asset protection status
+  - Network traffic analysis
+  - Security score tracking
+  - Maintenance scheduling
+  - Report generation
   - Live log streaming with WebSocket support
   - Dynamic log source management
-  - Start/Stop controls for all services
-  - Live service statistics
-  - Real-time anomaly data display
-  - Severity-based highlighting (high/medium/low)
   - Interactive web UI with FastAPI + Jinja2
-  - Color-coded anomaly scores
-  - Anomaly investigation and acknowledgment
+  - Color-coded security indicators
+  - Real-time data updates
+
+- 🌐 **Network Management**
+  - Network device discovery and monitoring
+  - Connection tracking and management
+  - Traffic analysis and visualization
+  - Network health metrics
+  - Automated threat response
+  - Connection blocking capabilities
+  - Network scan scheduling
+  - Maintenance window management
 
 - 📝 **Advanced Log Management**
   - Multiple log source types:
@@ -85,11 +103,12 @@
   - Interactive notification management
 
 ### Planned Features
-- 🤖 GPT-based anomaly explanation summaries
-- ☁️ AWS CloudTrail integration
+- 🤖 GPT-based security analysis and recommendations
+- ☁️ Cloud service integration (AWS, Azure, GCP)
 - 🐳 Docker containerization
 - 🔄 CI/CD pipeline
 - 📈 Advanced analytics dashboard
+- 🔐 Zero-trust security model implementation
 
 ## 🚀 Getting Started
 
@@ -123,7 +142,23 @@ cp .env.example .env
 # Edit .env with your settings
 ```
 
-5. Initialize the database:
+5. Generate secure API keys:
+```bash
+# Activate your virtual environment if not already activated
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Generate API key and Secret key
+python -c "import secrets; print('API Key:', secrets.token_urlsafe(32)); print('Secret Key:', secrets.token_hex(32))"
+```
+
+6. Update your `.env` file with the generated keys:
+```bash
+# Replace these values in your .env file
+API_KEY=your-generated-api-key-here
+SECRET_KEY=your-generated-secret-key-here
+```
+
+7. Initialize the database:
 ```bash
 python scripts/init_db.py
 ```
@@ -176,8 +211,8 @@ uvicorn app:app --reload
 
 ## 📸 Screenshots
 
-### Control Panel
-![Control Panel](screenshots/control_panel.png)
+### Dashboard
+![Dasbhboard](screenshots/dashboard.png)
 *Service control panel with real-time status indicators and statistics*
 
 ### Log Stream
@@ -202,10 +237,21 @@ SecureNet follows a modular architecture:
   - File system monitoring
   - API endpoints
   - Database queries
+  - Network devices
+  - Security scanners
 - **Data Pipeline:** 
   - Log ingestion → Format detection → Processing → Storage
+  - Network monitoring → Traffic analysis → Health scoring
+  - Security scanning → Threat detection → Vulnerability assessment
   - Real-time WebSocket streaming
   - Notification broadcasting
+- **Security Management:**
+  - Network health monitoring
+  - Threat detection and tracking
+  - Vulnerability assessment
+  - Patch management
+  - Security scoring
+  - Maintenance scheduling
 - **Log Management:**
   - Source configuration and monitoring
   - Format detection and parsing
@@ -215,6 +261,8 @@ SecureNet follows a modular architecture:
 - **AI Engine:** 
   - Isolation Forest (scikit-learn)
   - Real-time anomaly scoring
+  - Network health analysis
+  - Security risk assessment
 - **Alerting:** 
   - Real-time notification center
   - Configurable notification system
@@ -222,54 +270,79 @@ SecureNet follows a modular architecture:
   - FastAPI + Jinja2 templates
   - WebSocket for real-time updates
   - Bootstrap for modern UI
+  - Interactive visualizations
 - **Database:** 
   - SQLite with optimized schema
   - Log source management
-  - Log storage and retrieval
+  - Network device tracking
+  - Security metrics storage
+  - Asset management
   - Statistics and monitoring
 
-### Directory Structure
+### API Reference
+
+#### Dashboard Endpoints
+- `GET /api/stats/overview` - Get dashboard statistics
+- `GET /api/network/traffic` - Get network traffic data
+- `GET /api/security/score` - Get security score and status
+- `POST /api/scan/start` - Start network scan
+- `POST /api/security/scan` - Start security scan
+- `POST /api/maintenance/schedule` - Schedule maintenance
+- `POST /api/reports/generate` - Generate security reports
+
+#### Log Management
+- `GET /api/logs` - Get logs with filtering
+- `GET /api/logs/stats` - Get log statistics
+- `GET /api/logs/sources` - Get log sources
+- `POST /api/logs/sources` - Create log source
+- `PUT /api/logs/sources/{source_id}` - Update log source
+- `DELETE /api/logs/sources/{source_id}` - Delete log source
+- `POST /api/logs/sources/{source_id}/toggle` - Toggle log source
+
+#### Network Management
+- `GET /api/network/overview` - Get network overview
+- `GET /api/network/connections` - Get network connections
+- `GET /api/network/connections/{connection_id}` - Get specific connection
+- `POST /api/network/connections/{connection_id}/block` - Block connection
+
+#### Security Management
+- `GET /api/anomalies` - Get all anomalies
+- `GET /api/anomalies/{anomaly_id}` - Get specific anomaly
+- `POST /api/anomalies/{anomaly_id}/resolve` - Resolve anomaly
+
+#### Settings
+- `GET /api/settings` - Get current settings
+- `PUT /api/settings` - Update settings
+- `POST /api/settings/api-key` - Regenerate API key
+
+#### WebSocket Endpoints
+- `WS /ws/logs` - Real-time log updates
+- `WS /ws/notifications` - Real-time notifications
+
+### Authentication
+
+All API endpoints require authentication using an API key. Include the API key in the `X-API-Key` header:
+
+```bash
+curl -H "X-API-Key: your-api-key" http://localhost:8000/api/logs
 ```
-SecureNet/
-├── config/                    # Configuration files
-│   └── settings.yaml         # Application settings
-├── data/                     # Data storage
-│   ├── logs.db              # SQLite database for logs
-│   ├── init_schema.sql      # Initial database schema
-│   └── sample_logs.json     # Sample log data
-├── models/                   # ML models
-│   └── isolation_forest.pkl # Trained anomaly detection model
-├── screenshots/             # Documentation screenshots
-│   ├── control_panel.png    # Dashboard control panel
-│   ├── log_stream.png      # Real-time log stream
-│   ├── anomalies_view.png   # Anomalies display
-│   └── notification_center.png # Notification system
-├── scripts/                 # Utility scripts
-│   ├── init_db.py          # Database initialization
-│   └── update_db.py        # Database schema updates
-├── src/                     # Core application code
-│   ├── __init__.py         # Package initialization
-│   ├── alert.py            # Alerting system (Slack/Email)
-│   ├── app.py              # FastAPI dashboard application
-│   ├── detect_anomalies.py # ML anomaly detection
-│   └── ingest_logs.py      # Log ingestion system
-├── templates/               # Web templates
-│   └── dashboard.html      # Dashboard template
-├── tests/                   # Test suite
-│   ├── README.md           # Testing documentation
-│   ├── smoke_slack.py      # Slack integration test
-│   ├── test_dashboard.py   # Dashboard tests
-│   ├── test_detect_anomalies.py  # ML model tests
-│   └── test_ingestion.py   # Log ingestion tests
-├── venv/                    # Python virtual environment
-├── .env                     # Environment variables (gitignored)
-├── .env.example            # Example environment variables
-├── CONTRIBUTING.md         # Contribution guidelines
-├── LICENSE.txt             # MIT License
-├── README.md               # Project documentation
-├── TODO.md                 # Development tasks
-├── requirements.txt        # Python dependencies
-└── slack.txt              # Slack integration logs
+
+### WebSocket Connections
+
+Connect to WebSocket endpoints for real-time updates:
+
+```javascript
+// Log updates
+const ws = new WebSocket('ws://localhost:8000/ws/logs');
+ws.onmessage = (event) => {
+    console.log('New log:', JSON.parse(event.data));
+};
+
+// Notifications
+const ws = new WebSocket('ws://localhost:8000/ws/notifications');
+ws.onmessage = (event) => {
+    console.log('New notification:', JSON.parse(event.data));
+};
 ```
 
 ## 🧪 Testing

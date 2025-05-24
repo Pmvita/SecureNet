@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Shield background -->
+    <path d="M16 2L4 7V15C4 22.1797 9.10547 28.2109 16 30C22.8945 28.2109 28 22.1797 28 15V7L16 2Z" fill="#2C3E50"/>
+    
+    <!-- Shield border -->
+    <path d="M16 2L4 7V15C4 22.1797 9.10547 28.2109 16 30C22.8945 28.2109 28 22.1797 28 15V7L16 2Z" stroke="#ECF0F1" stroke-width="2"/>
+    
+    <!-- Network lines -->
+    <path d="M11 16L16 11L21 16" stroke="#3498DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M11 20L16 15L21 20" stroke="#3498DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M11 24L16 19L21 24" stroke="#3498DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg> 

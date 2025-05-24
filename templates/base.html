@@ -3,564 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}SecureNet{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css" rel="stylesheet">
+    <title>SecureNet - Enterprise Security Platform</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        dark: {
+                            100: '#1E293B',
+                            200: '#0F172A',
+                            300: '#020617',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <!-- Inter Font -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    
+    <!-- Custom Styles -->
     <style>
-        :root {
-            --primary-color: #2563eb;
-            --primary-hover: #1d4ed8;
-            --success-color: #059669;
-            --success-hover: #047857;
-            --danger-color: #dc2626;
-            --danger-hover: #b91c1c;
-            --warning-color: #d97706;
-            --warning-hover: #b45309;
-            --neutral-50: #f9fafb;
-            --neutral-100: #f3f4f6;
-            --neutral-200: #e5e7eb;
-            --neutral-300: #d1d5db;
-            --neutral-400: #9ca3af;
-            --neutral-500: #6b7280;
-            --neutral-600: #4b5563;
-            --neutral-700: #374151;
-            --neutral-800: #1f2937;
-            --neutral-900: #111827;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --radius-sm: 0.375rem;
-            --radius: 0.5rem;
-            --radius-lg: 0.75rem;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--neutral-100);
-            color: var(--neutral-800);
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
-            min-height: 100vh;
-            display: flex;
+            background-color: #0F172A;
+            color: #E2E8F0;
         }
-
-        /* Sidebar */
-        .sidebar {
-            width: 280px;
-            background: white;
-            border-right: 1px solid var(--neutral-200);
-            padding: 1.5rem;
-            position: fixed;
-            height: 100vh;
-            overflow-y: auto;
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-
-        .sidebar-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding-bottom: 1.5rem;
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid var(--neutral-200);
-        }
-
-        .sidebar-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--neutral-900);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .sidebar-title i {
-            color: var(--primary-color);
-        }
-
-        .nav-item {
-            margin-bottom: 0.5rem;
-        }
-
+        
         .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            color: var(--neutral-600);
-            text-decoration: none;
-            border-radius: var(--radius);
-            transition: all 0.2s ease;
+            @apply px-4 py-2 rounded-lg transition-all duration-200;
         }
-
+        
         .nav-link:hover {
-            background: var(--neutral-100);
-            color: var(--neutral-900);
+            @apply bg-primary-700/20 text-primary-300;
         }
-
+        
         .nav-link.active {
-            background: var(--primary-color);
-            color: white;
+            @apply bg-primary-700/30 text-primary-300;
         }
-
-        .nav-link i {
-            width: 1.25rem;
-            text-align: center;
+        
+        .btn-primary {
+            @apply px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200;
         }
-
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            margin-left: 280px;
-            padding: 2rem;
+        
+        .btn-secondary {
+            @apply px-4 py-2 bg-dark-100 text-gray-300 rounded-lg hover:bg-dark-200 transition-all duration-200;
         }
-
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--neutral-200);
-        }
-
-        .page-title {
-            font-size: 1.875rem;
-            font-weight: 700;
-            color: var(--neutral-900);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .page-title i {
-            color: var(--primary-color);
-        }
-
-        /* Cards */
+        
         .card {
-            background: white;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-md);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            @apply glass-card rounded-xl p-6;
         }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .card-title {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--neutral-800);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        /* Status Indicators */
-        .status-indicator {
-            display: inline-block;
-            width: 0.75rem;
-            height: 0.75rem;
-            border-radius: 50%;
-            position: relative;
-        }
-
-        .status-indicator::after {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(2);
-                opacity: 0;
-            }
-        }
-
-        .status-running { 
-            background-color: var(--success-color);
-        }
-        .status-running::after {
-            background-color: var(--success-color);
-        }
-        .status-stopped { 
-            background-color: var(--danger-color);
-        }
-        .status-stopped::after {
-            background-color: var(--danger-color);
-        }
-
-        /* Buttons */
-        .button {
-            padding: 0.625rem 1.25rem;
-            border: none;
-            border-radius: var(--radius);
-            font-weight: 500;
-            font-size: 0.875rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .button i {
-            font-size: 0.875rem;
-        }
-
-        .button-primary {
-            background-color: var(--primary-color);
-            color: white;
-        }
-        .button-primary:hover {
-            background-color: var(--primary-hover);
-        }
-
-        .button-success {
-            background-color: var(--success-color);
-            color: white;
-        }
-        .button-success:hover {
-            background-color: var(--success-hover);
-        }
-
-        .button-danger {
-            background-color: var(--danger-color);
-            color: white;
-        }
-        .button-danger:hover {
-            background-color: var(--danger-hover);
-        }
-
-        .button:disabled {
-            background-color: var(--neutral-300);
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-
-        /* Toast Container */
-        .toast-container {
-            position: fixed;
-            bottom: 1rem;
-            right: 1rem;
-            z-index: 1000;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1024px) {
-            .sidebar {
-                width: 240px;
-            }
-            .main-content {
-                margin-left: 240px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease;
-                z-index: 1000;
-            }
-            .sidebar.show {
-                transform: translateX(0);
-            }
-            .main-content {
-                margin-left: 0;
-            }
-            .mobile-menu-button {
-                display: block;
-            }
-        }
-
-        /* Mobile Menu Button */
-        .mobile-menu-button {
-            display: none;
-            position: fixed;
-            top: 1rem;
-            left: 1rem;
-            z-index: 1001;
-            background: white;
-            border: none;
-            border-radius: var(--radius);
-            padding: 0.5rem;
-            box-shadow: var(--shadow);
-            cursor: pointer;
-        }
-
-        .mobile-menu-button i {
-            font-size: 1.25rem;
-            color: var(--neutral-700);
-        }
-
-        /* Overlay for mobile menu */
-        .sidebar-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-        }
-
-        .sidebar-overlay.show {
-            display: block;
+        
+        .input-field {
+            @apply bg-dark-100 border border-gray-700 rounded-lg px-4 py-2 text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
         }
     </style>
-    {% block extra_css %}{% endblock %}
 </head>
-<body>
-    <!-- Mobile Menu Button -->
-    <button class="mobile-menu-button" onclick="toggleSidebar()">
-        <i class="fas fa-bars"></i>
-    </button>
-
-    <!-- Sidebar Overlay -->
-    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
-
-    <!-- Sidebar -->
-    <nav class="sidebar">
-        <div class="sidebar-header">
-            <h1 class="sidebar-title">
-                <i class="fas fa-shield-alt"></i>
-                SecureNet
-            </h1>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="glass-card fixed top-0 left-0 right-0 z-50 border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center space-x-3">
+                        <svg class="h-8 w-8 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        <span class="text-xl font-semibold text-white">SecureNet</span>
+                    </a>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
+                    <a href="/logs" class="nav-link {% if request.url.path == '/logs' %}active{% endif %}">Logs</a>
+                    <a href="/anomalies" class="nav-link {% if request.url.path == '/anomalies' %}active{% endif %}">Anomalies</a>
+                    <a href="/network" class="nav-link {% if request.url.path == '/network' %}active{% endif %}">Network</a>
+                    <a href="/settings" class="nav-link {% if request.url.path == '/settings' %}active{% endif %}">Settings</a>
+                </div>
+            </div>
         </div>
-        <ul class="nav">
-            <li class="nav-item">
-                <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">
-                    <i class="fas fa-home"></i>
-                    Dashboard
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="/logs" class="nav-link {% if request.url.path == '/logs' %}active{% endif %}">
-                    <i class="fas fa-database"></i>
-                    Log Ingestion
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="/anomalies" class="nav-link {% if request.url.path == '/anomalies' %}active{% endif %}">
-                    <i class="fas fa-radar"></i>
-                    Anomaly Detection
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="/network" class="nav-link {% if request.url.path == '/network' %}active{% endif %}">
-                    <i class="fas fa-network-wired"></i>
-                    Network Scanner
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="/settings" class="nav-link {% if request.url.path == '/settings' %}active{% endif %}">
-                    <i class="fas fa-cog"></i>
-                    Settings
-                </a>
-            </li>
-        </ul>
     </nav>
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="pt-20 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Toast Container -->
-    <div class="toast-container"></div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Mobile sidebar toggle
-        function toggleSidebar() {
-            document.querySelector('.sidebar').classList.toggle('show');
-            document.querySelector('.sidebar-overlay').classList.toggle('show');
-        }
-
-        // Global state management
-        const state = {
-            services: {
-                ingestion: { running: false, stats: null },
-                detection: { running: false, stats: null },
-                alerts: { running: false, stats: null },
-                scanner: { running: false, stats: null }
-            },
-            ws: null,
-            wsReconnectAttempts: 0,
-            maxReconnectAttempts: 5,
-            reconnectDelay: 1000,
-            apiKey: '{{ api_key }}'  // Get API key from template
-        };
-
-        // WebSocket management
-        function initializeWebSocket() {
-            if (state.ws) {
-                state.ws.close();
-            }
-
-            // Ensure API key is available
-            if (!state.apiKey) {
-                showNotification({
-                    title: 'Authentication Error',
-                    message: 'API key is required for WebSocket connection',
-                    level: 'error'
-                });
-                return;
-            }
-
-            // Create WebSocket connection with API key in query parameters
-            const wsUrl = `ws://${window.location.host}/ws/logs?api_key=${encodeURIComponent(state.apiKey)}`;
-            state.ws = new WebSocket(wsUrl);
-            
-            // Set up ping interval for connection health check
-            let pingInterval;
-            
-            state.ws.onopen = function() {
-                console.log('WebSocket connected');
-                state.wsReconnectAttempts = 0;
-                
-                // Start ping interval
-                pingInterval = setInterval(() => {
-                    if (state.ws.readyState === WebSocket.OPEN) {
-                        state.ws.send('ping');
-                    }
-                }, 30000); // Send ping every 30 seconds
-                
-                showNotification({
-                    title: 'Connection Established',
-                    message: 'Real-time updates are now active',
-                    level: 'success'
-                });
-            };
-
-            state.ws.onmessage = function(event) {
-                try {
-                    // Handle pong response
-                    if (event.data === 'pong') {
-                        return;
-                    }
-                    
-                    const data = JSON.parse(event.data);
-                    if (data.type === 'notification') {
-                        showNotification(data);
-                    }
-                    // Handle other message types in specific pages
-                    if (typeof handleWebSocketMessage === 'function') {
-                        handleWebSocketMessage(data);
-                    }
-                } catch (error) {
-                    console.error('Error processing WebSocket message:', error);
-                }
-            };
-
-            state.ws.onerror = function(error) {
-                console.error('WebSocket error:', error);
-                showNotification({
-                    title: 'Connection Error',
-                    message: 'Failed to establish real-time connection',
-                    level: 'error'
-                });
-            };
-
-            state.ws.onclose = function(event) {
-                // Clear ping interval
-                if (pingInterval) {
-                    clearInterval(pingInterval);
-                }
-                
-                console.log('WebSocket disconnected:', event.code, event.reason);
-                
-                // Handle specific close codes
-                if (event.code === 1006) {
-                    showNotification({
-                        title: 'Connection Lost',
-                        message: 'Connection was unexpectedly closed',
-                        level: 'error'
-                    });
-                } else if (event.code === 4003) {
-                    showNotification({
-                        title: 'Authentication Failed',
-                        message: event.reason || 'Invalid API key',
-                        level: 'error'
-                    });
-                } else if (state.wsReconnectAttempts < state.maxReconnectAttempts) {
-                    state.wsReconnectAttempts++;
-                    const delay = state.reconnectDelay * Math.pow(2, state.wsReconnectAttempts - 1);
-                    setTimeout(initializeWebSocket, delay);
-                    showNotification({
-                        title: 'Connection Lost',
-                        message: `Attempting to reconnect (${state.wsReconnectAttempts}/${state.maxReconnectAttempts})...`,
-                        level: 'warning'
-                    });
-                } else {
-                    showNotification({
-                        title: 'Connection Failed',
-                        message: 'Please refresh the page to reconnect',
-                        level: 'error'
-                    });
-                }
-            };
-        }
-
-        // Notification system
-        function showNotification(notification) {
-            const toast = document.createElement('div');
-            toast.className = `toast align-items-center text-white bg-${notification.level === 'error' ? 'danger' : notification.level === 'warning' ? 'warning' : 'success'} border-0`;
-            toast.setAttribute('role', 'alert');
-            toast.setAttribute('aria-live', 'assertive');
-            toast.setAttribute('aria-atomic', 'true');
-            
-            toast.innerHTML = `
-                <div class="d-flex">
-                    <div class="toast-body">
-                        <strong>${notification.title}</strong><br>
-                        ${notification.message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    <!-- Footer -->
+    <footer class="glass-card mt-12 border-t border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex justify-between items-center">
+                <div class="text-gray-400 text-sm">
+                    © 2024 SecureNet. All rights reserved.
                 </div>
-            `;
-            
-            const container = document.querySelector('.toast-container');
-            container.appendChild(toast);
-            const bsToast = new bootstrap.Toast(toast, { delay: 5000 });
-            bsToast.show();
-            
-            toast.addEventListener('hidden.bs.toast', () => {
-                toast.remove();
-            });
-        }
+                <div class="flex space-x-6">
+                    <a href="#" class="text-gray-400 hover:text-primary-400 transition-colors">Documentation</a>
+                    <a href="#" class="text-gray-400 hover:text-primary-400 transition-colors">Support</a>
+                    <a href="#" class="text-gray-400 hover:text-primary-400 transition-colors">Privacy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
 
-        // Initialize
+    <!-- Scripts -->
+    <script>
+        // Add any global JavaScript here
         document.addEventListener('DOMContentLoaded', function() {
-            initializeWebSocket();
-            // Initialize page-specific functionality
-            if (typeof initializePage === 'function') {
-                initializePage();
-            }
+            // Initialize any global components
         });
     </script>
-    {% block extra_js %}{% endblock %}
+    
+    {% block scripts %}{% endblock %}
 </body>
 </html> 

@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}Anomalies - SecureNet{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="fas fa-exclamation-triangle"></i>
+        Security Anomalies
+    </h1>
+    <div class="header-actions">
+        <button class="btn btn-primary" onclick="refreshAnomalies()">
+            <i class="fas fa-sync-alt"></i>
+            Refresh
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Anomaly Statistics -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-chart-pie"></i>
+                    Anomaly Statistics
+                </h2>
+            </div>
+            <div class="card-body">
+                <div class="stat-item">
+                    <span class="stat-label">Total Anomalies</span>
+                    <span class="stat-value" id="total-anomalies">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Critical</span>
+                    <span class="stat-value text-danger" id="critical-anomalies">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">High</span>
+                    <span class="stat-value text-warning" id="high-anomalies">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Medium</span>
+                    <span class="stat-value text-info" id="medium-anomalies">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Low</span>
+                    <span class="stat-value text-success" id="low-anomalies">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anomaly Timeline -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-chart-line"></i>
+                    Anomaly Timeline
+                </h2>
+            </div>
+            <div class="card-body">
+                <canvas id="anomaly-timeline"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Anomaly List -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-list"></i>
+            Recent Anomalies
+        </h2>
+        <div class="card-actions">
+            <div class="btn-group">
+                <button class="btn btn-outline-secondary active" data-filter="all">All</button>
+                <button class="btn btn-outline-danger" data-filter="critical">Critical</button>
+                <button class="btn btn-outline-warning" data-filter="high">High</button>
+                <button class="btn btn-outline-info" data-filter="medium">Medium</button>
+                <button class="btn btn-outline-success" data-filter="low">Low</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table" id="anomalies-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Severity</th>
+                        <th>Type</th>
+                        <th>Source</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Anomalies will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let anomalyChart;
+const API_KEY = "{{ api_key }}";
+
+// Initialize the page
+document.addEventListener('DOMContentLoaded', function() {
+    initializeAnomalyChart();
+    loadAnomalies();
+    setupWebSocket();
+});
+
+// Initialize the anomaly timeline chart
+function initializeAnomalyChart() {
+    const ctx = document.getElementById('anomaly-timeline').getContext('2d');
+    anomalyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Anomalies',
+                data: [],
+                borderColor: '#dc2626',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Load anomalies from the API
+async function loadAnomalies() {
+    try {
+        const response = await fetch('/api/anomalies', {
+            headers: {
+                'Authorization': `Bearer ${API_KEY}`
+            }
+        });
+        const data = await response.json();
+        updateAnomalyDisplay(data);
+    } catch (error) {
+        console.error('Error loading anomalies:', error);
+        showNotification('Error loading anomalies', 'error');
+    }
+}
+
+// Update the display with anomaly data
+function updateAnomalyDisplay(anomalies) {
+    // Update statistics
+    const stats = {
+        total: anomalies.length,
+        critical: anomalies.filter(a => a.severity === 'critical').length,
+        high: anomalies.filter(a => a.severity === 'high').length,
+        medium: anomalies.filter(a => a.severity === 'medium').length,
+        low: anomalies.filter(a => a.severity === 'low').length
+    };
+
+    document.getElementById('total-anomalies').textContent = stats.total;
+    document.getElementById('critical-anomalies').textContent = stats.critical;
+    document.getElementById('high-anomalies').textContent = stats.high;
+    document.getElementById('medium-anomalies').textContent = stats.medium;
+    document.getElementById('low-anomalies').textContent = stats.low;
+
+    // Update table
+    const tbody = document.querySelector('#anomalies-table tbody');
+    tbody.innerHTML = '';
+    
+    anomalies.forEach(anomaly => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${new Date(anomaly.timestamp).toLocaleString()}</td>
+            <td><span class="badge bg-${getSeverityClass(anomaly.severity)}">${anomaly.severity}</span></td>
+            <td>${anomaly.type}</td>
+            <td>${anomaly.source}</td>
+            <td>${anomaly.description}</td>
+            <td><span class="badge bg-${getStatusClass(anomaly.status)}">${anomaly.status}</span></td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="viewAnomaly('${anomaly.id}')">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-success" onclick="resolveAnomaly('${anomaly.id}')">
+                    <i class="fas fa-check"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // Update chart
+    updateAnomalyChart(anomalies);
+}
+
+// Get severity class for badges
+function getSeverityClass(severity) {
+    const classes = {
+        'critical': 'danger',
+        'high': 'warning',
+        'medium': 'info',
+        'low': 'success'
+    };
+    return classes[severity] || 'secondary';
+}
+
+// Get status class for badges
+function getStatusClass(status) {
+    const classes = {
+        'new': 'danger',
+        'investigating': 'warning',
+        'resolved': 'success',
+        'false_positive': 'info'
+    };
+    return classes[status] || 'secondary';
+}
+
+// Update the anomaly timeline chart
+function updateAnomalyChart(anomalies) {
+    // Group anomalies by hour
+    const hourlyData = {};
+    anomalies.forEach(anomaly => {
+        const hour = new Date(anomaly.timestamp).toLocaleString('en-US', {
+            hour: 'numeric',
+            hour12: true
+        });
+        hourlyData[hour] = (hourlyData[hour] || 0) + 1;
+    });
+
+    anomalyChart.data.labels = Object.keys(hourlyData);
+    anomalyChart.data.datasets[0].data = Object.values(hourlyData);
+    anomalyChart.update();
+}
+
+// Setup WebSocket connection for real-time updates
+function setupWebSocket() {
+    const ws = new WebSocket(`ws://${window.location.host}/ws/notifications?api_key=${API_KEY}`);
+    
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if (data.type === 'anomaly') {
+            loadAnomalies(); // Reload all anomalies when a new one is detected
+            showNotification(`New ${data.severity} anomaly detected: ${data.description}`, 'warning');
+        }
+    };
+
+    ws.onclose = function() {
+        console.log('WebSocket connection closed. Retrying in 5 seconds...');
+        setTimeout(setupWebSocket, 5000);
+    };
+}
+
+// View anomaly details
+async function viewAnomaly(id) {
+    try {
+        const response = await fetch(`/api/anomalies/${id}`, {
+            headers: {
+                'Authorization': `Bearer ${API_KEY}`
+            }
+        });
+        const anomaly = await response.json();
+        // TODO: Implement modal or detailed view
+        console.log('View anomaly:', anomaly);
+    } catch (error) {
+        console.error('Error viewing anomaly:', error);
+        showNotification('Error viewing anomaly details', 'error');
+    }
+}
+
+// Resolve an anomaly
+async function resolveAnomaly(id) {
+    try {
+        const response = await fetch(`/api/anomalies/${id}/resolve`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${API_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (response.ok) {
+            loadAnomalies();
+            showNotification('Anomaly resolved successfully', 'success');
+        } else {
+            throw new Error('Failed to resolve anomaly');
+        }
+    } catch (error) {
+        console.error('Error resolving anomaly:', error);
+        showNotification('Error resolving anomaly', 'error');
+    }
+}
+
+// Refresh anomalies
+function refreshAnomalies() {
+    loadAnomalies();
+    showNotification('Refreshing anomalies...', 'info');
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    // TODO: Implement notification system
+    console.log(`${type.toUpperCase()}: ${message}`);
+}
+</script>
+{% endblock %} 
