@@ -13,6 +13,7 @@
 
 - [Features](#-features)
 - [Getting Started](#-getting-started)
+- [Project Structure](#-project-structure)
 - [Documentation](#-documentation)
 - [Screenshots](#-screenshots)
 - [API Reference](#-api-reference)
@@ -28,36 +29,36 @@
 - 🔍 **Real-time Security Monitoring**
   - ML-based threat detection using scikit-learn
   - Network health monitoring and scoring
-  - Real-time security metrics
+  - Real-time security metrics via WebSocket
   - Asset protection status tracking
   - Vulnerability assessment
   - Patch status monitoring
   - Security incident tracking
-  - Live threat feed with real-time updates
+  - Live threat feed with WebSocket updates
   - Severity-based threat categorization
   - Enhanced anomaly visualization with:
     - Interactive timeline charts
     - Severity distribution analysis
-    - Real-time anomaly updates
+    - Real-time anomaly updates via WebSocket
     - Advanced filtering and search
     - Detailed anomaly inspection
     - Export capabilities
     - Trend analysis and statistics
   - **Advanced Security Scanning**
-    - Real-time security scan management
+    - Real-time security scan management via WebSocket
     - Multiple scan types:
       - Full system scans
       - Vulnerability scans
       - Compliance checks
       - Custom scans
-    - Scan scheduling and automation
+    - Scan scheduling with datetime support
     - Real-time scan progress monitoring
     - Detailed findings management
     - Severity-based finding categorization
     - Finding status tracking
     - Export capabilities for scan results
     - WebSocket-based real-time updates
-    - Interactive scan dashboard
+    - Interactive scan dashboard with charts
     - Scan history and statistics
 
 - 📊 **Interactive Dashboard**
@@ -222,6 +223,7 @@
 - Python 3.8 or higher
 - `pip` package manager
 - Virtual environment (recommended)
+- SQLite3 (included with Python)
 
 ### Installation
 
@@ -242,31 +244,30 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Configure environment:
-```bash
-cp .env.example .env
-# Edit .env with your settings
-```
-
-5. Generate secure API keys:
-```bash
-# Activate your virtual environment if not already activated
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Generate API key and Secret key
-python -c "import secrets; print('API Key:', secrets.token_urlsafe(32)); print('Secret Key:', secrets.token_hex(32))"
-```
-
-6. Update your `.env` file with the generated keys:
-```bash
-# Replace these values in your .env file
-API_KEY=your-generated-api-key-here
-SECRET_KEY=your-generated-secret-key-here
-```
-
-7. Initialize the database:
+4. Initialize the database:
 ```bash
 python scripts/init_db.py
+```
+
+5. Generate an API key:
+```bash
+python scripts/generate_api_key.py
+```
+
+6. Start the application:
+```bash
+uvicorn app:app --reload
+```
+
+The application will be available at `http://localhost:8000`
+
+### Environment Variables
+Create a `.env` file based on `.env.example`:
+```env
+SECRET_KEY=your-secret-key
+API_KEY=your-api-key
+DATABASE_URL=sqlite:///data/securenet.db
+LOG_LEVEL=INFO
 ```
 
 ### Running the System
@@ -565,41 +566,77 @@ python -m pytest tests/test_dashboard.py -v
 
 ## 🛣️ Roadmap
 
-### ✅ Phase 1: Requirements & Architecture Planning
-- [x] Define real-time or batch detection scope
-- [x] Identify threat types: anomaly detection, unauthorized access, malware behavior
-- [x] Design high-level architecture: 
-  - Logs, telemetry, AWS CloudTrail → pipeline → ML engine → alerts + dashboard
+### ✅ Phase 1: Core Infrastructure (Completed)
+- [x] Define real-time/batch detection scope
+- [x] Identify threat types (anomaly detection, unauthorized access, malware behavior)
+- [x] Design high-level architecture
+- [x] Implement FastAPI + Jinja2 dashboard
+- [x] Set up SQLite database with optimized schema
+- [x] Implement WebSocket infrastructure for real-time updates
+- [x] Create base UI components and templates
 
-### ✅ Phase 2: Core Components & Tools
-- [x] Log ingestion from file system (system logs or CloudTrail)
-- [x] SQLite-based log storage
-- [x] ML model (Isolation Forest) for anomaly detection
-- [x] Alerting system via CLI, Slack, or email
-- [x] FastAPI + Jinja2 dashboard for basic UI
+### ✅ Phase 2: Security & Monitoring (Completed)
+- [x] Implement log ingestion system
+  - [x] Multiple log source types (Syslog, File, API, Database)
+  - [x] Real-time log streaming via WebSocket
+  - [x] Advanced filtering and search
+  - [x] Export capabilities
+- [x] Deploy ML-based anomaly detection
+  - [x] Isolation Forest model integration
+  - [x] Real-time anomaly scoring
+  - [x] Interactive visualization
+- [x] Implement security scanning
+  - [x] Multiple scan types (full, vulnerability, compliance)
+  - [x] Real-time scan management
+  - [x] Findings tracking and management
+  - [x] Scan scheduling
+- [x] Set up network monitoring
+  - [x] macOS-compatible connection tracking
+  - [x] Protocol analysis
+  - [x] Device management
+  - [x] Real-time traffic visualization
 
-### 🔄 Phase 3: Cloud Integration
-- [ ] AWS GuardDuty and Security Hub integration
-- [ ] Log ingestion via S3, processing via Lambda or SageMaker
-- [ ] Terraform-based IaC
-- [ ] Docker + Kubernetes containerization
+### ✅ Phase 3: API & Authentication (Completed)
+- [x] Implement API key authentication
+- [x] Create RESTful API endpoints
+- [x] Set up WebSocket endpoints
+- [x] Implement real-time notification system
+- [x] Add API documentation
 
-### 🔒 Phase 4: Security & Compliance
+### 🔄 Phase 4: Enhanced Security (In Progress)
+- [x] Basic API authentication
 - [ ] Encrypt logs at rest and in transit
-- [ ] API authentication using OAuth2 or JWT
-- [ ] Role-based access control
-- [ ] Logging and audit trails
+- [ ] Implement role-based access control
+- [ ] Add comprehensive audit logging
+- [ ] Enhance WebSocket security
+- [ ] Add rate limiting
+- [ ] Implement IP whitelisting
 
-### 📊 Phase 5: Testing & Deployment
-- [ ] Unit/integration tests
-- [ ] Simulated attacks with Atomic Red Team or Caldera
-- [ ] GitHub Actions or CI/CD pipeline
+### 🔄 Phase 5: Cloud Integration (In Progress)
+- [ ] AWS GuardDuty and Security Hub integration
+- [ ] Log ingestion via S3
+- [ ] Terraform-based infrastructure as code
+- [ ] Docker containerization
+- [ ] Kubernetes deployment
+- [ ] Cloud-native monitoring
+
+### 🔄 Phase 6: Testing & Deployment (In Progress)
+- [x] Basic unit/integration tests
+- [ ] Comprehensive test suite
+- [ ] Simulated attack testing
+- [ ] Performance testing
+- [ ] CI/CD pipeline
+- [ ] Automated deployment
 
 ### 🚀 Future Enhancements
-- [ ] Threat intelligence feed integration (AlienVault, MISP)
-- [ ] Transformer-based NLP anomaly detection
-- [ ] GPT-style log summary module
-- [ ] Automated response playbooks (SOAR behavior)
+- [ ] Threat intelligence feed integration
+- [ ] Transformer-based NLP for log analysis
+- [ ] GPT-style log summary generation
+- [ ] Automated response playbooks
+- [ ] Advanced analytics dashboard
+- [ ] Machine learning model improvements
+- [ ] Mobile application
+- [ ] API client libraries
 
 ## 🤝 Contributing
 
@@ -630,3 +667,66 @@ Distributed under the MIT License. See [LICENSE.txt](LICENSE.txt) for details.
 <div align="center">
 Made by Pierre Mvita
 </div>
+
+## 📁 Project Structure
+
+```
+SecureNet/
+├── app.py                 # Main FastAPI application
+├── database.py           # Database models and operations
+├── requirements.txt      # Python dependencies
+├── README.md            # Project documentation
+├── LICENSE.txt          # MIT License
+├── CONTRIBUTING.md      # Contribution guidelines
+├── TODO.md             # Project roadmap
+├── .env.example        # Environment variables template
+├── .gitignore         # Git ignore rules
+├── templates/         # Jinja2 templates
+│   ├── base.html     # Base template
+│   ├── home.html     # Dashboard
+│   ├── security.html # Security center
+│   ├── logs.html     # Log management
+│   ├── network.html  # Network monitoring
+│   ├── anomalies.html # Anomaly detection
+│   └── settings.html  # System settings
+├── static/           # Static assets
+├── data/            # Data storage
+├── scripts/         # Utility scripts
+├── tests/           # Test suite
+├── models/          # ML models
+├── config/          # Configuration files
+└── src/            # Source code modules
+```
+
+## 🔌 API Reference
+
+### Authentication
+All API endpoints require authentication using an API key. Include the API key in the request header:
+```
+X-API-Key: your-api-key
+```
+
+### WebSocket Endpoints
+- `/ws/notifications` - Real-time notifications
+- `/ws/security` - Security scan updates
+- `/ws/logs` - Live log streaming
+
+### REST Endpoints
+- `GET /api/stats/overview` - System overview statistics
+- `GET /api/logs` - Log retrieval with filtering
+- `GET /api/network/traffic` - Network traffic data
+- `GET /api/security/score` - Security score
+- `GET /api/network/overview` - Network overview
+- `GET /api/network/protocols` - Protocol statistics
+- `GET /api/network/devices` - Device information
+- `GET /api/network/connections` - Active connections
+- `GET /api/settings` - System settings
+- `GET /api/anomalies` - Anomaly detection results
+
+### Security Endpoints
+- `GET /api/security/scans` - List security scans
+- `POST /api/security/scan` - Start new scan
+- `GET /api/security/scan/{id}` - Get scan details
+- `POST /api/security/scan/{id}/stop` - Stop running scan
+- `GET /api/security/scan/{id}/findings` - Get scan findings
+- `PUT /api/security/scan/{id}/findings/{finding_id}` - Update finding status
