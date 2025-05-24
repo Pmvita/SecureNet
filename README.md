@@ -43,18 +43,36 @@
   - Color-coded anomaly scores
   - Anomaly investigation and acknowledgment
 
-- 📝 **Log Management**
-  - Multiple log source support:
-    - File system logs
-    - Syslog server
-    - AWS CloudTrail
-    - Custom endpoints
-  - Real-time log streaming
-  - Log level filtering (info/warning/error)
-  - SQLite database for log storage
-  - Efficient log parsing and processing
-  - Service operation tracking
-  - Configurable service settings
+- 📝 **Advanced Log Management**
+  - Multiple log source types:
+    - Syslog (UDP/TCP)
+    - File monitoring with pattern matching
+    - API endpoints with authentication
+    - Database queries with polling
+  - Flexible log format support:
+    - Auto-detect
+    - JSON
+    - Syslog
+    - CSV
+    - Custom format patterns
+  - Real-time log streaming with WebSocket
+  - Interactive log feed with:
+    - Color-coded log levels
+    - Expandable log entries
+    - Real-time filtering
+    - Pause/Resume functionality
+    - Clear feed option
+  - Log source management:
+    - Add/Edit/Delete sources
+    - Enable/Disable sources
+    - Status monitoring
+    - Log rate tracking
+    - Tag-based organization
+  - SQLite database with:
+    - Efficient log storage
+    - Optimized indexes
+    - Log statistics
+    - Source configuration
 
 - 🔔 **Alerting System**
   - Real-time notification center
@@ -114,18 +132,38 @@ python scripts/init_db.py
 
 1. Start the dashboard:
 ```bash
-uvicorn src.app:app --reload
+uvicorn app:app --reload
 ```
 
 2. Access the dashboard at http://localhost:8000
 
 3. Configure log sources:
-   - Click "Add Log Source" in the Services tab
-   - Select source type (File, Syslog, AWS, or Custom)
-   - Configure source settings
-   - Click "Add Source" to start monitoring
+   - Navigate to the Log Ingestion page
+   - Click "Add Log Source"
+   - Select source type:
+     - Syslog: Configure host, port, and protocol (UDP/TCP)
+     - File: Set path, pattern, and recursive options
+     - API: Configure endpoint and authentication
+     - Database: Set connection and query details
+   - Choose log format:
+     - Auto-detect: Automatically identify format
+     - JSON: Parse JSON-structured logs
+     - Syslog: Standard syslog format
+     - CSV: Comma-separated values
+     - Custom: Define your own pattern
+   - Add tags for organization
+   - Save and enable the source
 
-4. Use the control panel to:
+4. Monitor logs:
+   - View real-time log feed
+   - Filter logs by content
+   - Pause/Resume feed
+   - Clear feed when needed
+   - Monitor source status
+   - Track log rates
+   - Manage multiple sources
+
+5. Use the control panel to:
    - Start/Stop log ingestion service
    - Start/Stop anomaly detection service
    - Start/Stop alert service
@@ -160,14 +198,20 @@ uvicorn src.app:app --reload
 
 SecureNet follows a modular architecture:
 - **Data Sources:** 
-  - File system logs
-  - Syslog server
-  - AWS CloudTrail
-  - Custom endpoints
+  - Syslog server (UDP/TCP)
+  - File system monitoring
+  - API endpoints
+  - Database queries
 - **Data Pipeline:** 
-  - Log ingestion → Feature extraction → ML detection
+  - Log ingestion → Format detection → Processing → Storage
   - Real-time WebSocket streaming
   - Notification broadcasting
+- **Log Management:**
+  - Source configuration and monitoring
+  - Format detection and parsing
+  - Real-time streaming
+  - Efficient storage
+  - Statistics tracking
 - **AI Engine:** 
   - Isolation Forest (scikit-learn)
   - Real-time anomaly scoring
@@ -179,9 +223,10 @@ SecureNet follows a modular architecture:
   - WebSocket for real-time updates
   - Bootstrap for modern UI
 - **Database:** 
-  - SQLite with service tracking
-  - Log source configuration
-  - Notification history
+  - SQLite with optimized schema
+  - Log source management
+  - Log storage and retrieval
+  - Statistics and monitoring
 
 ### Directory Structure
 ```
