@@ -43,6 +43,22 @@
     - Detailed anomaly inspection
     - Export capabilities
     - Trend analysis and statistics
+  - **Advanced Security Scanning**
+    - Real-time security scan management
+    - Multiple scan types:
+      - Full system scans
+      - Vulnerability scans
+      - Compliance checks
+      - Custom scans
+    - Scan scheduling and automation
+    - Real-time scan progress monitoring
+    - Detailed findings management
+    - Severity-based finding categorization
+    - Finding status tracking
+    - Export capabilities for scan results
+    - WebSocket-based real-time updates
+    - Interactive scan dashboard
+    - Scan history and statistics
 
 - 📊 **Interactive Dashboard**
   - Real-time security metrics and statistics
@@ -77,6 +93,14 @@
     - Device details inspection
     - Network data export
     - Performance trend tracking
+  - macOS-compatible network monitoring:
+    - Native `netstat` integration for connection tracking
+    - Enhanced permission handling
+    - Improved error reporting
+    - Cross-platform compatibility
+    - Real-time connection state updates
+    - Detailed protocol information
+    - Connection history tracking
 
 - 📝 **Advanced Log Management**
   - Multiple log source types:
@@ -97,17 +121,39 @@
     - Real-time filtering
     - Pause/Resume functionality
     - Clear feed option
+    - Advanced search capabilities:
+      - Full-text search
+      - Regular expression support
+      - Field-specific filtering
+      - Time-based filtering
+      - Log level filtering
+      - Source-based filtering
+    - Log analysis features:
+      - Log aggregation
+      - Pattern detection
+      - Trend analysis
+      - Statistical summaries
+      - Custom visualization
+    - Export options:
+      - CSV format
+      - JSON format
+      - PDF reports
+      - Custom templates
   - Log source management:
     - Add/Edit/Delete sources
     - Enable/Disable sources
     - Status monitoring
     - Log rate tracking
     - Tag-based organization
+    - Source health metrics
+    - Configuration validation
   - SQLite database with:
     - Efficient log storage
     - Optimized indexes
     - Log statistics
     - Source configuration
+    - Enhanced query performance
+    - Automatic maintenance
 
 - 🔔 **Alerting System**
   - Real-time notification center
@@ -126,6 +172,49 @@
 - 🔄 CI/CD pipeline
 - 📈 Advanced analytics dashboard
 - 🔐 Zero-trust security model implementation
+
+### Recent Updates
+
+#### Security Scanning Implementation
+- Added comprehensive security scanning system
+- Implemented real-time scan management interface
+- Added support for multiple scan types (full, vulnerability, compliance, custom)
+- Integrated scan scheduling with cron support
+- Added real-time scan progress monitoring via WebSocket
+- Implemented findings management with severity tracking
+- Added export capabilities for scan results
+- Enhanced security dashboard with scan statistics
+- Improved error handling and reporting for scans
+- Added interactive scan details view
+- Implemented finding status management
+- Added scan scheduling interface
+
+#### Network Monitoring Improvements
+- Enhanced macOS compatibility with native `netstat` integration
+- Improved permission handling for network connection access
+- Better error reporting and logging for network operations
+- Cross-platform compatibility improvements
+- Real-time connection state tracking
+- Detailed protocol information display
+- Connection history and trend analysis
+
+#### Log Management Enhancements
+- Advanced search capabilities with full-text and regex support
+- Log aggregation and pattern detection
+- Statistical analysis and trend visualization
+- Multiple export formats (CSV, JSON, PDF)
+- Enhanced source management with health metrics
+- Improved database performance and maintenance
+- Better error handling and reporting
+
+#### UI/UX Improvements
+- Modernized log viewer interface
+- Advanced filtering and search options
+- Interactive log analysis panels
+- Real-time log statistics
+- Export functionality
+- Improved error messages and notifications
+- Enhanced mobile responsiveness
 
 ## 🚀 Getting Started
 
@@ -229,37 +318,88 @@ uvicorn app:app --reload
 ## 📸 Screenshots
 
 ### Dashboard
-![Dasbhboard](screenshots/dashboard.png)
-*Service control panel with real-time status indicators and statistics*
+![Dashboard](screenshots/dashboard.png)
+*Comprehensive dashboard featuring:
+- Real-time security metrics and statistics
+- Network health visualization
+- Active threat monitoring
+- Asset protection status
+- Security score tracking
+- Service status indicators
+- Quick action buttons
+- Real-time data updates via WebSocket*
 
-### Log Stream
-![Log Stream](screenshots/log.png)
-*Real-time log streaming with color-coded log levels*
+### Log Management
+![Log Management](screenshots/log.png)
+*Advanced log management interface featuring:
+- Real-time log streaming with WebSocket support
+- Color-coded log levels for easy identification
+- Expandable log entries for detailed inspection
+- Advanced filtering and search capabilities
+- Log source management and monitoring
+- Export functionality for analysis
+- Log statistics and trend visualization
+- Source health metrics and status tracking*
+
+### Security Center
+![Security](screenshots/security.png)
+*Enhanced security management center featuring:
+- Real-time security scan management
+- Multiple scan type support (full, vulnerability, compliance, custom)
+- Active scan monitoring with progress tracking
+- Scan scheduling and automation
+- Findings management with severity tracking
+- Interactive scan dashboard
+- Export capabilities for scan results
+- Real-time WebSocket updates
+- Scan history and statistics
+- Finding status management
+- Severity-based categorization
+- Detailed scan inspection*
 
 ### Anomalies View
 ![Anomalies View](screenshots/anomalies.png)
-*Enhanced anomaly dashboard featuring:
+*Advanced anomaly detection dashboard featuring:
 - Real-time anomaly statistics with trend indicators
 - Interactive timeline visualization
 - Severity-based distribution analysis
 - Advanced filtering and search capabilities
 - Detailed anomaly inspection modal
-- Export functionality for analysis*
+- Export functionality for analysis
+- ML-based threat detection metrics
+- Pattern recognition visualization
+- Anomaly correlation analysis
+- Real-time WebSocket updates*
 
 ### Network Monitoring 
 ![Network Monitoring](screenshots/Network-monitoring.png)
-*Advanced Network Monitoring center featuring:
+*Comprehensive network monitoring center featuring:
 - Real-time device and connection statistics
 - Interactive network traffic visualization
 - Protocol distribution analysis
 - Dynamic network map with device discovery
 - Connection filtering and management
 - Device details inspection
-- Network data export capabilities*
+- Network data export capabilities
+- Traffic pattern analysis
+- Connection history tracking
+- Native macOS network monitoring
+- Real-time connection state updates
+- Performance trend tracking*
 
 ### Settings
 ![Settings](screenshots/settings.png)
-*Settings page with log source configuration and notification settings*
+*Configuration management interface featuring:
+- Log source configuration and management
+- Notification settings and preferences
+- API key management
+- Security scan configuration
+- Network monitoring settings
+- Alert threshold configuration
+- System preferences
+- User management
+- Export/Import settings
+- Backup and restore options*
 
 ## 📚 Documentation
 
@@ -341,12 +481,20 @@ SecureNet follows a modular architecture:
 - `PUT /api/logs/sources/{source_id}` - Update log source
 - `DELETE /api/logs/sources/{source_id}` - Delete log source
 - `POST /api/logs/sources/{source_id}/toggle` - Toggle log source
+- `GET /api/logs/search` - Advanced log search
+- `GET /api/logs/aggregate` - Get log aggregation
+- `GET /api/logs/export` - Export logs
+- `GET /api/logs/patterns` - Get log patterns
+- `GET /api/logs/trends` - Get log trends
 
 #### Network Management
 - `GET /api/network/overview` - Get network overview
 - `GET /api/network/connections` - Get network connections
 - `GET /api/network/connections/{connection_id}` - Get specific connection
 - `POST /api/network/connections/{connection_id}/block` - Block connection
+- `GET /api/network/stats` - Get network statistics
+- `GET /api/network/protocols` - Get protocol distribution
+- `GET /api/network/history` - Get connection history
 
 #### Security Management
 - `GET /api/anomalies` - Get all anomalies

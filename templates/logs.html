@@ -9,10 +9,19 @@
         Log Management
     </h1>
     <div class="header-actions">
-        <button class="button button-secondary" onclick="exportLogs()">
-            <i class="fas fa-download"></i>
-            Export Logs
-        </button>
+        <div class="dropdown">
+            <button class="button button-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="fas fa-download"></i>
+                Export
+                <i class="fas fa-chevron-down ml-2"></i>
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" onclick="exportLogs('csv')">CSV Format</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportLogs('json')">JSON Format</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportLogs('pdf')">PDF Report</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportLogs('elastic')">Elasticsearch Format</a></li>
+            </ul>
+        </div>
         <button class="button button-primary" onclick="addLogSource()">
             <i class="fas fa-plus"></i>
             Add Log Source
@@ -20,10 +29,10 @@
     </div>
 </div>
 
-<!-- Log Statistics -->
+<!-- Quick Stats Cards -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
     <!-- Total Logs -->
-    <div class="card">
+    <div class="card hover-card">
         <div class="flex items-center justify-between">
             <div>
                 <h3 class="text-sm font-medium text-gray-400">Total Logs (24h)</h3>
@@ -37,7 +46,7 @@
     </div>
 
     <!-- Active Sources -->
-    <div class="card">
+    <div class="card hover-card">
         <div class="flex items-center justify-between">
             <div>
                 <h3 class="text-sm font-medium text-gray-400">Active Sources</h3>
@@ -51,7 +60,7 @@
     </div>
 
     <!-- Log Rate -->
-    <div class="card">
+    <div class="card hover-card">
         <div class="flex items-center justify-between">
             <div>
                 <h3 class="text-sm font-medium text-gray-400">Current Log Rate</h3>
@@ -65,7 +74,7 @@
     </div>
 
     <!-- Error Rate -->
-    <div class="card">
+    <div class="card hover-card">
         <div class="flex items-center justify-between">
             <div>
                 <h3 class="text-sm font-medium text-gray-400">Error Rate (24h)</h3>
@@ -79,104 +88,155 @@
     </div>
 </div>
 
-<!-- Log Rate Chart -->
-<div class="card mb-6">
-    <div class="card-header">
-        <h2 class="card-title">
-            <i class="fas fa-chart-line"></i>
-            Log Rate Trend
-        </h2>
-        <div class="card-actions">
-            <div class="flex space-x-2">
-                <button onclick="updateLogRateChart('1h')" class="button button-secondary text-xs" id="rateRange1h">1H</button>
-                <button onclick="updateLogRateChart('24h')" class="button button-primary text-xs" id="rateRange24h">24H</button>
-                <button onclick="updateLogRateChart('7d')" class="button button-secondary text-xs" id="rateRange7d">7D</button>
-            </div>
-        </div>
-    </div>
-    <div class="h-64">
-        <canvas id="logRateChart"></canvas>
-    </div>
-</div>
-
-<!-- Log Sources -->
-<div class="card mb-6">
-    <div class="card-header">
-        <h2 class="card-title">
-            <i class="fas fa-list"></i>
-            Log Sources
-        </h2>
-        <div class="card-actions">
-            <div class="input-group" style="width: 300px;">
-                <input type="text" class="form-control" id="source-filter" placeholder="Filter sources...">
-                <button class="button" onclick="clearSourceFilter()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <button class="button" onclick="refreshLogSources()">
-                <i class="fas fa-sync-alt"></i>
-                Refresh
-            </button>
-        </div>
-    </div>
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Last Update</th>
-                    <th>Logs/Min</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="log-sources">
-                <!-- Filled by JavaScript -->
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Live Log Feed -->
-<div class="card">
-    <div class="card-header">
-        <h2 class="card-title">
-            <i class="fas fa-stream"></i>
-            Live Log Feed
-        </h2>
-        <div class="card-actions">
-            <div class="flex space-x-2">
-                <select class="form-select" id="log-level-filter">
-                    <option value="all">All Levels</option>
-                    <option value="error">Error</option>
-                    <option value="warning">Warning</option>
-                    <option value="info">Info</option>
-                    <option value="debug">Debug</option>
-                </select>
-                <select class="form-select" id="source-filter">
-                    <option value="all">All Sources</option>
-                    <!-- Filled by JavaScript -->
-                </select>
-                <div class="input-group" style="width: 300px;">
-                    <input type="text" class="form-control" id="log-filter" placeholder="Search logs...">
-                    <button class="button" onclick="clearLogFilter()">
-                        <i class="fas fa-times"></i>
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left Column: Log Sources and Analysis -->
+    <div class="lg:col-span-1 space-y-6">
+        <!-- Log Sources Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-list"></i>
+                    Log Sources
+                </h2>
+                <div class="card-actions">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="source-filter" placeholder="Filter sources...">
+                        <button class="button" onclick="clearSourceFilter()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <button class="button" onclick="refreshLogSources()">
+                        <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
-                <button class="button" onclick="clearLogFeed()">
-                    <i class="fas fa-trash"></i>
-                    Clear
-                </button>
-                <button class="button" onclick="toggleLogFeed()">
-                    <i class="fas fa-pause" id="feed-toggle-icon"></i>
-                    <span id="feed-toggle-text">Pause</span>
-                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Rate</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-sources">
+                        <!-- Filled by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Log Analysis Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-chart-bar"></i>
+                    Log Analysis
+                </h2>
+                <div class="card-actions">
+                    <select class="form-select" id="analysisType" onchange="updateAnalysis()">
+                        <option value="trend">Trends</option>
+                        <option value="distribution">Distribution</option>
+                        <option value="sources">Sources</option>
+                        <option value="correlation">Correlation</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="h-64">
+                    <canvas id="analysisChart"></canvas>
+                </div>
+                <div class="analysis-stats mt-4">
+                    <div id="analysisStats" class="grid grid-cols-2 gap-4">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="log-feed" id="log-feed">
-        <!-- Filled by JavaScript -->
+
+    <!-- Right Column: Log Feed -->
+    <div class="lg:col-span-2">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-stream"></i>
+                    Live Log Feed
+                </h2>
+                <div class="card-actions">
+                    <div class="flex space-x-2">
+                        <button class="button button-secondary" onclick="toggleLogFeed()">
+                            <i class="fas fa-pause" id="feed-toggle-icon"></i>
+                            <span id="feed-toggle-text">Pause</span>
+                        </button>
+                        <button class="button button-secondary" onclick="clearLogFeed()">
+                            <i class="fas fa-trash"></i>
+                            Clear
+                        </button>
+                        <button class="button button-primary" onclick="showAdvancedSearch()">
+                            <i class="fas fa-search-plus"></i>
+                            Advanced Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced Filter Bar -->
+            <div class="filter-bar p-4 bg-neutral-800 border-b border-neutral-700">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="filter-group">
+                        <label class="filter-label">Level</label>
+                        <select class="form-select" id="log-level-filter">
+                            <option value="all">All Levels</option>
+                            <option value="error">Error</option>
+                            <option value="warning">Warning</option>
+                            <option value="info">Info</option>
+                            <option value="debug">Debug</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Source</label>
+                        <select class="form-select" id="source-filter">
+                            <option value="all">All Sources</option>
+                            <!-- Filled by JavaScript -->
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Time Range</label>
+                        <select class="form-select" id="time-range-filter">
+                            <option value="5m">Last 5 minutes</option>
+                            <option value="15m">Last 15 minutes</option>
+                            <option value="1h">Last hour</option>
+                            <option value="24h" selected>Last 24 hours</option>
+                            <option value="7d">Last 7 days</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Search</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="log-filter" placeholder="Search logs...">
+                            <button class="button" onclick="toggleRegex()" id="regexButton" title="Toggle regex search">
+                                <i class="fas fa-code" id="regexIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced Log Feed -->
+            <div class="log-feed-container">
+                <div class="log-feed" id="log-feed">
+                    <div class="empty-state" id="empty-state" style="display: none;">
+                        <i class="fas fa-stream empty-state-icon"></i>
+                        <div class="empty-state-text">No logs to display</div>
+                        <div class="empty-state-subtext">Logs will appear here as they are received</div>
+                    </div>
+                    <!-- Log entries will be inserted here -->
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -335,183 +395,329 @@
         </div>
     </div>
 </div>
+
+<!-- Advanced Search Modal -->
+<div class="modal fade" id="advancedSearchModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-search-plus"></i>
+                    Advanced Search
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="advancedSearchForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Search Pattern</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="searchPattern" placeholder="Enter search pattern...">
+                                <button class="button" type="button" onclick="toggleRegex()">
+                                    <i class="fas fa-code" id="regexIcon"></i>
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">Use regex for advanced patterns</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Search Fields</label>
+                            <select class="form-select" id="searchFields" multiple>
+                                <option value="message">Message</option>
+                                <option value="source">Source</option>
+                                <option value="level">Level</option>
+                                <option value="metadata">Metadata</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Time Range</label>
+                            <div class="input-group">
+                                <input type="datetime-local" class="form-control" id="timeFrom">
+                                <span class="input-group-text">to</span>
+                                <input type="datetime-local" class="form-control" id="timeTo">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Correlation</label>
+                            <select class="form-select" id="correlationType">
+                                <option value="none">No Correlation</option>
+                                <option value="time">Time-based</option>
+                                <option value="source">Source-based</option>
+                                <option value="pattern">Pattern-based</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Aggregation</label>
+                            <div class="btn-group w-100">
+                                <button type="button" class="button" onclick="setAggregation('count')">Count</button>
+                                <button type="button" class="button" onclick="setAggregation('avg')">Average</button>
+                                <button type="button" class="button" onclick="setAggregation('sum')">Sum</button>
+                                <button type="button" class="button" onclick="setAggregation('min')">Min</button>
+                                <button type="button" class="button" onclick="setAggregation('max')">Max</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="button button-primary" onclick="applyAdvancedSearch()">Search</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stack Trace Modal -->
+<div class="modal fade" id="stackTraceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Stack Trace</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="stackTraceContent" class="bg-neutral-900 p-4 rounded-lg overflow-x-auto"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-    .log-feed {
-        height: 600px;
-        overflow-y: auto;
-        background: var(--neutral-900);
-        color: var(--neutral-100);
-        font-family: 'JetBrains Mono', monospace;
-        padding: 1rem;
-        border-radius: var(--radius);
+    /* Enhanced Card Styles */
+    .hover-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .hover-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Enhanced Log Feed Styles */
+    .log-feed-container {
         position: relative;
+        height: calc(100vh - 400px);
+        min-height: 400px;
+        overflow: hidden;
+    }
+
+    .log-feed {
+        height: 100%;
+        overflow-y: auto;
+        padding: 1rem;
+        background: var(--neutral-900);
     }
 
     .log-entry {
-        margin: 0.25rem 0;
-        padding: 0.75rem;
-        border-radius: var(--radius-sm);
-        font-size: 0.875rem;
-        line-height: 1.5;
         display: grid;
-        grid-template-columns: auto 80px 120px 1fr;
+        grid-template-columns: auto 100px 150px 1fr auto;
         gap: 1rem;
-        align-items: start;
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--neutral-800);
         transition: background-color 0.2s;
+        cursor: pointer;
+        align-items: center;
     }
 
     .log-entry:hover {
-        background: rgba(255, 255, 255, 0.05);
+        background-color: var(--neutral-800);
     }
 
     .log-entry.expanded {
-        background: rgba(255, 255, 255, 0.05);
+        background-color: var(--neutral-800);
     }
 
-    .log-timestamp {
+    .log-entry .log-timestamp {
         color: var(--neutral-400);
-        font-size: 0.75rem;
+        font-family: monospace;
         white-space: nowrap;
     }
 
-    .log-level {
+    .log-entry .log-level {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
         font-weight: 600;
         text-align: center;
-        padding: 0.25rem 0.5rem;
-        border-radius: var(--radius-sm);
-        font-size: 0.75rem;
+        text-transform: uppercase;
     }
 
-    .log-level.error {
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
-    }
+    .log-entry .log-level.error { background-color: rgba(239, 68, 68, 0.2); color: #ef4444; }
+    .log-entry .log-level.warning { background-color: rgba(234, 179, 8, 0.2); color: #eab308; }
+    .log-entry .log-level.info { background-color: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+    .log-entry .log-level.debug { background-color: rgba(156, 163, 175, 0.2); color: #9ca3af; }
 
-    .log-level.warning {
-        background: rgba(234, 179, 8, 0.1);
-        color: #eab308;
-    }
-
-    .log-level.info {
-        background: rgba(59, 130, 246, 0.1);
-        color: #3b82f6;
-    }
-
-    .log-level.debug {
-        background: rgba(156, 163, 175, 0.1);
-        color: #9ca3af;
-    }
-
-    .log-source {
-        color: var(--neutral-400);
-        font-size: 0.75rem;
+    .log-entry .log-source {
+        color: var(--neutral-300);
+        font-weight: 500;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .log-message {
-        color: var(--neutral-100);
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .log-entry.expanded .log-message {
+    .log-entry .log-message {
+        color: var(--neutral-200);
+        font-family: monospace;
         white-space: pre-wrap;
-        overflow: visible;
+        word-break: break-word;
     }
 
-    .log-entry .log-details {
-        display: none;
-        grid-column: 1 / -1;
-        margin-top: 0.5rem;
-        padding-top: 0.5rem;
-        border-top: 1px solid var(--neutral-800);
-        font-size: 0.75rem;
+    .log-entry .log-actions {
+        display: flex;
+        gap: 0.5rem;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .log-entry:hover .log-actions {
+        opacity: 1;
+    }
+
+    .log-action-button {
+        padding: 0.25rem;
         color: var(--neutral-400);
+        background: none;
+        border: none;
+        border-radius: 0.25rem;
+        cursor: pointer;
+        transition: color 0.2s, background-color 0.2s;
+    }
+
+    .log-action-button:hover {
+        color: var(--neutral-200);
+        background-color: var(--neutral-700);
+    }
+
+    .log-details {
+        grid-column: 1 / -1;
+        display: none;
+        padding: 1rem;
+        background-color: var(--neutral-800);
+        border-radius: 0.25rem;
+        margin-top: 0.5rem;
     }
 
     .log-entry.expanded .log-details {
         display: block;
     }
 
-    .source-status {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.25rem 0.75rem;
-        border-radius: var(--radius-full);
-        font-size: 0.75rem;
-        font-weight: 500;
+    .log-details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
     }
 
-    .source-status.active {
-        background: rgba(34, 197, 94, 0.1);
-        color: #22c55e;
-    }
-
-    .source-status.inactive {
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
-    }
-
-    .source-status.warning {
-        background: rgba(234, 179, 8, 0.1);
-        color: #eab308;
-    }
-
-    .source-actions {
+    .log-detail-item {
         display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .log-detail-label {
+        color: var(--neutral-400);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+
+    .log-detail-value {
+        color: var(--neutral-200);
+        font-family: monospace;
+        word-break: break-all;
+    }
+
+    /* Enhanced Filter Bar Styles */
+    .filter-bar {
+        background-color: var(--neutral-800);
+        border-bottom: 1px solid var(--neutral-700);
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
         gap: 0.5rem;
     }
 
-    .source-actions button {
-        padding: 0.25rem 0.5rem;
+    .filter-label {
+        color: var(--neutral-400);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+
+    /* Empty State Styles */
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: var(--neutral-500);
+        text-align: center;
+        padding: 2rem;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state-text {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state-subtext {
         font-size: 0.875rem;
     }
 
-    .form-label {
-        font-weight: 500;
-        color: var(--neutral-700);
+    /* Analysis Stats Styles */
+    .analysis-stats {
+        padding: 1rem;
+        background-color: var(--neutral-800);
+        border-radius: 0.25rem;
     }
 
-    .form-control, .form-select {
-        border-color: var(--neutral-300);
-    }
-
-    .form-control:focus, .form-select:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-    }
-
-    /* Loading animation */
-    .loading-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
+    .stat-item {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10;
+        flex-direction: column;
+        gap: 0.25rem;
     }
 
-    .loading-spinner {
-        width: 2rem;
-        height: 2rem;
-        border: 3px solid var(--neutral-700);
-        border-top-color: var(--primary-500);
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
+    .stat-label {
+        color: var(--neutral-400);
+        font-size: 0.75rem;
+        text-transform: uppercase;
     }
 
-    @keyframes spin {
-        to { transform: rotate(360deg); }
+    .stat-value {
+        color: var(--neutral-200);
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+        .log-entry {
+            grid-template-columns: auto 80px 120px 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .log-entry {
+            grid-template-columns: auto 80px 1fr;
+        }
+        .log-source {
+            display: none;
+        }
     }
 </style>
 {% endblock %}
@@ -604,13 +810,6 @@
                 tr.innerHTML = `
                     <td>${source.name}</td>
                     <td>${source.type}</td>
-                    <td>
-                        <span class="source-status ${source.status}">
-                            <i class="fas fa-circle"></i>
-                            ${source.status}
-                        </span>
-                    </td>
-                    <td>${new Date(source.last_update).toLocaleString()}</td>
                     <td>${source.logs_per_minute}</td>
                     <td>
                         <div class="source-actions">
@@ -909,7 +1108,7 @@
         
         entries.forEach(entry => {
             const message = entry.querySelector('.log-message').textContent.toLowerCase();
-            entry.style.display = message.includes(logFilter) ? 'flex' : 'none';
+            entry.style.display = message.includes(logFilter) ? 'grid' : 'none';
         });
     });
 
@@ -918,7 +1117,7 @@
         document.getElementById('log-filter').value = '';
         logFilter = '';
         document.querySelectorAll('.log-entry').forEach(entry => {
-            entry.style.display = 'flex';
+            entry.style.display = 'grid';
         });
     }
 
@@ -1136,37 +1335,161 @@
         }
     }
 
-    // Enhanced log entry display
+    // Enhanced log entry creation with better formatting and metadata
     function createLogEntry(log) {
         const entry = document.createElement('div');
-        entry.className = 'log-entry';
+        entry.className = `log-entry ${log.level.toLowerCase()}`;
         
         const details = {
             timestamp: new Date(log.timestamp).toLocaleString(),
             level: log.level.toLowerCase(),
             source: log.source,
             message: log.message,
-            metadata: log.metadata || {}
+            metadata: log.metadata || {},
+            trace: log.trace || null,
+            context: log.context || {}
         };
         
         entry.innerHTML = `
             <span class="log-timestamp">${details.timestamp}</span>
             <span class="log-level ${details.level}">${details.level.toUpperCase()}</span>
             <span class="log-source">${details.source}</span>
-            <span class="log-message">${details.message}</span>
+            <span class="log-message">${formatLogMessage(details.message)}</span>
+            <div class="log-actions">
+                <button class="log-action-button" onclick="copyLogMessage(event, '${details.message}')" title="Copy message">
+                    <i class="fas fa-copy"></i>
+                </button>
+                <button class="log-action-button" onclick="copyLogDetails(event, ${JSON.stringify(details)})" title="Copy details">
+                    <i class="fas fa-code"></i>
+                </button>
+                ${details.trace ? `
+                    <button class="log-action-button" onclick="showStackTrace(event, ${JSON.stringify(details.trace)})" title="Show stack trace">
+                        <i class="fas fa-bug"></i>
+                    </button>
+                ` : ''}
+            </div>
             <div class="log-details">
-                ${Object.entries(details.metadata).map(([key, value]) => `
-                    <div><strong>${key}:</strong> ${value}</div>
-                `).join('')}
+                <div class="log-details-grid">
+                    ${Object.entries(details.metadata).map(([key, value]) => `
+                        <div class="log-detail-item">
+                            <span class="log-detail-label">${key}</span>
+                            <span class="log-detail-value">${formatMetadataValue(value)}</span>
+                        </div>
+                    `).join('')}
+                    ${Object.entries(details.context).map(([key, value]) => `
+                        <div class="log-detail-item">
+                            <span class="log-detail-label">${key}</span>
+                            <span class="log-detail-value">${formatMetadataValue(value)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                ${details.trace ? `
+                    <div class="mt-4">
+                        <h4 class="text-sm font-semibold text-neutral-400 mb-2">Stack Trace</h4>
+                        <pre class="bg-neutral-900 p-4 rounded-lg overflow-x-auto">${formatStackTrace(details.trace)}</pre>
+                    </div>
+                ` : ''}
             </div>
         `;
         
-        entry.addEventListener('click', function() {
-            this.classList.toggle('expanded');
+        entry.addEventListener('click', function(e) {
+            if (!e.target.closest('.log-actions')) {
+                this.classList.toggle('expanded');
+            }
         });
         
         return entry;
     }
+
+    // Format log message with syntax highlighting
+    function formatLogMessage(message) {
+        // Add syntax highlighting for common patterns
+        return message
+            .replace(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/g, '<span class="text-blue-400">$1</span>')
+            .replace(/(https?:\/\/[^\s]+)/g, '<span class="text-green-400">$1</span>')
+            .replace(/([A-Z][A-Z0-9_]+)/g, '<span class="text-yellow-400">$1</span>')
+            .replace(/(\d+)/g, '<span class="text-purple-400">$1</span>');
+    }
+
+    // Format metadata values
+    function formatMetadataValue(value) {
+        if (typeof value === 'object') {
+            return `<pre class="text-sm">${JSON.stringify(value, null, 2)}</pre>`;
+        }
+        return value;
+    }
+
+    // Format stack trace
+    function formatStackTrace(trace) {
+        return trace
+            .split('\n')
+            .map(line => line.replace(/at\s+(.+?)\s+\((.+?)\)/g, 'at <span class="text-blue-400">$1</span> (<span class="text-green-400">$2</span>)'))
+            .join('\n');
+    }
+
+    // Show stack trace in modal
+    function showStackTrace(event, trace) {
+        event.stopPropagation();
+        const modal = new bootstrap.Modal(document.getElementById('stackTraceModal'));
+        document.getElementById('stackTraceContent').innerHTML = formatStackTrace(trace);
+        modal.show();
+    }
+
+    // Enhanced log filtering
+    function applyFilters() {
+        const levelFilter = document.getElementById('log-level-filter').value;
+        const sourceFilter = document.getElementById('source-filter').value;
+        const searchFilter = document.getElementById('log-filter').value.toLowerCase();
+        const timeRange = document.getElementById('time-range-filter').value;
+        
+        const entries = document.querySelectorAll('.log-entry');
+        let visibleCount = 0;
+        
+        entries.forEach(entry => {
+            const level = entry.querySelector('.log-level').textContent.toLowerCase();
+            const source = entry.querySelector('.log-source').textContent;
+            const message = entry.querySelector('.log-message').textContent.toLowerCase();
+            const timestamp = new Date(entry.querySelector('.log-timestamp').textContent);
+            
+            const levelMatch = levelFilter === 'all' || level === levelFilter;
+            const sourceMatch = sourceFilter === 'all' || source === sourceFilter;
+            const searchMatch = !searchFilter || message.includes(searchFilter);
+            const timeMatch = isWithinTimeRange(timestamp, timeRange);
+            
+            const shouldShow = levelMatch && sourceMatch && searchMatch && timeMatch;
+            entry.style.display = shouldShow ? 'grid' : 'none';
+            
+            if (shouldShow) visibleCount++;
+        });
+        
+        // Show/hide empty state
+        const emptyState = document.getElementById('empty-state');
+        emptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
+    }
+
+    // Check if timestamp is within selected time range
+    function isWithinTimeRange(timestamp, range) {
+        const now = new Date();
+        const diff = now - timestamp;
+        
+        switch (range) {
+            case '5m': return diff <= 5 * 60 * 1000;
+            case '15m': return diff <= 15 * 60 * 1000;
+            case '1h': return diff <= 60 * 60 * 1000;
+            case '24h': return diff <= 24 * 60 * 60 * 1000;
+            case '7d': return diff <= 7 * 24 * 60 * 60 * 1000;
+            default: return true;
+        }
+    }
+
+    // Set up filter event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        const filters = ['log-level-filter', 'source-filter', 'log-filter', 'time-range-filter'];
+        filters.forEach(id => {
+            document.getElementById(id).addEventListener('change', applyFilters);
+        });
+        document.getElementById('log-filter').addEventListener('input', applyFilters);
+    });
 
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
@@ -1174,5 +1497,233 @@
         initializeCharts();
         setupWebSocket();
     });
+
+    // Advanced Search Functions
+    let isRegexEnabled = false;
+
+    function toggleRegex() {
+        isRegexEnabled = !isRegexEnabled;
+        const icon = document.getElementById('regexIcon');
+        icon.style.color = isRegexEnabled ? '#3b82f6' : '';
+        document.getElementById('searchPattern').placeholder = isRegexEnabled ? 
+            'Enter regex pattern...' : 'Enter search pattern...';
+    }
+
+    function showAdvancedSearch() {
+        const modal = new bootstrap.Modal(document.getElementById('advancedSearchModal'));
+        modal.show();
+    }
+
+    async function applyAdvancedSearch() {
+        const searchParams = {
+            pattern: document.getElementById('searchPattern').value,
+            isRegex: isRegexEnabled,
+            fields: Array.from(document.getElementById('searchFields').selectedOptions).map(opt => opt.value),
+            timeFrom: document.getElementById('timeFrom').value,
+            timeTo: document.getElementById('timeTo').value,
+            correlation: document.getElementById('correlationType').value,
+            aggregation: currentAggregation
+        };
+
+        try {
+            const response = await fetch('/api/logs/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': '{{ api_key }}'
+                },
+                body: JSON.stringify(searchParams)
+            });
+
+            if (!response.ok) throw new Error('Search failed');
+            
+            const results = await response.json();
+            displaySearchResults(results);
+            updateAnalysis(results);
+            
+            bootstrap.Modal.getInstance(document.getElementById('advancedSearchModal')).hide();
+        } catch (error) {
+            console.error('Advanced search error:', error);
+            showNotification({
+                title: 'Search Error',
+                message: error.message,
+                level: 'error'
+            });
+        }
+    }
+
+    // Log Analysis Functions
+    let analysisChart = null;
+    let currentAggregation = 'count';
+
+    function setAggregation(type) {
+        currentAggregation = type;
+        document.querySelectorAll('.btn-group .button').forEach(btn => {
+            btn.classList.remove('button-primary');
+        });
+        event.target.classList.add('button-primary');
+        updateAnalysis();
+    }
+
+    async function updateAnalysis() {
+        const analysisType = document.getElementById('analysisType').value;
+        
+        try {
+            const response = await fetch(`/api/logs/analysis?type=${analysisType}&aggregation=${currentAggregation}`, {
+                headers: {
+                    'X-API-Key': '{{ api_key }}'
+                }
+            });
+
+            if (!response.ok) throw new Error('Failed to fetch analysis data');
+            
+            const data = await response.json();
+            updateAnalysisChart(data);
+            updateAnalysisStats(data.stats);
+        } catch (error) {
+            console.error('Analysis update error:', error);
+            showNotification({
+                title: 'Analysis Error',
+                message: error.message,
+                level: 'error'
+            });
+        }
+    }
+
+    function updateAnalysisChart(data) {
+        const ctx = document.getElementById('analysisChart').getContext('2d');
+        
+        if (analysisChart) {
+            analysisChart.destroy();
+        }
+
+        const chartConfig = getChartConfig(data);
+        analysisChart = new Chart(ctx, chartConfig);
+    }
+
+    function getChartConfig(data) {
+        const analysisType = document.getElementById('analysisType').value;
+        
+        switch (analysisType) {
+            case 'trend':
+                return {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Log Count',
+                            data: data.values,
+                            borderColor: '#3b82f6',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: getChartOptions('Log Trends Over Time')
+                };
+            case 'distribution':
+                return {
+                    type: 'pie',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            data: data.values,
+                            backgroundColor: [
+                                '#ef4444', // error
+                                '#eab308', // warning
+                                '#3b82f6', // info
+                                '#9ca3af'  // debug
+                            ]
+                        }]
+                    },
+                    options: getChartOptions('Log Level Distribution')
+                };
+            // Add more chart types as needed
+        }
+    }
+
+    function getChartOptions(title) {
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: title,
+                    color: '#9ca3af'
+                },
+                legend: {
+                    position: 'right',
+                    labels: {
+                        color: '#9ca3af'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#9ca3af'
+                    }
+                },
+                y: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#9ca3af'
+                    }
+                }
+            }
+        };
+    }
+
+    function updateAnalysisStats(stats) {
+        const statsContainer = document.getElementById('analysisStats');
+        statsContainer.innerHTML = Object.entries(stats)
+            .map(([key, value]) => `
+                <div class="stat-item">
+                    <span class="stat-label">${key}</span>
+                    <span class="stat-value">${value}</span>
+                </div>
+            `).join('');
+    }
+
+    // Enhanced Export Functions
+    async function exportLogs(format) {
+        try {
+            const response = await fetch(`/api/logs/export?format=${format}`, {
+                headers: {
+                    'X-API-Key': '{{ api_key }}'
+                }
+            });
+
+            if (!response.ok) throw new Error('Export failed');
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `securenet-logs-${new Date().toISOString().split('T')[0]}.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showNotification({
+                title: 'Success',
+                message: `Logs exported in ${format.toUpperCase()} format`,
+                level: 'success'
+            });
+        } catch (error) {
+            console.error('Export error:', error);
+            showNotification({
+                title: 'Export Error',
+                message: error.message,
+                level: 'error'
+            });
+        }
+    }
 </script>
 {% endblock %} 

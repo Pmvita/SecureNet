@@ -9,15 +9,76 @@
         Network Monitoring
     </h1>
     <div class="header-actions">
-        <div class="flex space-x-2">
-            <button class="btn btn-outline-secondary" onclick="exportNetworkData()">
-                <i class="fas fa-download"></i>
-                Export
-            </button>
-            <button class="btn btn-primary" onclick="refreshNetwork()">
-                <i class="fas fa-sync-alt"></i>
-                Refresh
-            </button>
+        <div class="flex space-x-4">
+            <!-- Network Monitoring Service Controls -->
+            <div class="service-controls bg-gray-800 rounded-lg p-3 flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <div id="monitoring-status" class="status-badge">
+                        <i class="fas fa-circle"></i>
+                        <span class="status-text">Stopped</span>
+                    </div>
+                    <div class="text-sm text-gray-400" id="last-scan">
+                        Last scan: Never
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="btn btn-success btn-sm" id="start-monitoring" onclick="toggleMonitoring(true)">
+                        <i class="fas fa-play"></i>
+                        Start
+                    </button>
+                    <button class="btn btn-danger btn-sm" id="stop-monitoring" onclick="toggleMonitoring(false)" disabled>
+                        <i class="fas fa-stop"></i>
+                        Stop
+                    </button>
+                </div>
+            </div>
+            <div class="flex space-x-2">
+                <button class="btn btn-outline-secondary" onclick="exportNetworkData()">
+                    <i class="fas fa-download"></i>
+                    Export
+                </button>
+                <button class="btn btn-primary" onclick="refreshNetwork()">
+                    <i class="fas fa-sync-alt"></i>
+                    Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monitoring Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+    <div class="card bg-gray-800">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Devices Discovered</p>
+                <p class="mt-2 text-3xl font-semibold text-white" id="devices-discovered">0</p>
+            </div>
+            <div class="p-3 bg-blue-500/10 rounded-lg">
+                <i class="fas fa-server text-blue-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    <div class="card bg-gray-800">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Connections Tracked</p>
+                <p class="mt-2 text-3xl font-semibold text-white" id="connections-tracked">0</p>
+            </div>
+            <div class="p-3 bg-green-500/10 rounded-lg">
+                <i class="fas fa-plug text-green-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    <div class="card bg-gray-800">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Traffic Analyzed</p>
+                <p class="mt-2 text-3xl font-semibold text-white" id="traffic-analyzed">0</p>
+            </div>
+            <div class="p-3 bg-purple-500/10 rounded-lg">
+                <i class="fas fa-chart-line text-purple-500 text-xl"></i>
+            </div>
         </div>
     </div>
 </div>
@@ -215,10 +276,22 @@ let protocolDistributionChart;
 let networkMap;
 const API_KEY = "{{ api_key }}";
 
+// Network monitoring state
+let monitoringStatus = {
+    running: false,
+    lastScan: null,
+    stats: {
+        devicesDiscovered: 0,
+        connectionsTracked: 0,
+        trafficAnalyzed: 0
+    }
+};
+
 // Initialize the page
 document.addEventListener('DOMContentLoaded', function() {
     initializeCharts();
     initializeNetworkMap();
+    initMonitoringStatus();
     loadNetworkData();
     setupWebSocket();
     setupEventListeners();
@@ -396,19 +469,19 @@ async function loadNetworkData(timeRange = '24h') {
     try {
         const [overview, traffic, protocols, devices, connections] = await Promise.all([
             fetch('/api/network/overview', {
-                headers: { 'Authorization': `Bearer ${API_KEY}` }
+                headers: { 'X-API-Key': API_KEY }
             }).then(r => r.json()),
             fetch(`/api/network/traffic?range=${timeRange}`, {
-                headers: { 'Authorization': `Bearer ${API_KEY}` }
+                headers: { 'X-API-Key': API_KEY }
             }).then(r => r.json()),
             fetch('/api/network/protocols', {
-                headers: { 'Authorization': `Bearer ${API_KEY}` }
+                headers: { 'X-API-Key': API_KEY }
             }).then(r => r.json()),
             fetch('/api/network/devices', {
-                headers: { 'Authorization': `Bearer ${API_KEY}` }
+                headers: { 'X-API-Key': API_KEY }
             }).then(r => r.json()),
             fetch('/api/network/connections', {
-                headers: { 'Authorization': `Bearer ${API_KEY}` }
+                headers: { 'X-API-Key': API_KEY }
             }).then(r => r.json())
         ]);
 
@@ -608,8 +681,9 @@ function setupWebSocket() {
     
     ws.onmessage = function(event) {
         const data = JSON.parse(event.data);
-        if (data.type === 'network') {
-            loadNetworkData(); // Reload all network data when updates are received
+        if (data.type === 'network_update') {
+            // Update network data
+            updateNetworkDisplay(data.data);
         }
     };
 
@@ -623,9 +697,7 @@ function setupWebSocket() {
 async function viewDevice(id) {
     try {
         const response = await fetch(`/api/network/devices/${id}`, {
-            headers: {
-                'Authorization': `Bearer ${API_KEY}`
-            }
+            headers: { 'X-API-Key': API_KEY }
         });
         const device = await response.json();
         showDeviceModal(device);
@@ -705,9 +777,7 @@ async function blockConnection(id) {
     try {
         const response = await fetch(`/api/network/connections/${id}/block`, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${API_KEY}`
-            }
+            headers: { 'X-API-Key': API_KEY }
         });
         if (response.ok) {
             loadNetworkData();
@@ -725,9 +795,7 @@ async function blockConnection(id) {
 async function exportNetworkData() {
     try {
         const response = await fetch('/api/network/export', {
-            headers: {
-                'Authorization': `Bearer ${API_KEY}`
-            }
+            headers: { 'X-API-Key': API_KEY }
         });
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -808,10 +876,232 @@ function debounce(func, wait) {
     };
 }
 
+// Initialize monitoring status
+async function initMonitoringStatus() {
+    try {
+        const response = await fetch('/api/network-monitoring/status', {
+            headers: { 'X-API-Key': API_KEY }
+        });
+        if (!response.ok) throw new Error('Failed to get monitoring status');
+        
+        const status = await response.json();
+        updateMonitoringStatus(status);
+    } catch (error) {
+        console.error('Error getting monitoring status:', error);
+        showNotification('Error getting monitoring status', 'error');
+    }
+}
+
+// Update monitoring status display
+function updateMonitoringStatus(status) {
+    monitoringStatus = status;
+    
+    // Update status badge
+    const statusBadge = document.getElementById('monitoring-status');
+    const statusText = statusBadge.querySelector('.status-text');
+    const statusIcon = statusBadge.querySelector('i');
+    
+    if (status.running) {
+        statusBadge.className = 'status-badge bg-success';
+        statusIcon.className = 'fas fa-circle animate-pulse';
+        statusText.textContent = 'Running';
+        document.getElementById('start-monitoring').disabled = true;
+        document.getElementById('stop-monitoring').disabled = false;
+    } else {
+        statusBadge.className = 'status-badge bg-danger';
+        statusIcon.className = 'fas fa-circle';
+        statusText.textContent = 'Stopped';
+        document.getElementById('start-monitoring').disabled = false;
+        document.getElementById('stop-monitoring').disabled = true;
+    }
+    
+    // Update last scan time
+    const lastScan = document.getElementById('last-scan');
+    if (status.last_scan) {
+        const scanTime = new Date(status.last_scan);
+        lastScan.textContent = `Last scan: ${scanTime.toLocaleString()}`;
+    } else {
+        lastScan.textContent = 'Last scan: Never';
+    }
+    
+    // Update stats
+    if (status.stats) {
+        document.getElementById('devices-discovered').textContent = status.stats.devices_discovered;
+        document.getElementById('connections-tracked').textContent = status.stats.connections_tracked;
+        document.getElementById('traffic-analyzed').textContent = status.stats.traffic_analyzed;
+    }
+}
+
+// Toggle network monitoring
+async function toggleMonitoring(start) {
+    try {
+        const endpoint = start ? '/api/network-monitoring/start' : '/api/network-monitoring/stop';
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'X-API-Key': API_KEY }
+        });
+        
+        if (!response.ok) throw new Error('Failed to toggle monitoring');
+        
+        const result = await response.json();
+        showNotification(result.message, 'success');
+        await initMonitoringStatus();
+        
+        // Refresh network data after status change
+        loadNetworkData();
+    } catch (error) {
+        console.error('Error toggling monitoring:', error);
+        showNotification('Error toggling network monitoring', 'error');
+    }
+}
+
 // Show notification
 function showNotification(message, type = 'info') {
-    // TODO: Implement notification system
-    console.log(`${type.toUpperCase()}: ${message}`);
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+        type === 'error' ? 'bg-red-500' :
+        type === 'success' ? 'bg-green-500' :
+        'bg-blue-500'
+    } text-white`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 5000);
 }
 </script>
+
+<style>
+/* Status badge styles */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.status-badge i {
+    font-size: 0.5rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.status-badge.bg-success {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.status-badge.bg-danger {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-sm:hover {
+    transform: translateY(-1px);
+}
+
+.btn-sm:active {
+    transform: translateY(0);
+}
+
+.btn-sm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-success {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.btn-success:hover:not(:disabled) {
+    background-color: rgba(16, 185, 129, 0.2);
+}
+
+.btn-danger {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: rgba(239, 68, 68, 0.2);
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Card styles */
+.card {
+    @apply bg-gray-800 rounded-lg p-6;
+}
+
+.card-header {
+    @apply flex items-center justify-between mb-6;
+}
+
+.card-title {
+    @apply text-lg font-semibold text-white flex items-center gap-2;
+}
+
+.card-actions {
+    @apply flex items-center space-x-4;
+}
+
+/* Button styles */
+.btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+}
+
+.btn-primary {
+    @apply bg-blue-500 text-white hover:bg-blue-600;
+}
+
+.btn-success {
+    @apply bg-green-500 text-white hover:bg-green-600;
+}
+
+.btn-danger {
+    @apply bg-red-500 text-white hover:bg-red-600;
+}
+
+.btn-secondary {
+    @apply bg-gray-600 text-white hover:bg-gray-700;
+}
+
+.btn-outline-secondary {
+    @apply border border-gray-600 text-gray-300 hover:bg-gray-700;
+}
+
+.btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
+}
+
+/* Form control styles */
+.form-control {
+    @apply bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500;
+}
+</style>
 {% endblock %} 

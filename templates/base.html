@@ -45,45 +45,191 @@
     
     <!-- Custom Styles -->
     <style>
+        /* Base styles */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #0F172A;
             color: #E2E8F0;
+            min-height: 100vh;
+            transition: background-color 0.3s ease;
         }
         
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #0F172A;
+            }
+        }
+        
+        /* Enhanced glass card effect */
         .glass-card {
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
         }
         
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px -1px rgba(0, 0, 0, 0.2), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Enhanced navigation */
         .nav-link {
-            @apply px-4 py-2 rounded-lg transition-all duration-200;
+            @apply px-4 py-2 rounded-lg transition-all duration-200 relative;
+            position: relative;
+            overflow: hidden;
         }
         
-        .nav-link:hover {
-            @apply bg-primary-700/20 text-primary-300;
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: #0EA5E9;
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+        
+        .nav-link:hover::after {
+            width: 100%;
         }
         
         .nav-link.active {
             @apply bg-primary-700/30 text-primary-300;
         }
         
+        .nav-link.active::after {
+            width: 100%;
+        }
+        
+        /* Loading states */
+        .loading {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        /* Enhanced buttons */
         .btn-primary {
-            @apply px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200;
+            @apply px-4 py-2 bg-primary-600 text-white rounded-lg transition-all duration-200;
+            position: relative;
+            overflow: hidden;
         }
         
-        .btn-secondary {
-            @apply px-4 py-2 bg-dark-100 text-gray-300 rounded-lg hover:bg-dark-200 transition-all duration-200;
+        .btn-primary::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease;
         }
         
-        .card {
-            @apply glass-card rounded-xl p-6;
+        .btn-primary:hover::after {
+            width: 200%;
+            height: 200%;
         }
         
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        /* Mobile navigation */
+        @media (max-width: 768px) {
+            .nav-menu {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 80%;
+                height: 100vh;
+                background: #1E293B;
+                transition: right 0.3s ease;
+                z-index: 1000;
+            }
+            
+            .nav-menu.active {
+                right: 0;
+            }
+            
+            .nav-link {
+                display: block;
+                padding: 1rem;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+        }
+        
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background: #1E293B;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(100%);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        /* Enhanced form controls */
         .input-field {
-            @apply bg-dark-100 border border-gray-700 rounded-lg px-4 py-2 text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+            @apply bg-dark-100 border border-gray-700 rounded-lg px-4 py-2 text-gray-300;
+            transition: all 0.3s ease;
+        }
+        
+        .input-field:focus {
+            @apply border-primary-500 ring-2 ring-primary-500/20;
+            transform: translateY(-1px);
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1E293B;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
         }
     </style>
 </head>
@@ -104,6 +250,7 @@
                 <div class="flex items-center space-x-4">
                     <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
                     <a href="/logs" class="nav-link {% if request.url.path == '/logs' %}active{% endif %}">Logs</a>
+                    <a href="/security" class="nav-link {% if request.url.path == '/security' %}active{% endif %}">Security</a>
                     <a href="/anomalies" class="nav-link {% if request.url.path == '/anomalies' %}active{% endif %}">Anomalies</a>
                     <a href="/network" class="nav-link {% if request.url.path == '/network' %}active{% endif %}">Network</a>
                     <a href="/settings" class="nav-link {% if request.url.path == '/settings' %}active{% endif %}">Settings</a>
@@ -135,9 +282,52 @@
 
     <!-- Scripts -->
     <script>
-        // Add any global JavaScript here
+        // Global state management
+        const appState = {
+            darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
+            notifications: [],
+            loading: false
+        };
+        
+        // Toast notification system
+        function showToast(message, type = 'info', duration = 3000) {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+        
+        // Loading state management
+        function setLoading(isLoading) {
+            appState.loading = isLoading;
+            document.body.classList.toggle('loading', isLoading);
+        }
+        
+        // Mobile navigation
+        function toggleMobileNav() {
+            const nav = document.querySelector('.nav-menu');
+            nav.classList.toggle('active');
+        }
+        
+        // Initialize components
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize any global components
+            // Initialize mobile navigation
+            const mobileNavToggle = document.createElement('button');
+            mobileNavToggle.className = 'md:hidden fixed top-4 right-4 z-50 p-2 rounded-lg bg-primary-600 text-white';
+            mobileNavToggle.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>';
+            mobileNavToggle.onclick = toggleMobileNav;
+            document.body.appendChild(mobileNavToggle);
+            
+            // Initialize dark mode
+            if (appState.darkMode) {
+                document.documentElement.classList.add('dark');
+            }
         });
     </script>
     

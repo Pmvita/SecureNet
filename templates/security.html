@@ -1,0 +1,523 @@
+{% extends "base.html" %}
+
+{% block title %}SecureNet - Security Scans{% endblock %}
+
+{% block content %}
+<div class="page-header flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-white flex items-center gap-3">
+        <i class="fas fa-shield-alt text-primary-500"></i>
+        Security Center
+    </h1>
+    <div class="flex gap-4">
+        <button class="btn-primary flex items-center gap-2" onclick="scheduleScan()">
+            <i class="fas fa-clock"></i>
+            Schedule Scan
+        </button>
+        <button class="btn-primary flex items-center gap-2" onclick="startNewScan()">
+            <i class="fas fa-play"></i>
+            Start New Scan
+        </button>
+    </div>
+</div>
+
+<!-- Quick Stats with Enhanced UI -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <!-- Active Scans Card -->
+    <div class="glass-card hover:scale-105 transition-transform">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Active Scans</p>
+                <p class="mt-2 text-3xl font-semibold text-white" id="activeScans">0</p>
+                <p class="mt-1 text-sm text-gray-400" id="activeScansTrend"></p>
+            </div>
+            <div class="p-3 bg-primary-500/10 rounded-lg animate-pulse">
+                <i class="fas fa-sync-alt text-primary-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Findings Card -->
+    <div class="glass-card hover:scale-105 transition-transform">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Total Findings</p>
+                <p class="mt-2 text-3xl font-semibold text-white" id="totalFindings">0</p>
+                <p class="mt-1 text-sm text-gray-400" id="findingsTrend"></p>
+            </div>
+            <div class="p-3 bg-yellow-500/10 rounded-lg">
+                <i class="fas fa-exclamation-circle text-yellow-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Critical Findings Card -->
+    <div class="glass-card hover:scale-105 transition-transform">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Critical Findings</p>
+                <p class="mt-2 text-3xl font-semibold text-red-500" id="criticalFindings">0</p>
+                <p class="mt-1 text-sm text-gray-400" id="criticalTrend"></p>
+            </div>
+            <div class="p-3 bg-red-500/10 rounded-lg animate-pulse">
+                <i class="fas fa-radiation-alt text-red-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scan Success Rate Card -->
+    <div class="glass-card hover:scale-105 transition-transform">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Success Rate</p>
+                <p class="mt-2 text-3xl font-semibold text-white" id="successRate">0%</p>
+                <p class="mt-1 text-sm text-gray-400" id="successTrend"></p>
+            </div>
+            <div class="p-3 bg-green-500/10 rounded-lg">
+                <i class="fas fa-chart-line text-green-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Active Scans Panel -->
+    <div class="lg:col-span-2">
+        <div class="glass-card">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <i class="fas fa-list-ul text-primary-500"></i>
+                    Active Scans
+                </h2>
+                <div class="flex gap-2">
+                    <button class="btn-secondary flex items-center gap-2" onclick="refreshScans()">
+                        <i class="fas fa-sync-alt"></i>
+                        Refresh
+                    </button>
+                    <button class="btn-secondary flex items-center gap-2" onclick="exportScans()">
+                        <i class="fas fa-download"></i>
+                        Export
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Enhanced Scan Table -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-700">
+                    <thead>
+                        <tr class="text-left">
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Scan ID</th>
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Progress</th>
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Findings</th>
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700" id="activeScansTable">
+                        <!-- Scan rows will be dynamically inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scan Statistics Panel -->
+    <div class="lg:col-span-1">
+        <div class="glass-card">
+            <h2 class="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                <i class="fas fa-chart-pie text-primary-500"></i>
+                Scan Statistics
+            </h2>
+            
+            <!-- Scan Type Distribution -->
+            <div class="mb-6">
+                <h3 class="text-sm font-medium text-gray-400 mb-3">Scan Type Distribution</h3>
+                <canvas id="scanTypeChart" class="w-full h-48"></canvas>
+            </div>
+            
+            <!-- Finding Severity Distribution -->
+            <div class="mb-6">
+                <h3 class="text-sm font-medium text-gray-400 mb-3">Finding Severity</h3>
+                <canvas id="severityChart" class="w-full h-48"></canvas>
+            </div>
+            
+            <!-- Recent Activity -->
+            <div>
+                <h3 class="text-sm font-medium text-gray-400 mb-3">Recent Activity</h3>
+                <div class="space-y-3" id="recentActivity">
+                    <!-- Activity items will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scan Details Modal -->
+<div id="scanDetailsModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="glass-card max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-white">Scan Details</h2>
+            <button class="text-gray-400 hover:text-white" onclick="closeScanDetails()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="space-y-6">
+            <!-- Scan Progress -->
+            <div>
+                <div class="flex justify-between mb-2">
+                    <span class="text-sm text-gray-400">Progress</span>
+                    <span class="text-sm text-white" id="modalScanProgress">0%</span>
+                </div>
+                <div class="h-2 bg-dark-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-primary-500 rounded-full transition-all duration-500" id="modalProgressBar" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <!-- Findings List -->
+            <div>
+                <h3 class="text-lg font-medium text-white mb-4">Findings</h3>
+                <div class="space-y-4" id="findingsList">
+                    <!-- Findings will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Scan Modal -->
+<div id="scheduleScanModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="glass-card max-w-lg w-full mx-4">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-white">Schedule New Scan</h2>
+            <button class="text-gray-400 hover:text-white" onclick="closeScheduleModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <form id="scheduleScanForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Scan Type</label>
+                <select class="input-field w-full" id="scanType" required>
+                    <option value="full">Full System Scan</option>
+                    <option value="vulnerability">Vulnerability Scan</option>
+                    <option value="compliance">Compliance Check</option>
+                    <option value="custom">Custom Scan</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Schedule</label>
+                <input type="datetime-local" class="input-field w-full" id="scanSchedule" required>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Target</label>
+                <input type="text" class="input-field w-full" id="scanTarget" placeholder="Enter target IP or hostname" required>
+            </div>
+            
+            <div class="flex justify-end gap-4">
+                <button type="button" class="btn-secondary" onclick="closeScheduleModal()">Cancel</button>
+                <button type="submit" class="btn-primary">Schedule Scan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Global state
+let currentScanId = null;
+let scanCharts = {
+    typeChart: null,
+    severityChart: null
+};
+
+// Initialize charts
+function initializeCharts() {
+    // Scan Type Distribution Chart
+    const typeCtx = document.getElementById('scanTypeChart').getContext('2d');
+    scanCharts.typeChart = new Chart(typeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Full', 'Vulnerability', 'Compliance', 'Custom'],
+            datasets: [{
+                data: [0, 0, 0, 0],
+                backgroundColor: [
+                    '#0EA5E9',
+                    '#F59E0B',
+                    '#10B981',
+                    '#8B5CF6'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#E2E8F0'
+                    }
+                }
+            }
+        }
+    });
+    
+    // Severity Distribution Chart
+    const severityCtx = document.getElementById('severityChart').getContext('2d');
+    scanCharts.severityChart = new Chart(severityCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Critical', 'High', 'Medium', 'Low'],
+            datasets: [{
+                data: [0, 0, 0, 0],
+                backgroundColor: [
+                    '#EF4444',
+                    '#F59E0B',
+                    '#3B82F6',
+                    '#10B981'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#E2E8F0'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: '#E2E8F0'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Update charts with real data
+function updateCharts(data) {
+    // Update scan type distribution
+    scanCharts.typeChart.data.datasets[0].data = [
+        data.fullScans || 0,
+        data.vulnerabilityScans || 0,
+        data.complianceScans || 0,
+        data.customScans || 0
+    ];
+    scanCharts.typeChart.update();
+    
+    // Update severity distribution
+    scanCharts.severityChart.data.datasets[0].data = [
+        data.criticalFindings || 0,
+        data.highFindings || 0,
+        data.mediumFindings || 0,
+        data.lowFindings || 0
+    ];
+    scanCharts.severityChart.update();
+}
+
+// Enhanced scan row template
+function createScanRow(scan) {
+    return `
+        <tr class="hover:bg-dark-100/50 transition-colors" data-scan-id="${scan.id}">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-white">${scan.id}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <span class="px-2 py-1 rounded-full text-xs font-medium
+                    ${scan.type === 'full' ? 'bg-primary-500/20 text-primary-400' :
+                    scan.type === 'vulnerability' ? 'bg-yellow-500/20 text-yellow-400' :
+                    scan.type === 'compliance' ? 'bg-green-500/20 text-green-400' :
+                    'bg-purple-500/20 text-purple-400'}">
+                    ${scan.type.charAt(0).toUpperCase() + scan.type.slice(1)}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <span class="px-2 py-1 rounded-full text-xs font-medium
+                    ${scan.status === 'running' ? 'bg-green-500/20 text-green-400' :
+                    scan.status === 'completed' ? 'bg-blue-500/20 text-blue-400' :
+                    scan.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                    'bg-gray-500/20 text-gray-400'}">
+                    ${scan.status.charAt(0).toUpperCase() + scan.status.slice(1)}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="w-full bg-dark-100 rounded-full h-2">
+                    <div class="progress-bar h-2 bg-primary-500 rounded-full transition-all duration-500" 
+                         style="width: ${scan.progress}%"></div>
+                </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-white">${scan.findings}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <button class="btn-sm btn-primary" onclick="viewScanDetails('${scan.id}')">
+                    <i class="fas fa-eye"></i>
+                </button>
+                ${scan.status === 'running' ? `
+                    <button class="btn-sm btn-danger ml-2" onclick="stopScan('${scan.id}')">
+                        <i class="fas fa-stop"></i>
+                    </button>
+                ` : ''}
+            </td>
+        </tr>
+    `;
+}
+
+// Enhanced finding item template
+function createFindingItem(finding) {
+    return `
+        <div class="glass-card p-4 hover:scale-[1.02] transition-transform">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h4 class="text-sm font-medium text-white">${finding.title}</h4>
+                    <p class="mt-1 text-sm text-gray-400">${finding.description}</p>
+                </div>
+                <span class="px-2 py-1 rounded-full text-xs font-medium
+                    ${finding.severity === 'critical' ? 'bg-red-500/20 text-red-400' :
+                    finding.severity === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                    finding.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-blue-500/20 text-blue-400'}">
+                    ${finding.severity.charAt(0).toUpperCase() + finding.severity.slice(1)}
+                </span>
+            </div>
+            <div class="mt-3 flex items-center gap-4 text-sm text-gray-400">
+                <span><i class="fas fa-clock mr-1"></i> ${new Date(finding.timestamp).toLocaleString()}</span>
+                <span><i class="fas fa-map-marker-alt mr-1"></i> ${finding.location}</span>
+            </div>
+        </div>
+    `;
+}
+
+// Initialize WebSocket connection
+const ws = new WebSocket(`ws://${window.location.host}/ws/security`);
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    handleScanUpdate(data);
+};
+
+// Handle scan updates
+function handleScanUpdate(data) {
+    switch (data.type) {
+        case 'scan_started':
+            showToast(`Scan started: ${data.scan_id}`, 'info');
+            loadActiveScans();
+            break;
+        case 'scan_completed':
+            showToast(`Scan completed: ${data.scan_id}`, 'success');
+            loadActiveScans();
+            updateStats();
+            if (currentScanId === data.scan_id) {
+                viewScanDetails(data.scan_id);
+            }
+            break;
+        case 'scan_failed':
+            showToast(`Scan failed: ${data.error}`, 'error');
+            loadActiveScans();
+            updateStats();
+            break;
+        case 'scan_progress':
+            updateScanProgress(data.scan_id, data.progress);
+            break;
+        case 'finding_added':
+            if (currentScanId === data.scan_id) {
+                viewScanDetails(data.scan_id);
+            }
+            updateStats();
+            break;
+        case 'finding_updated':
+            if (currentScanId === data.scan_id) {
+                viewScanDetails(data.scan_id);
+            }
+            updateStats();
+            break;
+    }
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+    loadActiveScans();
+    updateStats();
+    
+    // Set up periodic refresh
+    setInterval(() => {
+        loadActiveScans();
+        updateStats();
+    }, 30000);
+});
+
+// Export functions
+function exportScans() {
+    // Implementation for exporting scan data
+    showToast('Exporting scan data...', 'info');
+}
+
+// Modal functions
+function showModal(modalId) {
+    document.getElementById(modalId).classList.remove('hidden');
+    document.getElementById(modalId).classList.add('flex');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+    document.getElementById(modalId).classList.remove('flex');
+}
+
+function closeScanDetails() {
+    closeModal('scanDetailsModal');
+    currentScanId = null;
+}
+
+function closeScheduleModal() {
+    closeModal('scheduleScanModal');
+    document.getElementById('scheduleScanForm').reset();
+}
+
+// Event handlers
+function scheduleScan() {
+    showModal('scheduleScanModal');
+}
+
+function startNewScan() {
+    // Implementation for starting a new scan
+    showToast('Starting new scan...', 'info');
+}
+
+function viewScanDetails(scanId) {
+    currentScanId = scanId;
+    showModal('scanDetailsModal');
+    // Load scan details
+}
+
+function stopScan(scanId) {
+    // Implementation for stopping a scan
+    showToast('Stopping scan...', 'info');
+}
+
+// Form submission
+document.getElementById('scheduleScanForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    // Implementation for scheduling a scan
+    showToast('Scan scheduled successfully', 'success');
+    closeScheduleModal();
+});
+</script>
+{% endblock %} 
