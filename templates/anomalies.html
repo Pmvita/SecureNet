@@ -168,7 +168,7 @@ let timelineChart = null;
 // Initialize WebSocket connection
 function initWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/alerts?api_key={{ api_key }}`;
+    const wsUrl = `${protocol}//${window.location.host}/ws/alerts?api_key=${encodeURIComponent('{{ api_key }}')}`;
     
     ws = new WebSocket(wsUrl);
     

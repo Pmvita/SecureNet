@@ -19,7 +19,7 @@ function initWebSocket(type = 'logs') {
     }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/${type}?api_key=${state.apiKey}`;
+    const wsUrl = `${protocol}//${window.location.host}/ws/${type}?api_key=${encodeURIComponent(state.apiKey)}`;
 
     state.ws = new WebSocket(wsUrl);
 

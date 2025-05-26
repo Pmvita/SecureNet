@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Depends, Header, Query, status
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Depends, Header, Query, status, Body
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -22,9 +22,91 @@ import platform
 import re
 from pydantic import BaseModel
 from fastapi import BackgroundTasks
+import sys
+import time
+import signal
+import random
+import secrets
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Configure logging first
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# Create logs directory if it doesn't exist
+os.makedirs('logs', exist_ok=True)
+
+# Add file handler
+file_handler = logging.FileHandler('logs/app.log')
+file_handler.setLevel(logging.INFO)
+file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(file_formatter)
+logger.addHandler(file_handler)
+
+# Add stream handler for console output
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.INFO)
+stream_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+stream_handler.setFormatter(stream_formatter)
+logger.addHandler(stream_handler)
+
+# Get API key from environment with fallback
+API_KEY = os.getenv('SECURENET_API_KEY')
+if not API_KEY:
+    # Try alternative environment variable name
+    API_KEY = os.getenv('API_KEY')
+    if API_KEY:
+        logger.info("Using API_KEY from environment")
+        os.environ['SECURENET_API_KEY'] = API_KEY
+    else:
+        # Generate new key if none exists
+        API_KEY = secrets.token_urlsafe(32)
+        os.environ['SECURENET_API_KEY'] = API_KEY
+        logger.info(f"Generated new API key: {API_KEY[:8]}...")
+
+# Log the API key being used (first 8 chars only)
+logger.info(f"Using API key: {API_KEY[:8]}...")
+
+# Initialize database
+db = Database()
+
+# Ensure database has the same API key
+try:
+    db.update_settings({'api_key': API_KEY})
+    logger.info("Database API key updated successfully")
+except Exception as e:
+    logger.error(f"Error updating database API key: {str(e)}")
+
+# Add database handler
+class DatabaseLogHandler(logging.Handler):
+    def emit(self, record):
+        try:
+            # Format the log message
+            msg = self.format(record)
+            
+            # Insert into database
+            with db.get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO logs (timestamp, level, source, message)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    datetime.now().isoformat(),
+                    record.levelname.lower(),
+                    record.name,
+                    msg
+                ))
+                conn.commit()
+        except Exception as e:
+            print(f"Error logging to database: {str(e)}")
+
+db_handler = DatabaseLogHandler()
+db_handler.setLevel(logging.INFO)
+db_formatter = logging.Formatter('%(message)s')
+db_handler.setFormatter(db_formatter)
+logger.addHandler(db_handler)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -32,24 +114,14 @@ app = FastAPI(
     description="A comprehensive network security monitoring and management system"
 )
 
-# Initialize database
-db = Database()
-
-# Get API key from environment
-API_KEY = os.getenv('API_KEY')
-if not API_KEY:
-    raise ValueError("API_KEY environment variable is not set")
-
-# Configure logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-# Add handler if none exists
-if not logger.handlers:
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+# Global variables
+monitoring_task = None
+active_connections = {
+    'security': set(),
+    'logs': set(),
+    'network': set(),
+    'alerts': set()
+}
 
 # Configure CORS
 app.add_middleware(
@@ -67,19 +139,171 @@ templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # WebSocket connection management
-active_connections = {
-    'notifications': set(),
-    'network': set(),
-    'logs': set(),
-    'alerts': set()
-}
-
-# WebSocket message queues
 message_queues = {
     'network': asyncio.Queue(),
     'logs': asyncio.Queue(),
-    'alerts': asyncio.Queue()
+    'alerts': asyncio.Queue(),
+    'security': asyncio.Queue()  # Add security queue
 }
+
+def get_api_key() -> str:
+    """Get API key from environment"""
+    return API_KEY
+
+def validate_api_key(api_key: str) -> bool:
+    """Validate the provided API key"""
+    if not api_key:
+        logger.debug("Empty API key provided")
+        return False
+    
+    # Strip any comments and whitespace from the key
+    clean_key = api_key.split('#')[0].strip()
+    stored_key = API_KEY.split('#')[0].strip()
+    
+    # Log validation attempt (first 8 chars only)
+    logger.debug(f"Validating API key: {clean_key[:8]}... against stored key: {stored_key[:8]}...")
+    
+    is_valid = clean_key == stored_key
+    if not is_valid:
+        logger.warning(f"Invalid API key attempt: {clean_key[:8]}...")
+    return is_valid
+
+@app.websocket("/ws/{connection_type}")
+async def websocket_endpoint(websocket: WebSocket, connection_type: str, api_key: Optional[str] = None):
+    """WebSocket endpoint for real-time updates"""
+    if not validate_api_key(api_key):
+        logger.warning(f"Invalid API key attempt: {api_key[:10]}...")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+    
+    if connection_type not in active_connections:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+    
+    try:
+        await websocket.accept()
+        active_connections[connection_type].add(websocket)
+        logger.info(f"New {connection_type} WebSocket connection established. Total connections: {len(active_connections[connection_type])}")
+        
+        # Send initial state
+        if connection_type == 'security':
+            await send_security_state(websocket)
+        elif connection_type == 'logs':
+            await send_logs_state(websocket)
+        elif connection_type == 'network':
+            await send_network_state(websocket)
+        elif connection_type == 'alerts':
+            await send_alerts_state(websocket)
+        
+        # Keep connection alive and handle messages
+        while True:
+            try:
+                data = await websocket.receive_text()
+                # Handle any incoming messages if needed
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                logger.error(f"Error in {connection_type} WebSocket connection: {str(e)}")
+                break
+    finally:
+        active_connections[connection_type].remove(websocket)
+        logger.info(f"{connection_type} WebSocket connection closed. Remaining connections: {len(active_connections[connection_type])}")
+
+async def send_security_state(websocket: WebSocket):
+    """Send initial security state to WebSocket client"""
+    try:
+        # Get security metrics using async methods
+        metrics = await db.get_security_metrics()
+        active_scans = await db.get_active_scans_async()
+        recent_findings = await db.get_recent_findings_async(limit=10)
+        
+        await websocket.send_json({
+            'type': 'initial_state',
+            'payload': {
+                'metrics': metrics,
+                'active_scans': active_scans,
+                'recent_findings': recent_findings,
+                'timestamp': datetime.now().isoformat()
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error sending security state: {str(e)}")
+        try:
+            await websocket.send_json({
+                'type': 'error',
+                'payload': {
+                    'message': 'Error retrieving security state',
+                    'timestamp': datetime.now().isoformat()
+                }
+            })
+        except:
+            pass
+
+async def send_logs_state(websocket: WebSocket):
+    """Send initial logs state to WebSocket client"""
+    try:
+        recent_logs = await db.get_recent_logs(limit=50)
+        await websocket.send_json({
+            'type': 'initial_state',
+            'payload': {
+                'logs': recent_logs,
+                'timestamp': datetime.now().isoformat()
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error sending logs state: {str(e)}")
+
+async def send_network_state(websocket: WebSocket):
+    """Send initial network state to WebSocket client"""
+    try:
+        traffic = await db.get_network_traffic(hours=24)
+        devices = await db.get_network_devices()
+        protocols = await db.get_network_protocols()
+        
+        await websocket.send_json({
+            'type': 'initial_state',
+            'payload': {
+                'traffic': traffic,
+                'devices': devices,
+                'protocols': protocols,
+                'timestamp': datetime.now().isoformat()
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error sending network state: {str(e)}")
+
+async def send_alerts_state(websocket: WebSocket):
+    """Send initial alerts state to WebSocket client"""
+    try:
+        recent_alerts = await db.get_recent_alerts(limit=50)
+        await websocket.send_json({
+            'type': 'initial_state',
+            'payload': {
+                'alerts': recent_alerts,
+                'timestamp': datetime.now().isoformat()
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error sending alerts state: {str(e)}")
+
+# Broadcast updates to all connected clients
+async def broadcast_update(connection_type: str, data: dict):
+    """Broadcast update to all connected clients of a specific type"""
+    if connection_type not in active_connections:
+        return
+    
+    disconnected = set()
+    for websocket in active_connections[connection_type]:
+        try:
+            await websocket.send_json(data)
+        except WebSocketDisconnect:
+            disconnected.add(websocket)
+        except Exception as e:
+            logger.error(f"Error broadcasting to {connection_type} client: {str(e)}")
+            disconnected.add(websocket)
+    
+    # Clean up disconnected clients
+    active_connections[connection_type] -= disconnected
 
 async def broadcast_message(websocket_type: str, message: dict):
     """Broadcast message to all connected clients of a specific type."""
@@ -96,137 +320,266 @@ async def broadcast_message(websocket_type: str, message: dict):
     # Clean up disconnected clients
     active_connections[websocket_type] -= disconnected
 
-async def websocket_auth(websocket: WebSocket) -> bool:
-    """Authenticate WebSocket connection using API key."""
+async def websocket_auth(websocket: WebSocket, api_key: str = None) -> bool:
+    """Authenticate WebSocket connection with proper error handling."""
+    if not api_key:
+        logger.warning("No API key provided for WebSocket connection")
+        return False
+    
     try:
-        api_key = websocket.query_params.get('api_key')
-        if not api_key or api_key != API_KEY:
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        # Clean the API key by removing any comments or whitespace
+        clean_api_key = api_key.split('#')[0].strip()
+        # Validate API key
+        if not validate_api_key(clean_api_key):
+            logger.warning(f"Invalid API key attempt: {clean_api_key[:8]}...")
             return False
         return True
     except Exception as e:
-        logger.error(f"WebSocket authentication error: {str(e)}")
+        logger.error(f"Error authenticating WebSocket connection: {str(e)}")
+        return False
+
+async def handle_websocket_connection(websocket: WebSocket, connection_type: str, api_key: str = None):
+    """Common WebSocket connection handler with proper error handling and cleanup."""
+    if not await websocket_auth(websocket, api_key):
+        await websocket.close(code=4001, reason="Authentication failed")
+        return False
+    
+    try:
+        await websocket.accept()
+        active_connections[connection_type].add(websocket)
+        logger.info(f"New {connection_type} WebSocket connection established. Total connections: {len(active_connections[connection_type])}")
+        return True
+    except Exception as e:
+        logger.error(f"Error establishing WebSocket connection: {str(e)}")
         try:
-            await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+            await websocket.close(code=1011, reason="Internal server error")
         except:
             pass
         return False
 
 @app.websocket("/ws/network")
-async def websocket_network(websocket: WebSocket):
-    """WebSocket endpoint for real-time network updates."""
-    if not await websocket_auth(websocket):
+async def websocket_network(websocket: WebSocket, api_key: str = Query(None)):
+    """WebSocket endpoint for network monitoring."""
+    if not await handle_websocket_connection(websocket, 'network', api_key):
         return
-    
-    await websocket.accept()
-    active_connections['network'].add(websocket)
-    logger.info(f"New network WebSocket connection. Total connections: {len(active_connections['network'])}")
-    
+
     try:
         while True:
-            # Send initial network state
-            network_state = await get_network_state()
-            await websocket.send_json({
-                "type": "initial_state",
-                "payload": network_state
-            })
-            
-            # Process queued messages
-            while True:
-                message = await message_queues['network'].get()
-                await websocket.send_json(message)
-    except WebSocketDisconnect:
-        active_connections['network'].remove(websocket)
-        logger.info(f"Network WebSocket disconnected. Total connections: {len(active_connections['network'])}")
-    except Exception as e:
-        logger.error(f"Network WebSocket error: {str(e)}")
-        if websocket in active_connections['network']:
-            active_connections['network'].remove(websocket)
+            try:
+                # Get network state
+                metrics = await db.get_network_metrics()
+                await websocket.send_json({
+                    'type': 'network_state',
+                    'data': metrics
+                })
+                await asyncio.sleep(1)
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                logger.error(f"Error in network WebSocket connection: {str(e)}")
+                break
+    finally:
+        active_connections['network'].discard(websocket)
+        try:
+            await websocket.close()
+        except:
+            pass
 
 @app.websocket("/ws/logs")
-async def websocket_logs(websocket: WebSocket):
+async def websocket_logs(websocket: WebSocket, api_key: str = Query(None)):
     """WebSocket endpoint for real-time log streaming."""
-    if not await websocket_auth(websocket):
+    if not await handle_websocket_connection(websocket, 'logs', api_key):
         return
-    
-    await websocket.accept()
-    active_connections['logs'].add(websocket)
-    logger.info(f"New logs WebSocket connection. Total connections: {len(active_connections['logs'])}")
-    
+
     try:
+        # Send initial logs
+        recent_logs = await get_recent_logs(limit=50)
+        await websocket.send_json({
+            "type": "initial_logs",
+            "payload": recent_logs
+        })
+        
         while True:
-            # Send recent logs
-            recent_logs = await get_recent_logs(limit=50)
-            await websocket.send_json({
-                "type": "initial_logs",
-                "payload": recent_logs
-            })
-            
-            # Process queued messages
-            while True:
+            try:
+                # Process queued messages
                 message = await message_queues['logs'].get()
                 await websocket.send_json(message)
-    except WebSocketDisconnect:
-        active_connections['logs'].remove(websocket)
-        logger.info(f"Logs WebSocket disconnected. Total connections: {len(active_connections['logs'])}")
-    except Exception as e:
-        logger.error(f"Logs WebSocket error: {str(e)}")
-        if websocket in active_connections['logs']:
-            active_connections['logs'].remove(websocket)
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                logger.error(f"Error in logs WebSocket connection: {str(e)}")
+                break
+    finally:
+        active_connections['logs'].discard(websocket)
+        try:
+            await websocket.close()
+        except:
+            pass
 
 @app.websocket("/ws/alerts")
-async def websocket_alerts(websocket: WebSocket):
+async def websocket_alerts(websocket: WebSocket, api_key: str = Query(None)):
     """WebSocket endpoint for real-time alert streaming."""
-    if not await websocket_auth(websocket):
+    if not await handle_websocket_connection(websocket, 'alerts', api_key):
         return
-    
-    await websocket.accept()
-    active_connections['alerts'].add(websocket)
-    logger.info(f"New alerts WebSocket connection. Total connections: {len(active_connections['alerts'])}")
-    
+
     try:
+        # Send initial alerts
+        recent_alerts = await get_recent_alerts(limit=50)
+        await websocket.send_json({
+            "type": "initial_alerts",
+            "payload": recent_alerts
+        })
+        
         while True:
-            # Send recent alerts
-            recent_alerts = await get_recent_alerts(limit=50)
-            await websocket.send_json({
-                "type": "initial_alerts",
-                "payload": recent_alerts
-            })
-            
-            # Process queued messages
-            while True:
+            try:
+                # Process queued messages
                 message = await message_queues['alerts'].get()
                 await websocket.send_json(message)
-    except WebSocketDisconnect:
-        active_connections['alerts'].remove(websocket)
-        logger.info(f"Alerts WebSocket disconnected. Total connections: {len(active_connections['alerts'])}")
-    except Exception as e:
-        logger.error(f"Alerts WebSocket error: {str(e)}")
-        if websocket in active_connections['alerts']:
-            active_connections['alerts'].remove(websocket)
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                logger.error(f"Error in alerts WebSocket connection: {str(e)}")
+                break
+    finally:
+        active_connections['alerts'].discard(websocket)
+        try:
+            await websocket.close()
+        except:
+            pass
 
 @app.websocket("/ws/notifications")
-async def websocket_notifications(websocket: WebSocket):
+async def websocket_notifications(websocket: WebSocket, api_key: str = Query(None)):
     """WebSocket endpoint for real-time notifications."""
-    if not await websocket_auth(websocket):
-        return
-    
-    await websocket.accept()
-    active_connections['notifications'].add(websocket)
-    logger.info(f"New notifications WebSocket connection. Total connections: {len(active_connections['notifications'])}")
-    
     try:
-        while True:
-            # Keep connection alive and wait for messages
-            data = await websocket.receive_text()
-            # Process any incoming messages if needed
-    except WebSocketDisconnect:
-        active_connections['notifications'].remove(websocket)
-        logger.info(f"Notifications WebSocket disconnected. Total connections: {len(active_connections['notifications'])}")
-    except Exception as e:
-        logger.error(f"Notifications WebSocket error: {str(e)}")
-        if websocket in active_connections['notifications']:
+        # Get API key from query parameters
+        if not api_key:
+            logger.warning("WebSocket connection attempt without API key")
+            await websocket.close(code=4003, reason="API key required")
+            return
+
+        # Clean the API key by removing any comments or whitespace
+        clean_api_key = api_key.split('#')[0].strip()
+
+        # Verify API key
+        if not await websocket_auth(websocket, clean_api_key):
+            return
+        
+        await websocket.accept()
+        active_connections['notifications'].add(websocket)
+        logger.info(f"New notifications WebSocket connection. Total connections: {len(active_connections['notifications'])}")
+        
+        try:
+            while True:
+                # Keep connection alive and wait for messages
+                data = await websocket.receive_text()
+                # Process any incoming messages if needed
+        except WebSocketDisconnect:
             active_connections['notifications'].remove(websocket)
+            logger.info(f"Notifications WebSocket disconnected. Total connections: {len(active_connections['notifications'])}")
+        except Exception as e:
+            logger.error(f"Notifications WebSocket error: {str(e)}")
+            if websocket in active_connections['notifications']:
+                active_connections['notifications'].remove(websocket)
+    except Exception as e:
+        logger.error(f"Error in notifications WebSocket connection: {str(e)}")
+        try:
+            await websocket.close(code=1011, reason="Internal server error")
+        except:
+            pass
+
+@app.websocket("/ws/security")
+async def websocket_security(websocket: WebSocket, api_key: str = Query(None)):
+    """WebSocket endpoint for real-time security updates."""
+    try:
+        # Clean and validate API key
+        if not api_key:
+            logger.warning("WebSocket connection attempt without API key")
+            await websocket.close(code=4003, reason="API key required")
+            return
+
+        clean_api_key = api_key.split('#')[0].strip()
+        if not clean_api_key:
+            logger.warning("Empty API key after cleaning")
+            await websocket.close(code=4003, reason="Invalid API key format")
+            return
+
+        # Verify API key
+        if not await websocket_auth(websocket, clean_api_key):
+            return
+        
+        await websocket.accept()
+        active_connections['security'].add(websocket)
+        logger.info(f"New security WebSocket connection. Total connections: {len(active_connections['security'])}")
+        
+        # Send initial state
+        await send_security_state(websocket)
+        
+        try:
+            while True:
+                # Process queued messages
+                message = await message_queues['security'].get()
+                await websocket.send_json(message)
+        except WebSocketDisconnect:
+            logger.info("Security WebSocket disconnected")
+        except Exception as e:
+            logger.error(f"Error in security WebSocket connection: {str(e)}")
+        finally:
+            active_connections['security'].discard(websocket)
+            logger.info(f"Security WebSocket connection closed. Remaining connections: {len(active_connections['security'])}")
+    except Exception as e:
+        logger.error(f"Error in security WebSocket connection: {str(e)}")
+        try:
+            await websocket.close(code=1011, reason="Internal server error")
+        except:
+            pass
+
+async def update_security_state():
+    """Background task to update security state and broadcast to WebSocket clients."""
+    while True:
+        try:
+            security_state = await get_security_state()
+            await message_queues['security'].put({
+                "type": "security_update",
+                "payload": security_state
+            })
+            await asyncio.sleep(1)  # Update every second
+        except Exception as e:
+            logger.error(f"Error updating security state: {str(e)}")
+            await asyncio.sleep(5)  # Back off on error
+
+async def get_security_state():
+    """Get current security state including active scans, findings, and security metrics."""
+    try:
+        now = datetime.now().isoformat()
+        
+        # Get active scans
+        active_scans = await db.get_active_scans_async()
+        
+        # Get recent findings
+        recent_findings = await db.get_recent_findings_async(limit=50)
+        
+        # Get security metrics
+        security_metrics = await db.get_security_metrics()
+        
+        # Get scan statistics
+        scan_stats = await db.get_scan_statistics_async()
+        
+        return {
+            "timestamp": now,
+            "active_scans": active_scans,
+            "recent_findings": recent_findings,
+            "metrics": security_metrics,
+            "scan_stats": scan_stats
+        }
+    except Exception as e:
+        logger.error(f"Error getting security state: {str(e)}")
+        return {
+            "timestamp": now,
+            "active_scans": [],
+            "recent_findings": [],
+            "metrics": {},
+            "scan_stats": {}
+        }
 
 # Background tasks for updating WebSocket clients
 async def update_network_state():
@@ -268,13 +621,105 @@ async def process_alert_stream():
         except Exception as e:
             logger.error(f"Error processing alert stream: {str(e)}")
             await asyncio.sleep(5)
+            async for alert in get_alert_stream():  # Retry
+                yield alert
+
+# Add these global variables near other global state
+app_shutdown_event = asyncio.Event()
+background_tasks = set()
 
 @app.on_event("startup")
 async def startup_event():
-    """Start background tasks on application startup."""
-    asyncio.create_task(update_network_state())
-    asyncio.create_task(process_log_stream())
-    asyncio.create_task(process_alert_stream())
+    """Initialize application on startup."""
+    try:
+        # Create a new event loop if needed
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        # Initialize database schema
+        await db.init_db()
+        logger.info("Database schema initialized successfully")
+
+        # Check for stale monitoring status
+        settings = await db.get_settings_async()
+        if settings.get('monitoring_status') == 'running':
+            logger.warning("Stale monitoring_status 'running' detected on startup. Resetting to 'stopped'.")
+            await db.update_settings_async({
+                'monitoring_status': 'stopped',
+                'last_stop': datetime.utcnow().isoformat()
+            })
+        
+        logger.info("Application startup complete")
+    except Exception as e:
+        logger.error(f"Error during startup: {str(e)}")
+        raise
+
+@app.on_event("shutdown")
+async def shutdown_event_handler():
+    """Cleanup on application shutdown."""
+    try:
+        logger.info("Shutting down application...")
+        
+        # Cancel monitoring task
+        global monitoring_task
+        if monitoring_task is not None:
+            monitoring_task.cancel()
+            try:
+                await monitoring_task
+            except asyncio.CancelledError:
+                logger.info("Network monitoring task cancelled")
+        
+        # Close database connection
+        await db.close()
+        logger.info("Database connection closed")
+        
+        # Close all WebSocket connections
+        for connection_type in active_connections:
+            for websocket in active_connections[connection_type]:
+                try:
+                    await websocket.close()
+                except Exception as e:
+                    logger.error(f"Error closing WebSocket connection: {str(e)}")
+        
+        logger.info("Application shutdown complete")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {str(e)}")
+        raise
+
+def signal_handler(sig, frame):
+    """Handle shutdown signals."""
+    logger.info("Received shutdown signal")
+    if not app_shutdown_event.is_set():
+        app_shutdown_event.set()
+        # Give tasks a chance to clean up
+        loop = asyncio.get_event_loop()
+        loop.call_later(2, lambda: sys.exit(0))
+
+# Register signal handlers
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
+# Update the network monitoring task to respect shutdown
+async def network_monitoring_task():
+    """Background task for network monitoring."""
+    logger.info("Starting network monitoring task")
+    try:
+        while not app_shutdown_event.is_set() and network_monitoring_state["running"]:
+            try:
+                await monitor_network()
+                await asyncio.sleep(1)  # Check every second
+            except asyncio.CancelledError:
+                logger.info("Network monitoring task cancelled")
+                break
+            except Exception as e:
+                logger.error(f"Error in network monitoring task: {str(e)}")
+                await asyncio.sleep(5)  # Wait before retrying
+    finally:
+        logger.info("Network monitoring task stopped")
+        network_monitoring_state["running"] = False
 
 # API key verification decorator
 def require_api_key(func):
@@ -301,8 +746,8 @@ async def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
     """Verify API key from header."""
     if not x_api_key:
         raise HTTPException(status_code=401, detail="API key is missing")
-    settings = db.get_settings()
-    if x_api_key != settings['api_key']:
+    if not validate_api_key(x_api_key):
+        logger.warning(f"Invalid API key attempt: {x_api_key[:8]}...")
         raise HTTPException(status_code=401, detail="Invalid API key")
     return x_api_key
 
@@ -321,43 +766,52 @@ async def home(request: Request):
 @app.get("/logs", response_class=HTMLResponse)
 async def logs_page(request: Request):
     """Render the logs page."""
-    sources = db.get_log_sources()
+    settings = db.get_page_settings('logs')
     return templates.TemplateResponse(
         "logs.html",
         {
             "request": request,
             "api_key": db.get_settings()['api_key'],
-            "sources": sources
+            "settings": settings
         }
     )
 
 @app.get("/anomalies", response_class=HTMLResponse)
 async def anomalies_page(request: Request):
     """Render the anomalies page."""
+    settings = db.get_page_settings('anomalies')
     return templates.TemplateResponse(
         "anomalies.html",
-        {"request": request, "api_key": db.get_settings()['api_key']}
+        {
+            "request": request,
+            "api_key": db.get_settings()['api_key'],
+            "settings": settings
+        }
     )
 
 @app.get("/network", response_class=HTMLResponse)
 async def network_page(request: Request):
     """Render the network page."""
+    settings = db.get_page_settings('network')
     return templates.TemplateResponse(
         "network.html",
         {
             "request": request,
-            "api_key": db.get_settings()['api_key']
+            "api_key": db.get_settings()['api_key'],
+            "settings": settings
         }
     )
 
 @app.get("/security", response_class=HTMLResponse)
 async def security_page(request: Request):
-    """Render the security scans page."""
+    """Render the security page."""
+    settings = db.get_page_settings('security')
     return templates.TemplateResponse(
         "security.html",
         {
             "request": request,
-            "api_key": db.get_settings()['api_key']
+            "api_key": db.get_settings()['api_key'],
+            "settings": settings
         }
     )
 
@@ -624,7 +1078,8 @@ async def get_stats_overview(api_key: str = Depends(verify_api_key)):
         
         # Get network health
         network_health = db.get_network_health()
-        health_trend = db.get_health_trend(days=7)
+        # Convert days to hours for health trend
+        health_trend = await db.get_health_trend(metric_name='network_health', hours=24*7)  # Last 7 days
         
         # Get protected assets
         protected_assets = db.get_protected_assets()
@@ -636,7 +1091,7 @@ async def get_stats_overview(api_key: str = Depends(verify_api_key)):
             "active_threats": len(active_threats),
             "threats_trend": threats_trend,
             "network_health": network_health,
-            "health_trend": health_trend,
+            "health_trend": health_trend[-1]['value'] if health_trend else 0,  # Get the latest value
             "protected_assets": protected_assets,
             "assets_status": assets_status
         }
@@ -818,8 +1273,16 @@ async def update_settings(settings: Dict[str, Any], api_key: str = Depends(verif
 async def regenerate_api_key(api_key: str = Depends(verify_api_key)):
     """Regenerate the API key."""
     try:
-        new_key = db.regenerate_api_key()
-        if new_key:
+        # Generate new API key
+        new_key = secrets.token_urlsafe(32)
+        
+        # Update environment variable
+        os.environ['SECURENET_API_KEY'] = new_key
+        global API_KEY
+        API_KEY = new_key
+        
+        # Update database
+        if db.update_settings({'api_key': new_key}):
             return {"api_key": new_key}
         raise HTTPException(status_code=500, detail="Error regenerating API key")
     except Exception as e:
@@ -858,85 +1321,6 @@ async def get_scans(
         logger.error(f"Error getting scans: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving scans")
 
-@app.get("/api/security/scans/stats")
-async def get_scan_stats(api_key: str = Depends(verify_api_key)):
-    """Get statistics about security scans."""
-    try:
-        active_scans = len(db.get_active_scans())
-        recent_scans = db.get_recent_scans(limit=100)
-        
-        total_findings = 0
-        critical_findings = 0
-        successful_scans = 0
-        
-        for scan in recent_scans:
-            if scan["status"] == "completed":
-                successful_scans += 1
-                findings = db.get_scan_findings(scan["id"])
-                total_findings += len(findings)
-                critical_findings += sum(1 for f in findings if f["severity"] == "critical")
-        
-        success_rate = (successful_scans / len(recent_scans) * 100) if recent_scans else 0
-        
-        return {
-            "active_scans": active_scans,
-            "total_findings": total_findings,
-            "critical_findings": critical_findings,
-            "success_rate": round(success_rate, 1)
-        }
-    except Exception as e:
-        logger.error(f"Error getting scan stats: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error retrieving scan statistics")
-
-@app.post("/api/security/scan")
-async def start_scan(
-    background_tasks: BackgroundTasks,
-    api_key: str = Depends(verify_api_key)
-):
-    """Start a new security scan."""
-    try:
-        scan_id = str(uuid.uuid4())
-        scan = {
-            "id": scan_id,
-            "timestamp": datetime.now().isoformat(),
-            "type": "full",
-            "status": "running",
-            "progress": 0,
-            "findings_count": 0,
-            "start_time": datetime.now().isoformat(),
-            "end_time": None,
-            "metadata": {}
-        }
-        
-        db.start_security_scan(scan)
-        
-        # Start scan in background
-        background_tasks.add_task(run_security_scan, scan_id)
-        
-        # Notify connected clients
-        await broadcast_message('notifications', json.dumps({
-            "type": "security_scan_started",
-            "scan_id": scan_id,
-            "status": "running"
-        }))
-        
-        return {
-            "scan_id": scan_id,
-            "message": "Security scan started",
-            "status": "running"
-        }
-    except Exception as e:
-        logger.error(f"Error starting security scan: {str(e)}")
-        db.update_scan_status(scan_id, "failed", 0, error_message=str(e))
-        
-        # Notify connected clients
-        await broadcast_message('notifications', json.dumps({
-            "type": "security_scan_failed",
-            "scan_id": scan_id,
-            "error": str(e)
-        }))
-        raise HTTPException(status_code=500, detail="Error starting security scan")
-
 @app.get("/api/security/scan/{scan_id}")
 async def get_scan(
     scan_id: str,
@@ -962,1217 +1346,296 @@ async def get_scan(
         logger.error(f"Error getting scan details: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving scan details")
 
-@app.post("/api/security/scan/{scan_id}/findings")
-async def add_finding(
-    scan_id: str,
-    finding: dict,
+@app.post("/api/security/scan")
+async def start_security_scan(
+    scan_config: dict = Body(..., example={
+        "type": "full",
+        "target": "all",
+        "deep_scan": False,
+        "include_remediation": True,
+        "notify_on_complete": True,
+        "modules": ["vulnerabilities", "configuration", "compliance"]
+    }),
     api_key: str = Depends(verify_api_key)
 ):
-    """Add a finding to a security scan."""
+    """Start a new security scan with the given configuration."""
     try:
-        scan = db.get_scan(scan_id)
-        if not scan:
-            raise HTTPException(status_code=404, detail="Scan not found")
+        # Validate scan configuration
+        if not isinstance(scan_config, dict):
+            raise HTTPException(status_code=422, detail="Invalid scan configuration format")
         
-        if scan["status"] not in ["running", "completed"]:
-            raise HTTPException(status_code=400, detail="Cannot add findings to a scan that is not running or completed")
+        required_fields = ["type", "target"]
+        for field in required_fields:
+            if field not in scan_config:
+                raise HTTPException(status_code=422, detail=f"Missing required field: {field}")
         
-        finding_id = str(uuid.uuid4())
-        finding_data = {
-            "id": finding_id,
-            "scan_id": scan_id,
-            "timestamp": datetime.now().isoformat(),
-            **finding
+        # Generate scan ID and create initial scan record
+        scan_id = str(uuid.uuid4())
+        timestamp = datetime.now().isoformat()
+        
+        scan_data = {
+            "id": scan_id,
+            "timestamp": timestamp,
+            "type": scan_config.get("type", "full"),
+            "status": "running",
+            "target": scan_config.get("target", "all"),
+            "progress": 0,
+            "findings_count": 0,
+            "start_time": timestamp,
+            "metadata": json.dumps({
+                "scan_type": scan_config.get("type", "full"),
+                "modules": scan_config.get("modules", ["vulnerabilities", "configuration", "compliance"]),
+                "options": {
+                    "deep_scan": scan_config.get("deep_scan", False),
+                    "include_remediation": scan_config.get("include_remediation", False),
+                    "notify_on_complete": scan_config.get("notify_on_complete", True)
+                }
+            })
         }
         
-        db.add_scan_finding(finding_data)
+        # Insert scan record
+        with db.get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO scans (
+                    id, timestamp, type, status, target,
+                    progress, findings_count, start_time, metadata
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                scan_data["id"],
+                scan_data["timestamp"],
+                scan_data["type"],
+                scan_data["status"],
+                scan_data["target"],
+                scan_data["progress"],
+                scan_data["findings_count"],
+                scan_data["start_time"],
+                scan_data["metadata"]
+            ))
+            conn.commit()
+        
+        # Start background scan task
+        asyncio.create_task(run_security_scan(scan_id))
         
         # Notify connected clients
-        await broadcast_message('notifications', json.dumps({
-            "type": "scan_finding_added",
+        await broadcast_message('security', {
+            "type": "scan_started",
             "scan_id": scan_id,
-            "finding_id": finding_id,
-            "severity": finding["severity"]
-        }))
+            "config": scan_config
+        })
         
         return {
-            "finding_id": finding_id,
-            "message": "Finding added successfully"
+            "scan_id": scan_id,
+            "message": "Security scan started successfully",
+            "status": "running"
         }
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error adding finding: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error adding finding")
+        logger.error(f"Error starting security scan: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/api/security/scan/{scan_id}/findings/{finding_id}")
-async def update_finding_status(
-    scan_id: str,
-    finding_id: str,
-    status_update: dict,
+@app.post("/api/reports/generate")
+async def generate_report(
+    report_config: dict,
     api_key: str = Depends(verify_api_key)
 ):
-    """Update the status of a scan finding."""
+    """Generate a security report based on the given configuration."""
     try:
-        scan = db.get_scan(scan_id)
-        if not scan:
-            raise HTTPException(status_code=404, detail="Scan not found")
+        report_id = str(uuid.uuid4())
+        report_data = {
+            "id": report_id,
+            "type": report_config.get("type", "security"),
+            "format": report_config.get("format", "pdf"),
+            "time_range": report_config.get("time_range", "last_24h"),
+            "status": "generating",
+            "created_at": datetime.now().isoformat()
+        }
         
-        if scan["status"] == "failed":
-            raise HTTPException(status_code=400, detail="Cannot update findings for a failed scan")
+        # Generate report
+        report = db.generate_report(report_config)
+        report_data["status"] = "completed"
+        report_data["url"] = f"/api/reports/{report_id}/download"
         
-        db.update_finding_status(finding_id, status_update["status"])
-        
-        # Notify connected clients
-        await broadcast_message('notifications', json.dumps({
-            "type": "finding_status_updated",
-            "scan_id": scan_id,
-            "finding_id": finding_id,
-            "status": status_update["status"]
-        }))
-        
-        return {"message": "Finding status updated successfully"}
+        return {
+            "report_id": report_id,
+            "message": "Report generation started",
+            "status": "generating",
+            "download_url": report_data["url"]
+        }
+    except Exception as e:
+        logger.error(f"Error generating report: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error generating report")
+
+@app.get("/api/reports/{report_id}")
+async def get_report(
+    report_id: str,
+    api_key: str = Depends(verify_api_key)
+):
+    """Get the status and details of a generated report."""
+    try:
+        report = db.get_report(report_id)
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+        return report
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error updating finding status: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error updating finding status")
+        logger.error(f"Error retrieving report: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving report")
 
-@app.post("/api/security/scan/schedule")
-async def schedule_scan(
-    schedule: dict,
+@app.post("/api/maintenance/schedule")
+async def schedule_maintenance(
+    maintenance_config: dict = Body(..., example={
+        "start_time": "2024-05-26T00:00:00Z",
+        "end_time": "2024-05-26T02:00:00Z",
+        "type": "routine",
+        "description": "Scheduled maintenance window"
+    }),
     api_key: str = Depends(verify_api_key)
 ):
-    """Schedule a new security scan."""
+    """Schedule a maintenance window."""
     try:
-        schedule_id = str(uuid.uuid4())
-        schedule_data = {
-            "id": schedule_id,
-            "name": schedule["name"],
-            "type": schedule["type"],
-            "target": schedule["target"],
-            "schedule": schedule["schedule"],
-            "last_run": None,
-            "next_run": db._calculate_next_run(schedule["schedule"]),
-            "status": "active",
-            "metadata": schedule["metadata"] or {}
-        }
+        # Validate maintenance configuration
+        if not isinstance(maintenance_config, dict):
+            raise HTTPException(status_code=422, detail="Invalid maintenance configuration format")
         
-        db.schedule_scan(schedule_data)
+        required_fields = ["start_time", "end_time"]
+        for field in required_fields:
+            if field not in maintenance_config:
+                raise HTTPException(status_code=422, detail=f"Missing required field: {field}")
+        
+        # Validate maintenance window
+        try:
+            start_time = datetime.fromisoformat(maintenance_config["start_time"].replace('Z', '+00:00'))
+            end_time = datetime.fromisoformat(maintenance_config["end_time"].replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid datetime format")
+        
+        if start_time >= end_time:
+            raise HTTPException(status_code=400, detail="End time must be after start time")
+        
+        if start_time < datetime.now():
+            raise HTTPException(status_code=400, detail="Start time must be in the future")
+        
+        # Schedule maintenance
+        maintenance_id = db.schedule_maintenance({
+            "start_time": start_time.isoformat(),
+            "end_time": end_time.isoformat(),
+            "type": maintenance_config.get("type", "routine"),
+            "description": maintenance_config.get("description", "Scheduled maintenance")
+        })
+        
+        # Notify connected clients
+        await broadcast_message('notifications', {
+            "type": "maintenance_scheduled",
+            "maintenance_id": maintenance_id,
+            "start_time": start_time.isoformat(),
+            "end_time": end_time.isoformat()
+        })
         
         return {
-            "schedule_id": schedule_id,
-            "message": "Scan scheduled successfully",
-            "next_run": schedule_data["next_run"]
+            "maintenance_id": maintenance_id,
+            "message": "Maintenance window scheduled successfully",
+            "start_time": start_time.isoformat(),
+            "end_time": end_time.isoformat()
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error scheduling scan: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error scheduling scan")
+        logger.error(f"Error scheduling maintenance: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error scheduling maintenance")
 
-@app.get("/api/security/scan/schedule")
-async def get_scheduled_scans(api_key: str = Depends(verify_api_key)):
-    """Get all scheduled scans."""
+@app.get("/api/maintenance/schedule")
+async def get_maintenance_schedule(
+    api_key: str = Depends(verify_api_key)
+):
+    """Get all scheduled maintenance windows."""
     try:
-        schedules = db.get_scan_schedules()
+        schedules = db.get_maintenance_schedules()
         return {"schedules": schedules}
     except Exception as e:
-        logger.error(f"Error getting scheduled scans: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error retrieving scheduled scans")
+        logger.error(f"Error retrieving maintenance schedules: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving maintenance schedules")
 
-@app.delete("/api/security/scan/schedule/{schedule_id}")
-async def delete_scheduled_scan(
-    schedule_id: str,
+@app.delete("/api/maintenance/schedule/{maintenance_id}")
+async def cancel_maintenance(
+    maintenance_id: str,
     api_key: str = Depends(verify_api_key)
 ):
-    """Delete a scheduled scan."""
+    """Cancel a scheduled maintenance window."""
     try:
-        db.delete_scan_schedule(schedule_id)
-        return {"message": "Scheduled scan deleted successfully"}
-    except Exception as e:
-        logger.error(f"Error deleting scheduled scan: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error deleting scheduled scan")
-
-@app.get("/api/security/scan/{scan_id}/findings/export")
-async def export_findings(
-    scan_id: str,
-    format: str = "csv",
-    api_key: str = Depends(verify_api_key)
-):
-    """Export scan findings in the specified format."""
-    try:
-        scan = db.get_scan(scan_id)
-        if not scan:
-            raise HTTPException(status_code=404, detail="Scan not found")
-        
-        findings = db.get_scan_findings(scan_id)
-        
-        if format == "csv":
-            output = io.StringIO()
-            writer = csv.DictWriter(output, fieldnames=["id", "timestamp", "type", "severity", "description", "location", "status"])
-            writer.writeheader()
-            writer.writerows(findings)
-            
-            return StreamingResponse(
-                iter([output.getvalue()]),
-                media_type="text/csv",
-                headers={"Content-Disposition": f"attachment; filename=scan-findings-{scan_id}.csv"}
-            )
-        else:
-            raise HTTPException(status_code=400, detail="Unsupported export format")
+        if db.cancel_maintenance(maintenance_id):
+            # Notify connected clients
+            await broadcast_message('notifications', json.dumps({
+                "type": "maintenance_cancelled",
+                "maintenance_id": maintenance_id
+            }))
+            return {"message": "Maintenance window cancelled successfully"}
+        raise HTTPException(status_code=404, detail="Maintenance window not found")
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error exporting findings: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error exporting findings")
+        logger.error(f"Error cancelling maintenance: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error cancelling maintenance")
 
-async def run_security_scan(scan_id: str):
-    """Background task to run a security scan."""
+@app.get("/api/get-api-key")
+async def get_api_key_endpoint():
+    """Get API key for WebSocket connection"""
+    # Get API key from environment
+    api_key = get_api_key()
+    
+    # Return API key in response
+    return {"api_key": api_key}
+
+@app.get("/api/settings/{section}")
+async def get_section_settings(section: str, api_key: str = Depends(verify_api_key)):
+    """Get settings for a specific section."""
     try:
-        # Update scan status to running
-        db.update_scan_status(scan_id, "running", 0)
-        
-        # Simulate scan progress
-        for progress in range(0, 101, 10):
-            await asyncio.sleep(2)  # Simulate work
-            db.update_scan_status(scan_id, "running", progress)
-            
-            # Add some sample findings
-            if progress in [30, 60, 90]:
-                finding = {
-                    "type": "vulnerability",
-                    "severity": "high" if progress == 30 else "medium" if progress == 60 else "low",
-                    "description": f"Sample finding at {progress}% progress",
-                    "location": f"component_{progress}",
-                    "status": "new"
-                }
-                await add_finding(scan_id, finding)
-        
-        # Mark scan as completed
-        db.update_scan_status(scan_id, "completed", 100, end_time=datetime.now().isoformat())
-        
-        # Notify connected clients
-        await broadcast_message('notifications', json.dumps({
-            "type": "security_scan_completed",
-            "scan_id": scan_id,
-            "status": "completed"
-        }))
+        settings = db.get_page_settings(section)
+        return settings
     except Exception as e:
-        logger.error(f"Error running security scan: {str(e)}")
-        db.update_scan_status(scan_id, "failed", 0, error_message=str(e))
-        
-        # Notify connected clients
-        await broadcast_message('notifications', json.dumps({
-            "type": "security_scan_failed",
-            "scan_id": scan_id,
-            "error": str(e)
-        }))
+        logger.error(f"Error getting {section} settings: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving {section} settings")
 
-# Security scan models
-class ScanSchedule(BaseModel):
-    name: str
-    type: str
-    target: str
-    schedule: str
-    metadata: Optional[Dict[str, Any]] = None
-
-class ScanFinding(BaseModel):
-    type: str
-    severity: str
-    description: str
-    location: Optional[str] = None
-    evidence: Optional[str] = None
-    status: str = "new"
-    metadata: Optional[Dict[str, Any]] = None
-
-# Template middleware
-@app.middleware("http")
-async def template_middleware(request: Request, call_next):
-    """Middleware to inject API key into template context."""
-    response = await call_next(request)
-    
-    # Only modify HTML responses
-    if "text/html" in response.headers.get("content-type", ""):
-        # Get the response body
-        body = b""
-        async for chunk in response.body_iterator:
-            body += chunk
-        
-        # Get API key from settings
-        settings = db.get_settings()
-        api_key = settings['api_key']
-        
-        # Inject API key into template context
-        if b"{{ api_key }}" in body:
-            body = body.replace(b"{{ api_key }}", api_key.encode())
-        
-        # Create new response with modified body
-        return Response(
-            content=body,
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            media_type=response.media_type
-        )
-    
-    return response
-
-# Network monitoring service state
-network_monitoring_state = {
-    "running": False,
-    "last_scan": None,
-    "stats": {
-        "devices_discovered": 0,
-        "connections_tracked": 0,
-        "traffic_analyzed": 0
-    }
-}
-
-# Network monitoring background task
-async def network_monitoring_task():
-    """Background task for network monitoring."""
-    while network_monitoring_state["running"]:
-        try:
-            # Update last scan time
-            network_monitoring_state["last_scan"] = datetime.now().isoformat()
-            now = datetime.now().isoformat()
-            
-            # Discover devices using ARP
-            try:
-                if os.name == 'posix':  # Linux/Unix
-                    if platform.system() == 'Darwin':  # macOS
-                        # Use netstat on macOS as an alternative to psutil.net_connections
-                        try:
-                            netstat_output = subprocess.check_output(['netstat', '-an'], stderr=subprocess.PIPE).decode()
-                            connections = []
-                            for line in netstat_output.split('\n'):
-                                if 'ESTABLISHED' in line:
-                                    parts = line.split()
-                                    if len(parts) >= 4:
-                                        local_addr = parts[3]
-                                        remote_addr = parts[4]
-                                        if '.' in local_addr and '.' in remote_addr:  # IPv4 addresses
-                                            try:
-                                                local_ip, local_port = local_addr.rsplit(':', 1)
-                                                remote_ip, remote_port = remote_addr.rsplit(':', 1)
-                                                connections.append({
-                                                    'local_addr': f"{local_ip}:{local_port}",
-                                                    'remote_addr': f"{remote_ip}:{remote_port}",
-                                                    'status': 'ESTABLISHED',
-                                                    'type': 'tcp'  # netstat -an shows TCP by default
-                                                })
-                                            except ValueError:
-                                                continue
-                        except subprocess.CalledProcessError as e:
-                            logger.error(f"Error running netstat: {e.stderr.decode() if e.stderr else str(e)}")
-                            connections = []
-                        
-                        # Get ARP table
-                        arp_output = subprocess.check_output(['arp', '-a'], stderr=subprocess.PIPE).decode()
-                        devices = []
-                        for line in arp_output.split('\n'):
-                            if 'at' in line:  # macOS ARP format: hostname (ip) at mac on interface
-                                parts = line.split()
-                                if len(parts) >= 4:
-                                    ip = parts[1].strip('()')
-                                    mac = parts[3]
-                                    if mac != '(incomplete)':
-                                        devices.append({
-                                            'ip': ip,
-                                            'mac': mac,
-                                            'last_seen': now,
-                                            'first_seen': now
-                                        })
-                    else:  # Linux
-                        arp_output = subprocess.check_output(['arp', '-n'], stderr=subprocess.PIPE).decode()
-                        devices = []
-                        for line in arp_output.split('\n')[1:]:  # Skip header
-                            if line.strip():
-                                parts = line.split()
-                                if len(parts) >= 3:
-                                    ip = parts[0]
-                                    mac = parts[2]
-                                    if ip != '<incomplete>':
-                                        devices.append({
-                                            'ip': ip,
-                                            'mac': mac,
-                                            'last_seen': now,
-                                            'first_seen': now  # Set first_seen for new devices
-                                        })
-                else:  # Windows
-                    arp_output = subprocess.check_output(['arp', '-a'], stderr=subprocess.PIPE).decode()
-                    devices = []
-                    for line in arp_output.split('\n'):
-                        if 'dynamic' in line.lower():
-                            parts = line.split()
-                            if len(parts) >= 2:
-                                ip = parts[0]
-                                mac = parts[1]
-                                devices.append({
-                                    'ip': ip,
-                                    'mac': mac,
-                                    'last_seen': now,
-                                    'first_seen': now  # Set first_seen for new devices
-                                })
-            except subprocess.CalledProcessError as e:
-                logger.error(f"Error running network command: {e.stderr.decode() if e.stderr else str(e)}")
-                devices = []
-                connections = []
-            except Exception as e:
-                logger.error(f"Error discovering network devices: {str(e)}")
-                devices = []
-                connections = []
-            
-            # Update device count
-            network_monitoring_state["stats"]["devices_discovered"] = len(devices)
-            
-            # Update connection count
-            network_monitoring_state["stats"]["connections_tracked"] = len(connections)
-            
-            # Analyze traffic using psutil (this works on macOS)
-            try:
-                net_io = psutil.net_io_counters()
-                traffic_stats = {
-                    'bytes_sent': net_io.bytes_sent,
-                    'bytes_recv': net_io.bytes_recv,
-                    'packets_sent': net_io.packets_sent,
-                    'packets_recv': net_io.packets_recv,
-                    'timestamp': now
-                }
-            except Exception as e:
-                logger.error(f"Error getting network I/O stats: {str(e)}")
-                traffic_stats = {
-                    'bytes_sent': 0,
-                    'bytes_recv': 0,
-                    'packets_sent': 0,
-                    'packets_recv': 0,
-                    'timestamp': now
-                }
-            
-            # Calculate network load (macOS specific)
-            try:
-                if platform.system() == 'Darwin':
-                    # Get interface stats using netstat
-                    try:
-                        netstat_i_output = subprocess.check_output(['netstat', '-I', 'en0'], stderr=subprocess.PIPE).decode()
-                        lines = netstat_i_output.split('\n')
-                        if len(lines) >= 2:  # Skip header line
-                            stats = lines[1].split()
-                            if len(stats) >= 4:
-                                bytes_in = int(stats[3])
-                                bytes_out = int(stats[6])
-                                bytes_per_sec = (bytes_in + bytes_out) * 8  # Convert to bits
-                                # Assume 1Gbps connection
-                                if_speed = 1000000000  # 1Gbps in bits
-                                load = min(100, (bytes_per_sec / if_speed) * 100)
-                                primary_if = 'en0'
-                            else:
-                                load = 0
-                                primary_if = 'en0'
-                                bytes_per_sec = 0
-                        else:
-                            load = 0
-                            primary_if = 'en0'
-                            bytes_per_sec = 0
-                    except subprocess.CalledProcessError:
-                        # Fallback to simple calculation using psutil
-                        net_io = psutil.net_io_counters()
-                        bytes_per_sec = (net_io.bytes_sent + net_io.bytes_recv) * 8
-                        if_speed = 1000000000  # 1Gbps
-                        load = min(100, (bytes_per_sec / if_speed) * 100)
-                        primary_if = 'en0'
-                else:
-                    # Get network interface stats for non-macOS systems
-                    net_if_stats = psutil.net_if_stats()
-                    net_if_io = psutil.net_io_counters()
-                    
-                    # Find the primary interface (usually the one with the most traffic)
-                    primary_if = max(net_if_io.items(), key=lambda x: x[1].bytes_sent + x[1].bytes_recv)[0]
-                    
-                    # Get interface speed (in bits per second)
-                    if_speed = net_if_stats[primary_if].speed * 1000000  # Convert Mbps to bps
-                    
-                    # Calculate current bandwidth usage
-                    current_io = net_if_io[primary_if]
-                    bytes_per_sec = (current_io.bytes_sent + current_io.bytes_recv) * 8  # Convert to bits
-                    load = min(100, (bytes_per_sec / if_speed) * 100) if if_speed > 0 else 0
-            except Exception as e:
-                logger.error(f"Error calculating network load: {str(e)}")
-                load = 0
-                primary_if = 'en0'  # Default to en0 on macOS
-                bytes_per_sec = 0
-            
-            # Update network metrics
-            try:
-                db = Database()
-                db.update_network_metrics({
-                    'timestamp': now,
-                    'load': load,
-                    'latency': None,
-                    'packet_loss': None,
-                    'bandwidth_usage': bytes_per_sec,
-                    'active_connections': len(connections),
-                    'metadata': {
-                        'interface': primary_if,
-                        'interface_speed': if_speed if 'if_speed' in locals() else None
-                    }
-                })
-            except Exception as e:
-                logger.error(f"Error updating network metrics: {str(e)}")
-            
-            # Update traffic stats
-            network_monitoring_state["stats"]["traffic_analyzed"] = traffic_stats['bytes_sent'] + traffic_stats['bytes_recv']
-            
-            # Store data in database
-            try:
-                with db.get_db() as conn:
-                    cursor = conn.cursor()
-                    
-                    # Update devices
-                    for device in devices:
-                        cursor.execute("""
-                            INSERT OR REPLACE INTO network_devices (
-                                ip_address, mac_address, last_seen, first_seen
-                            ) VALUES (?, ?, ?, COALESCE(
-                                (SELECT first_seen FROM network_devices WHERE ip_address = ?),
-                                ?
-                            ))
-                        """, (
-                            device['ip'],
-                            device['mac'],
-                            device['last_seen'],
-                            device['ip'],
-                            device['first_seen']
-                        ))
-                    
-                    # Update connections (only if we have connection data)
-                    if connections:
-                        for conn in connections:
-                            try:
-                                local_parts = conn['local_addr'].split(':')
-                                remote_parts = conn['remote_addr'].split(':')
-                                cursor.execute("""
-                                    INSERT INTO network_connections (
-                                        source_ip, source_port, dest_ip, dest_port,
-                                        protocol, status, start_time
-                                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                                """, (
-                                    local_parts[0],
-                                    int(local_parts[1]),
-                                    remote_parts[0],
-                                    int(remote_parts[1]),
-                                    conn.get('type', 'tcp'),
-                                    conn.get('status', 'ESTABLISHED'),
-                                    now
-                                ))
-                            except (ValueError, IndexError) as e:
-                                logger.warning(f"Error processing connection data: {str(e)}")
-                                continue
-                    
-                    # Update traffic stats
-                    cursor.execute("""
-                        INSERT INTO network_traffic (
-                            timestamp, bytes_sent, bytes_received,
-                            packets_sent, packets_received
-                        ) VALUES (?, ?, ?, ?, ?)
-                    """, (
-                        traffic_stats['timestamp'],
-                        traffic_stats['bytes_sent'],
-                        traffic_stats['bytes_recv'],
-                        traffic_stats['packets_sent'],
-                        traffic_stats['packets_recv']
-                    ))
-                    
-                    conn.commit()
-            except sqlite3.Error as e:
-                logger.error(f"Database error: {str(e)}")
-            except Exception as e:
-                logger.error(f"Error storing network data: {str(e)}")
-            
-            # Broadcast updates via WebSocket
-            try:
-                await broadcast_message('network', {
-                    "type": "network_update",
-                    "data": {
-                        "devices": len(devices),
-                        "connections": len(connections),
-                        "traffic": traffic_stats,
-                        "load": load,
-                        "timestamp": now
-                    }
-                })
-            except Exception as e:
-                logger.error(f"Error broadcasting network update: {str(e)}")
-            
-            # Sleep for 5 seconds before next scan
-            await asyncio.sleep(5)
-            
-        except Exception as e:
-            logger.error(f"Error in network monitoring task: {str(e)}", exc_info=True)
-            await asyncio.sleep(5)  # Sleep before retrying
+@app.get("/api/network-monitoring/status")
+async def get_network_monitoring_status(api_key: str = Depends(verify_api_key)):
+    """Get current network monitoring status."""
+    try:
+        status = db.get_network_monitoring_status()
+        return status
+    except Exception as e:
+        logger.error(f"Error getting network monitoring status: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving network monitoring status")
 
 @app.post("/api/network-monitoring/start")
 async def start_network_monitoring(api_key: str = Depends(verify_api_key)):
-    """Start the network monitoring service."""
-    if network_monitoring_state["running"]:
-        raise HTTPException(status_code=400, detail="Network monitoring is already running")
-    
+    """Start network monitoring."""
     try:
-        network_monitoring_state["running"] = True
-        asyncio.create_task(network_monitoring_task())
-        return {"status": "started", "message": "Network monitoring service started"}
-    except Exception as e:
-        network_monitoring_state["running"] = False
-        logger.error(f"Error starting network monitoring: {str(e)}")
+        if db.start_network_monitoring():
+            # Notify connected clients
+            await broadcast_message('network', {
+                'type': 'monitoring_started',
+                'timestamp': datetime.now().isoformat()
+            })
+            return {"status": "success", "message": "Network monitoring started"}
         raise HTTPException(status_code=500, detail="Failed to start network monitoring")
-
-@app.post("/api/network-monitoring/stop")
-async def stop_network_monitoring(api_key: str = Depends(verify_api_key)):
-    """Stop the network monitoring service."""
-    if not network_monitoring_state["running"]:
-        raise HTTPException(status_code=400, detail="Network monitoring is not running")
-    
-    try:
-        network_monitoring_state["running"] = False
-        return {"status": "stopped", "message": "Network monitoring service stopped"}
-    except Exception as e:
-        logger.error(f"Error stopping network monitoring: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to stop network monitoring")
-
-@app.get("/api/network-monitoring/status")
-async def get_network_monitoring_status(api_key: str = Depends(verify_api_key)):
-    """Get the current status of the network monitoring service."""
-    return {
-        "running": network_monitoring_state["running"],
-        "last_scan": network_monitoring_state["last_scan"],
-        "stats": network_monitoring_state["stats"]
-    }
-
-async def monitor_network():
-    """Background task for network monitoring."""
-    try:
-        db = Database()
-        while True:
-            # Check if monitoring is still active
-            with db.get_db() as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT status FROM network_monitoring WHERE id = 1")
-                status = cursor.fetchone()
-                
-                if not status or status[0] != "running":
-                    break
-            
-            # Perform network scan
-            await scan_network()
-            
-            # Update monitoring stats
-            with db.get_db() as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    UPDATE network_monitoring
-                    SET last_scan = ?,
-                        last_updated = ?
-                    WHERE id = 1
-                """, (datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
-                conn.commit()
-            
-            # Wait before next scan
-            await asyncio.sleep(60)  # Scan every minute
-    except Exception as e:
-        logger.error(f"Error in network monitoring: {str(e)}")
-        # Update monitoring status to stopped on error
-        try:
-            with db.get_db() as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    UPDATE network_monitoring
-                    SET status = 'stopped',
-                        last_updated = ?
-                    WHERE id = 1
-                """, (datetime.utcnow().isoformat(),))
-                conn.commit()
-        except:
-            pass
-
-async def scan_network():
-    """Perform network scan to discover devices and connections."""
-    try:
-        # Use psutil to get network connections
-        import psutil
-        
-        db = Database()
-        now = datetime.utcnow().isoformat()
-        
-        # Get current network connections
-        connections = psutil.net_connections()
-        devices = set()
-        
-        for conn in connections:
-            if conn.status == 'ESTABLISHED':
-                # Add source device
-                source_ip = conn.laddr.ip
-                if source_ip != '127.0.0.1':
-                    devices.add(source_ip)
-                    device_id = db.update_network_device({
-                        'ip': source_ip,
-                        'type': 'client',
-                        'metadata': {
-                            'pid': conn.pid,
-                            'process': psutil.Process(conn.pid).name() if conn.pid else None
-                        }
-                    })
-                    
-                    # Add connection
-                    if conn.raddr:  # Has remote address
-                        dest_ip = conn.raddr.ip
-                        if dest_ip != '127.0.0.1':
-                            devices.add(dest_ip)
-                            dest_device_id = db.update_network_device({
-                                'ip': dest_ip,
-                                'type': 'remote'
-                            })
-                            
-                            db.add_network_connection({
-                                'source_device': device_id,
-                                'dest_device': dest_device_id,
-                                'protocol': conn.type,
-                                'source_port': conn.laddr.port,
-                                'dest_port': conn.raddr.port,
-                                'status': 'established',
-                                'start_time': now
-                            })
-        
-        # Update network traffic stats
-        net_io = psutil.net_io_counters()
-        db.update_network_traffic({
-            'timestamp': now,
-            'bytes_sent': net_io.bytes_sent,
-            'bytes_received': net_io.bytes_recv,
-            'packets_sent': net_io.packets_sent,
-            'packets_received': net_io.packets_recv
-        })
-        
-        # Update monitoring stats
-        with db.get_db() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE network_monitoring
-                SET devices_discovered = ?,
-                    connections_tracked = ?,
-                    traffic_analyzed = traffic_analyzed + 1
-                WHERE id = 1
-            """, (len(devices), len(connections)))
-            conn.commit()
-        
-        # Notify clients of update
-        await notify_clients({
-            'type': 'network_update',
-            'data': {
-                'devices': len(devices),
-                'connections': len(connections),
-                'timestamp': now
-            }
-        })
-    except Exception as e:
-        logger.error(f"Error scanning network: {str(e)}")
-        raise
-
-@app.post("/api/network-monitoring/start")
-async def start_network_monitoring(api_key: str = Depends(verify_api_key)):
-    """Start network monitoring service."""
-    try:
-        db = Database()
-        with db.get_db() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE network_monitoring
-                SET status = 'running',
-                    last_updated = ?
-                WHERE id = 1
-            """, (datetime.utcnow().isoformat(),))
-            conn.commit()
-        
-        # Start background monitoring task
-        asyncio.create_task(monitor_network())
-        
-        return {"message": "Network monitoring started successfully"}
     except Exception as e:
         logger.error(f"Error starting network monitoring: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error starting network monitoring")
 
 @app.post("/api/network-monitoring/stop")
 async def stop_network_monitoring(api_key: str = Depends(verify_api_key)):
-    """Stop network monitoring service."""
+    """Stop network monitoring."""
     try:
-        db = Database()
-        with db.get_db() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE network_monitoring
-                SET status = 'stopped',
-                    last_updated = ?
-                WHERE id = 1
-            """, (datetime.utcnow().isoformat(),))
-            conn.commit()
-        
-        return {"message": "Network monitoring stopped successfully"}
+        if db.stop_network_monitoring():
+            # Notify connected clients
+            await broadcast_message('network', {
+                'type': 'monitoring_stopped',
+                'timestamp': datetime.now().isoformat()
+            })
+            return {"status": "success", "message": "Network monitoring stopped"}
+        raise HTTPException(status_code=500, detail="Failed to stop network monitoring")
     except Exception as e:
         logger.error(f"Error stopping network monitoring: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/network-monitoring/status")
-async def get_network_monitoring_status(api_key: str = Depends(verify_api_key)):
-    """Get network monitoring service status."""
-    try:
-        db = Database()
-        with db.get_db() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM network_monitoring WHERE id = 1")
-            status = cursor.fetchone()
-            
-            if not status:
-                raise HTTPException(status_code=404, detail="Monitoring status not found")
-            
-            return {
-                "running": status[1] == "running",
-                "last_scan": status[2],
-                "stats": {
-                    "devices_discovered": status[3],
-                    "connections_tracked": status[4],
-                    "traffic_analyzed": status[5]
-                },
-                "last_updated": status[6]
-            }
-    except Exception as e:
-        logger.error(f"Error getting monitoring status: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-def get_db():
-    """Get a database connection."""
-    conn = sqlite3.connect('data/securenet.db')
-    conn.row_factory = sqlite3.Row
-    return conn
-
-# Update the database schema
-def update_db_schema():
-    """Update the database schema if needed."""
-    db = Database()  # This will initialize the database with the latest schema
-    logger.info("Database schema updated successfully")
-
-# New models for advanced search
-class SearchParams(BaseModel):
-    pattern: str
-    isRegex: bool = False
-    fields: List[str] = ["message"]
-    timeFrom: Optional[datetime] = None
-    timeTo: Optional[datetime] = None
-    correlation: str = "none"
-    aggregation: str = "count"
-
-class LogAnalysisParams(BaseModel):
-    type: str
-    aggregation: str
-    timeRange: str = "24h"
-
-# Advanced search endpoint
-@app.post("/api/logs/search")
-async def search_logs(params: SearchParams):
-    try:
-        query = "SELECT * FROM logs WHERE 1=1"
-        query_params = []
-        
-        # Add time range filter
-        if params.timeFrom:
-            query += " AND timestamp >= ?"
-            query_params.append(params.timeFrom.isoformat())
-        if params.timeTo:
-            query += " AND timestamp <= ?"
-            query_params.append(params.timeTo.isoformat())
-        
-        # Add pattern search
-        if params.pattern:
-            if params.isRegex:
-                try:
-                    pattern = re.compile(params.pattern)
-                    # We'll filter results after fetching
-                except re.error as e:
-                    raise HTTPException(status_code=400, detail=f"Invalid regex pattern: {str(e)}")
-            else:
-                query += " AND ("
-                conditions = []
-                for field in params.fields:
-                    conditions.append(f"{field} LIKE ?")
-                    query_params.append(f"%{params.pattern}%")
-                query += " OR ".join(conditions) + ")"
-        
-        # Execute query
-        db = Database()
-        results = db.execute_query(query, query_params)
-        
-        # Apply regex filter if needed
-        if params.isRegex and params.pattern:
-            pattern = re.compile(params.pattern)
-            results = [
-                log for log in results
-                if any(pattern.search(str(log.get(field, ""))) for field in params.fields)
-            ]
-        
-        # Apply correlation if requested
-        if params.correlation != "none":
-            results = apply_correlation(results, params.correlation)
-        
-        # Apply aggregation
-        if params.aggregation != "none":
-            results = apply_aggregation(results, params.aggregation)
-        
-        return results
-    except Exception as e:
-        logger.error(f"Error in advanced search: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Log analysis endpoint
-@app.get("/api/logs/analysis")
-async def analyze_logs(
-    type: str = Query(..., description="Analysis type: trend, distribution, sources, correlation"),
-    aggregation: str = Query("count", description="Aggregation method: count, avg, sum, min, max"),
-    timeRange: str = Query("24h", description="Time range for analysis")
-):
-    try:
-        db = Database()
-        
-        # Calculate time range
-        end_time = datetime.now()
-        if timeRange == "1h":
-            start_time = end_time - timedelta(hours=1)
-            interval = "1 minute"
-        elif timeRange == "24h":
-            start_time = end_time - timedelta(days=1)
-            interval = "1 hour"
-        elif timeRange == "7d":
-            start_time = end_time - timedelta(days=7)
-            interval = "1 day"
-        else:
-            raise HTTPException(status_code=400, detail="Invalid time range")
-        
-        # Get analysis data based on type
-        if type == "trend":
-            data = get_trend_analysis(db, start_time, end_time, interval, aggregation)
-        elif type == "distribution":
-            data = get_level_distribution(db, start_time, end_time)
-        elif type == "sources":
-            data = get_source_distribution(db, start_time, end_time)
-        elif type == "correlation":
-            data = get_log_correlation(db, start_time, end_time)
-        else:
-            raise HTTPException(status_code=400, detail="Invalid analysis type")
-        
-        return data
-    except Exception as e:
-        logger.error(f"Error in log analysis: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Helper functions for log analysis
-def get_trend_analysis(db: Database, start_time: datetime, end_time: datetime, interval: str, aggregation: str) -> Dict[str, Any]:
-    query = f"""
-        SELECT 
-            strftime('%Y-%m-%d %H:%M', timestamp) as time_bucket,
-            {aggregation}(1) as value
-        FROM logs
-        WHERE timestamp BETWEEN ? AND ?
-        GROUP BY time_bucket
-        ORDER BY time_bucket
-    """
-    results = db.execute_query(query, [start_time.isoformat(), end_time.isoformat()])
-    
-    return {
-        "labels": [r["time_bucket"] for r in results],
-        "values": [r["value"] for r in results],
-        "stats": {
-            "total": sum(r["value"] for r in results),
-            "average": sum(r["value"] for r in results) / len(results) if results else 0,
-            "max": max(r["value"] for r in results) if results else 0,
-            "min": min(r["value"] for r in results) if results else 0
-        }
-    }
-
-def get_level_distribution(db: Database, start_time: datetime, end_time: datetime) -> Dict[str, Any]:
-    query = """
-        SELECT level, COUNT(*) as count
-        FROM logs
-        WHERE timestamp BETWEEN ? AND ?
-        GROUP BY level
-    """
-    results = db.execute_query(query, [start_time.isoformat(), end_time.isoformat()])
-    
-    return {
-        "labels": [r["level"] for r in results],
-        "values": [r["count"] for r in results],
-        "stats": {
-            "total": sum(r["count"] for r in results),
-            "levels": {r["level"]: r["count"] for r in results}
-        }
-    }
-
-def get_source_distribution(db: Database, start_time: datetime, end_time: datetime) -> Dict[str, Any]:
-    query = """
-        SELECT source, COUNT(*) as count
-        FROM logs
-        WHERE timestamp BETWEEN ? AND ?
-        GROUP BY source
-    """
-    results = db.execute_query(query, [start_time.isoformat(), end_time.isoformat()])
-    
-    return {
-        "labels": [r["source"] for r in results],
-        "values": [r["count"] for r in results],
-        "stats": {
-            "total": sum(r["count"] for r in results),
-            "sources": {r["source"]: r["count"] for r in results}
-        }
-    }
-
-def get_log_correlation(db: Database, start_time: datetime, end_time: datetime) -> Dict[str, Any]:
-    # Get logs with similar patterns within a time window
-    query = """
-        WITH log_patterns AS (
-            SELECT 
-                message,
-                COUNT(*) as pattern_count,
-                GROUP_CONCAT(timestamp) as timestamps
-            FROM logs
-            WHERE timestamp BETWEEN ? AND ?
-            GROUP BY message
-            HAVING pattern_count > 1
-        )
-        SELECT 
-            message,
-            pattern_count,
-            timestamps
-        FROM log_patterns
-        ORDER BY pattern_count DESC
-        LIMIT 10
-    """
-    results = db.execute_query(query, [start_time.isoformat(), end_time.isoformat()])
-    
-    return {
-        "patterns": [
-            {
-                "message": r["message"],
-                "count": r["pattern_count"],
-                "timestamps": r["timestamps"].split(",")
-            }
-            for r in results
-        ],
-        "stats": {
-            "total_patterns": len(results),
-            "max_occurrences": max(r["pattern_count"] for r in results) if results else 0
-        }
-    }
-
-# Helper functions for correlation and aggregation
-def apply_correlation(logs: List[Dict[str, Any]], correlation_type: str) -> List[Dict[str, Any]]:
-    if correlation_type == "time":
-        # Group logs by time windows
-        time_windows = {}
-        for log in logs:
-            timestamp = datetime.fromisoformat(log["timestamp"])
-            window = timestamp.replace(minute=timestamp.minute - timestamp.minute % 5)
-            if window not in time_windows:
-                time_windows[window] = []
-            time_windows[window].append(log)
-        
-        # Return correlated logs
-        correlated = []
-        for window, window_logs in time_windows.items():
-            if len(window_logs) > 1:
-                correlated.extend(window_logs)
-        return correlated
-    
-    elif correlation_type == "source":
-        # Group logs by source
-        source_groups = {}
-        for log in logs:
-            source = log["source"]
-            if source not in source_groups:
-                source_groups[source] = []
-            source_groups[source].append(log)
-        
-        # Return logs from sources with multiple entries
-        correlated = []
-        for source, source_logs in source_groups.items():
-            if len(source_logs) > 1:
-                correlated.extend(source_logs)
-        return correlated
-    
-    elif correlation_type == "pattern":
-        # Group logs by similar messages
-        pattern_groups = {}
-        for log in logs:
-            message = log["message"]
-            # Simple pattern matching - can be enhanced
-            pattern = re.sub(r'\d+', 'N', message)
-            if pattern not in pattern_groups:
-                pattern_groups[pattern] = []
-            pattern_groups[pattern].append(log)
-        
-        # Return logs with similar patterns
-        correlated = []
-        for pattern, pattern_logs in pattern_groups.items():
-            if len(pattern_logs) > 1:
-                correlated.extend(pattern_logs)
-        return correlated
-    
-    return logs
-
-def apply_aggregation(logs: List[Dict[str, Any]], aggregation_type: str) -> List[Dict[str, Any]]:
-    if not logs:
-        return []
-    
-    if aggregation_type == "count":
-        return [{"count": len(logs)}]
-    
-    elif aggregation_type == "avg":
-        # Calculate average for numeric fields
-        numeric_fields = {}
-        for log in logs:
-            for key, value in log.items():
-                if isinstance(value, (int, float)):
-                    if key not in numeric_fields:
-                        numeric_fields[key] = []
-                    numeric_fields[key].append(value)
-        
-        return [{
-            field: sum(values) / len(values)
-            for field, values in numeric_fields.items()
-        }]
-    
-    elif aggregation_type == "sum":
-        # Calculate sum for numeric fields
-        numeric_fields = {}
-        for log in logs:
-            for key, value in log.items():
-                if isinstance(value, (int, float)):
-                    if key not in numeric_fields:
-                        numeric_fields[key] = 0
-                    numeric_fields[key] += value
-        
-        return [numeric_fields]
-    
-    elif aggregation_type == "min":
-        # Find minimum values for numeric fields
-        numeric_fields = {}
-        for log in logs:
-            for key, value in log.items():
-                if isinstance(value, (int, float)):
-                    if key not in numeric_fields:
-                        numeric_fields[key] = float('inf')
-                    numeric_fields[key] = min(numeric_fields[key], value)
-        
-        return [numeric_fields]
-    
-    elif aggregation_type == "max":
-        # Find maximum values for numeric fields
-        numeric_fields = {}
-        for log in logs:
-            for key, value in log.items():
-                if isinstance(value, (int, float)):
-                    if key not in numeric_fields:
-                        numeric_fields[key] = float('-inf')
-                    numeric_fields[key] = max(numeric_fields[key], value)
-        
-        return [numeric_fields]
-    
-    return logs
-
-async def get_network_state() -> dict:
-    """Get current network state including active connections, traffic stats, and device status."""
-    try:
-        # Get network connections
-        connections = db.get_network_connections(status='active', limit=100)
-        
-        # Get network traffic stats for the last hour
-        now = datetime.now()
-        start_time = now - timedelta(hours=1)
-        traffic_stats = db.get_network_traffic(
-            start_time=start_time,
-            interval="5m",
-            points=12  # 12 points for 1 hour with 5-minute intervals
-        )
-        
-        # Get device status
-        devices = db.get_network_devices()
-        
-        # Get protocol distribution
-        protocols = db.get_network_protocols()
-        
-        return {
-            'connections': connections,
-            'traffic': traffic_stats,
-            'devices': devices,
-            'protocols': protocols,
-            'timestamp': now.isoformat()
-        }
-    except Exception as e:
-        logger.error(f"Error getting network state: {str(e)}")
-        return {
-            'connections': [],
-            'traffic': {},
-            'devices': [],
-            'protocols': {},
-            'timestamp': datetime.now().isoformat(),
-            'error': str(e)
-        }
-
-async def get_log_stream():
-    """Async generator that yields new log entries as they arrive."""
-    try:
-        last_log_id = None
-        while True:
-            # Get new logs since last check
-            new_logs = db.get_logs(
-                start_time=(datetime.now() - timedelta(seconds=5)).isoformat(),
-                limit=100
-            )
-            
-            if new_logs:
-                # Filter out logs we've already seen
-                if last_log_id:
-                    new_logs = [log for log in new_logs if log['id'] > last_log_id]
-                
-                if new_logs:
-                    last_log_id = new_logs[-1]['id']
-                    for log in new_logs:
-                        yield log
-            
-            await asyncio.sleep(1)  # Check every second
-    except Exception as e:
-        logger.error(f"Error in log stream: {str(e)}")
-        await asyncio.sleep(5)  # Back off on error
-        async for log in get_log_stream():  # Retry
-            yield log
-
-async def get_alert_stream():
-    """Async generator that yields new security alerts as they are generated."""
-    try:
-        last_alert_id = None
-        while True:
-            # Get new alerts since last check
-            new_alerts = db.get_alerts(
-                start_time=(datetime.now() - timedelta(seconds=5)).isoformat(),
-                limit=100
-            )
-            
-            if new_alerts:
-                # Filter out alerts we've already seen
-                if last_alert_id:
-                    new_alerts = [alert for alert in new_alerts if alert['id'] > last_alert_id]
-                
-                if new_alerts:
-                    last_alert_id = new_alerts[-1]['id']
-                    for alert in new_alerts:
-                        yield alert
-            
-            await asyncio.sleep(1)  # Check every second
-    except Exception as e:
-        logger.error(f"Error in alert stream: {str(e)}")
-        await asyncio.sleep(5)  # Back off on error
-        async for alert in get_alert_stream():  # Retry
-            yield alert 
+        raise HTTPException(status_code=500, detail="Error stopping network monitoring")

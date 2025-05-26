@@ -192,16 +192,72 @@
                 <div class="btn-group">
                     <button class="btn btn-outline-secondary active" data-view="physical">Physical</button>
                     <button class="btn btn-outline-secondary" data-view="logical">Logical</button>
+                    <button class="btn btn-outline-secondary" data-view="security">Security</button>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="btn btn-outline-secondary" onclick="zoomNetworkMap('in')">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="zoomNetworkMap('out')">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="resetNetworkMap()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
                 </div>
                 <div class="relative">
                     <input type="text" class="form-control" id="device-search" placeholder="Search devices...">
                     <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 </div>
+                <div class="flex items-center space-x-2">
+                    <label class="text-sm text-gray-400">Show:</label>
+                    <div class="flex space-x-2">
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" class="form-checkbox" id="show-connections" checked>
+                            <span class="ml-2 text-sm">Connections</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" class="form-checkbox" id="show-labels" checked>
+                            <span class="ml-2 text-sm">Labels</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" class="form-checkbox" id="show-traffic" checked>
+                            <span class="ml-2 text-sm">Traffic</span>
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     <div class="card-body">
-        <div id="network-map" class="h-[600px] bg-gray-800 rounded-lg"></div>
+        <div id="network-map" class="h-[600px] bg-gray-800 rounded-lg relative">
+            <div id="map-legend" class="absolute bottom-4 right-4 bg-gray-900/90 p-4 rounded-lg shadow-lg z-10">
+                <h4 class="text-sm font-medium text-white mb-2">Legend</h4>
+                <div class="space-y-2">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <span class="text-sm text-gray-300">Server</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+                        <span class="text-sm text-gray-300">Router</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span class="text-sm text-gray-300">Switch</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <span class="text-sm text-gray-300">Firewall</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-3 h-3 rounded-full bg-gray-500"></div>
+                        <span class="text-sm text-gray-300">Client</span>
+                    </div>
+                </div>
+            </div>
+            <div id="map-tooltip" class="hidden absolute bg-gray-900 text-white p-2 rounded-lg shadow-lg text-sm z-20"></div>
+        </div>
     </div>
 </div>
 
@@ -252,14 +308,186 @@
 
 <!-- Device Details Modal -->
 <div id="device-modal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content max-w-4xl">
         <div class="modal-header">
             <h3 class="modal-title">Device Details</h3>
-            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div class="flex space-x-2">
+                <button class="btn btn-outline-primary" onclick="refreshDeviceDetails()">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
         </div>
         <div class="modal-body">
-            <div id="device-details">
-                <!-- Device details will be populated here -->
+            <div id="device-details" class="space-y-6">
+                <!-- Device Overview -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="card bg-gray-800">
+                        <div class="p-4">
+                            <h4 class="text-sm font-medium text-gray-400">Device Status</h4>
+                            <div class="mt-2 space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Status</span>
+                                    <span id="device-status" class="badge"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Uptime</span>
+                                    <span id="device-uptime" class="text-white"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Last Seen</span>
+                                    <span id="device-last-seen" class="text-white"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card bg-gray-800">
+                        <div class="p-4">
+                            <h4 class="text-sm font-medium text-gray-400">Network Usage</h4>
+                            <div class="mt-2 space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Current Traffic</span>
+                                    <span id="device-current-traffic" class="text-white"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Total Data</span>
+                                    <span id="device-total-data" class="text-white"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Bandwidth Usage</span>
+                                    <span id="device-bandwidth" class="text-white"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card bg-gray-800">
+                        <div class="p-4">
+                            <h4 class="text-sm font-medium text-gray-400">Security Status</h4>
+                            <div class="mt-2 space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Threat Level</span>
+                                    <span id="device-threat-level" class="badge"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Blocked Attempts</span>
+                                    <span id="device-blocked-attempts" class="text-white"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Last Scan</span>
+                                    <span id="device-last-scan" class="text-white"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Device Information -->
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Device Information</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-400">Name</p>
+                                <p id="device-name" class="mt-1 font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Type</p>
+                                <p id="device-type" class="mt-1"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">IP Address</p>
+                                <p id="device-ip" class="mt-1 font-mono"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">MAC Address</p>
+                                <p id="device-mac" class="mt-1 font-mono"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">OS</p>
+                                <p id="device-os" class="mt-1"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Vendor</p>
+                                <p id="device-vendor" class="mt-1"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Location</p>
+                                <p id="device-location" class="mt-1"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">First Seen</p>
+                                <p id="device-first-seen" class="mt-1"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real-time Traffic Chart -->
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Traffic History</h4>
+                        <div class="card-actions">
+                            <div class="flex space-x-2">
+                                <button onclick="updateDeviceTraffic('1h')" class="btn-secondary text-xs" id="deviceTimeRange1h">1H</button>
+                                <button onclick="updateDeviceTraffic('24h')" class="btn-primary text-xs" id="deviceTimeRange24h">24H</button>
+                                <button onclick="updateDeviceTraffic('7d')" class="btn-secondary text-xs" id="deviceTimeRange7d">7D</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="h-64">
+                            <canvas id="device-traffic-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Connections -->
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Active Connections</h4>
+                        <div class="card-actions">
+                            <div class="flex space-x-2">
+                                <button class="btn btn-outline-primary btn-sm" onclick="refreshDeviceConnections()">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table" id="device-connections-table">
+                                <thead>
+                                    <tr>
+                                        <th>Remote Address</th>
+                                        <th>Protocol</th>
+                                        <th>Port</th>
+                                        <th>Status</th>
+                                        <th>Duration</th>
+                                        <th>Data Transferred</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Device connections will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Services -->
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Running Services</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="device-services">
+                            <!-- Services will be populated here -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -270,6 +498,7 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.2/dist/vis-network.min.js"></script>
+<script src="/static/js/app.js"></script>
 <script>
 let networkTrafficChart;
 let protocolDistributionChart;
@@ -292,15 +521,33 @@ let ws = null;
 let isLive = true;
 let messageBuffer = [];
 const MAX_BUFFER_SIZE = 1000;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_DELAY = 2000; // 2 seconds
+
+let deviceTrafficChart = null;
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', function() {
-    initializeCharts();
-    initializeNetworkMap();
-    initMonitoringStatus();
-    loadNetworkData();
-    setupWebSocket();
-    setupEventListeners();
+    console.log('Network page initializing...');
+    try {
+        initializeCharts();
+        console.log('Charts initialized');
+        initializeNetworkMap();
+        console.log('Network map initialized');
+        initMonitoringStatus();
+        console.log('Monitoring status initialized');
+        loadNetworkData();
+        console.log('Network data loading started');
+        setupWebSocket();
+        startHeartbeat();
+        console.log('WebSocket setup started');
+        setupEventListeners();
+        console.log('Event listeners setup complete');
+    } catch (error) {
+        console.error('Error during network page initialization:', error);
+        showNotification('Error initializing network page: ' + error.message, 'error');
+    }
 });
 
 // Initialize charts
@@ -390,19 +637,32 @@ function initializeCharts() {
     });
 }
 
-// Initialize the network map
+// Initialize the network map with enhanced options
 function initializeNetworkMap() {
     const container = document.getElementById('network-map');
     const options = {
         nodes: {
             shape: 'dot',
-            size: 16,
+            size: 20,
             font: {
                 size: 12,
-                color: '#ffffff'
+                color: '#ffffff',
+                strokeWidth: 0,
+                strokeColor: '#000000'
             },
             borderWidth: 2,
-            borderWidthSelected: 3
+            borderWidthSelected: 3,
+            shadow: true,
+            scaling: {
+                min: 10,
+                max: 30,
+                label: {
+                    enabled: true,
+                    min: 12,
+                    max: 20,
+                    maxVisible: 20
+                }
+            }
         },
         edges: {
             width: 2,
@@ -413,29 +673,369 @@ function initializeNetworkMap() {
             },
             arrows: {
                 to: { enabled: true, scaleFactor: 1 }
+            },
+            smooth: {
+                type: 'continuous',
+                forceDirection: 'none',
+                roundness: 0.5
+            },
+            shadow: true,
+            scaling: {
+                min: 1,
+                max: 5,
+                label: {
+                    enabled: true,
+                    min: 10,
+                    max: 20,
+                    maxVisible: 20
+                }
             }
         },
         physics: {
-            stabilization: false,
+            enabled: true,
+            stabilization: {
+                enabled: true,
+                iterations: 1000,
+                updateInterval: 100
+            },
             barnesHut: {
                 gravitationalConstant: -80000,
                 springConstant: 0.001,
-                springLength: 200
+                springLength: 200,
+                damping: 0.09
+            },
+            forceAtlas2Based: {
+                gravitationalConstant: -50,
+                centralGravity: 0.005,
+                springLength: 200,
+                springConstant: 0.08,
+                damping: 0.4
             }
         },
         interaction: {
             hover: true,
-            tooltipDelay: 200
+            tooltipDelay: 200,
+            zoomView: true,
+            dragView: true,
+            navigationButtons: true,
+            keyboard: {
+                enabled: true,
+                speed: { x: 10, y: 10, zoom: 0.1 }
+            }
+        },
+        layout: {
+            improvedLayout: true,
+            clusterThreshold: 150
         }
     };
 
     networkMap = new vis.Network(container, { nodes: new vis.DataSet(), edges: new vis.DataSet() }, options);
     
-    // Add click event for node details
+    // Add event listeners
     networkMap.on('click', function(params) {
         if (params.nodes.length > 0) {
             const nodeId = params.nodes[0];
             viewDevice(nodeId);
+        }
+    });
+
+    networkMap.on('hoverNode', function(params) {
+        const node = networkMap.body.data.nodes.get(params.node);
+        const tooltip = document.getElementById('map-tooltip');
+        tooltip.innerHTML = `
+            <div class="font-medium">${node.label}</div>
+            <div class="text-gray-400">${node.title}</div>
+            ${node.traffic ? `<div class="mt-1 text-sm">Traffic: ${formatDataTransferred(node.traffic)}</div>` : ''}
+            ${node.threat_level ? `<div class="mt-1 text-sm">Threat Level: <span class="badge bg-${getThreatLevelClass(node.threat_level)}">${node.threat_level}</span></div>` : ''}
+        `;
+        tooltip.style.display = 'block';
+        tooltip.style.left = params.event.center.x + 'px';
+        tooltip.style.top = params.event.center.y + 'px';
+    });
+
+    networkMap.on('blurNode', function() {
+        document.getElementById('map-tooltip').style.display = 'none';
+    });
+
+    // Setup view toggle handlers
+    document.querySelectorAll('[data-view]').forEach(button => {
+        button.addEventListener('click', function() {
+            document.querySelectorAll('[data-view]').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            updateNetworkMapView(this.dataset.view);
+        });
+    });
+
+    // Setup checkbox handlers
+    document.getElementById('show-connections').addEventListener('change', function() {
+        updateNetworkMapVisibility();
+    });
+    document.getElementById('show-labels').addEventListener('change', function() {
+        updateNetworkMapVisibility();
+    });
+    document.getElementById('show-traffic').addEventListener('change', function() {
+        updateNetworkMapVisibility();
+    });
+}
+
+// Update network map with enhanced visualization
+function updateNetworkMap(devices) {
+    const nodes = new vis.DataSet(devices.map(device => ({
+        id: device.id,
+        label: document.getElementById('show-labels').checked ? device.name : '',
+        title: formatDeviceTooltip(device),
+        color: getDeviceColor(device),
+        shape: getDeviceShape(device),
+        size: calculateNodeSize(device),
+        traffic: device.current_traffic,
+        bandwidth: device.bandwidth,
+        connection_quality: device.connection_quality,
+        traffic_trend: device.traffic_trend,
+        threat_level: device.threat_level,
+        status: device.status,
+        font: {
+            size: document.getElementById('show-labels').checked ? 12 : 0
+        },
+        borderWidth: device.connection_quality?.quality === 'poor' ? 3 : 1,
+        borderWidthSelected: 4,
+        shadow: device.connection_quality?.quality === 'excellent'
+    })));
+
+    const edges = new vis.DataSet(devices.flatMap(device => 
+        device.connections.map(conn => ({
+            from: device.id,
+            to: conn.target_id,
+            label: document.getElementById('show-traffic').checked ? formatDataTransferred(conn.data_transferred) : '',
+            color: getConnectionColor(conn),
+            width: calculateEdgeWidth(conn),
+            arrows: {
+                to: { enabled: true, scaleFactor: 1 }
+            },
+            font: {
+                size: document.getElementById('show-traffic').checked ? 10 : 0
+            },
+            smooth: {
+                type: 'curvedCW',
+                roundness: 0.2
+            },
+            animation: {
+                enabled: true,
+                speed: 1000
+            }
+        }))
+    ));
+
+    networkMap.setData({ nodes, edges });
+}
+
+// Format device tooltip with enhanced metrics
+function formatDeviceTooltip(device) {
+    const bandwidth = device.bandwidth || { in: 0, out: 0, total: 0 };
+    const quality = device.connection_quality || { latency: 0, packet_loss: 0, quality: 'unknown' };
+    
+    return `
+        <div class="device-tooltip">
+            <div class="font-bold">${device.name}</div>
+            <div>IP: ${device.ip_address}</div>
+            <div>Type: ${device.type}</div>
+            <div>Status: ${device.status}</div>
+            <div class="mt-2">
+                <div>Bandwidth:</div>
+                <div>↓ ${formatDataTransferred(bandwidth.in)}/s</div>
+                <div>↑ ${formatDataTransferred(bandwidth.out)}/s</div>
+            </div>
+            <div class="mt-2">
+                <div>Connection Quality:</div>
+                <div>Latency: ${quality.latency.toFixed(1)}ms</div>
+                <div>Packet Loss: ${quality.packet_loss}%</div>
+                <div>Quality: ${quality.quality}</div>
+            </div>
+            <div class="mt-2">
+                <div>Traffic Trend: ${device.traffic_trend}</div>
+            </div>
+        </div>
+    `;
+}
+
+// Calculate node size based on traffic and importance
+function calculateNodeSize(device) {
+    let size = 20; // Base size
+    
+    // Adjust based on device type
+    const typeMultipliers = {
+        'server': 1.5,
+        'router': 1.3,
+        'switch': 1.2,
+        'firewall': 1.4,
+        'client': 1.0
+    };
+    size *= typeMultipliers[device.type] || 1.0;
+    
+    // Adjust based on bandwidth
+    if (device.bandwidth) {
+        const bandwidthMB = device.bandwidth.total / (1024 * 1024);
+        size *= Math.min(1 + (bandwidthMB / 10), 2);
+    }
+    
+    // Adjust based on connection quality
+    if (device.connection_quality) {
+        const qualityMultipliers = {
+            'excellent': 1.2,
+            'good': 1.1,
+            'fair': 1.0,
+            'poor': 0.9,
+            'unknown': 1.0
+        };
+        size *= qualityMultipliers[device.connection_quality.quality] || 1.0;
+    }
+    
+    return Math.min(Math.max(size, 10), 40);
+}
+
+// Get device color based on status and metrics
+function getDeviceColor(device) {
+    // Base color on connection quality
+    if (device.connection_quality) {
+        const qualityColors = {
+            'excellent': '#10b981', // green
+            'good': '#3b82f6',      // blue
+            'fair': '#f59e0b',      // yellow
+            'poor': '#ef4444',      // red
+            'unknown': '#6b7280'    // gray
+        };
+        return qualityColors[device.connection_quality.quality] || '#6b7280';
+    }
+    
+    // Fallback to status-based color
+    const statusColors = {
+        'online': '#10b981',
+        'offline': '#ef4444',
+        'warning': '#f59e0b',
+        'blocked': '#dc2626'
+    };
+    return statusColors[device.status] || '#6b7280';
+}
+
+// Calculate edge width based on traffic
+function calculateEdgeWidth(connection) {
+    if (!connection.data_transferred) return 1;
+    const trafficMB = connection.data_transferred / (1024 * 1024);
+    return Math.min(Math.max(trafficMB / 10, 1), 5);
+}
+
+// Update network map view (physical/logical/security)
+function updateNetworkMapView(view) {
+    const nodes = networkMap.body.data.nodes;
+    const edges = networkMap.body.data.edges;
+    
+    nodes.forEach(node => {
+        switch (view) {
+            case 'physical':
+                node.color = getDeviceColor(node);
+                node.shape = getDeviceShape(node);
+                break;
+            case 'logical':
+                node.color = getLogicalColor(node);
+                node.shape = 'dot';
+                break;
+            case 'security':
+                node.color = getSecurityColor(node);
+                node.shape = 'dot';
+                break;
+        }
+    });
+    
+    edges.forEach(edge => {
+        switch (view) {
+            case 'physical':
+                edge.color = getConnectionColor(edge);
+                break;
+            case 'logical':
+                edge.color = getLogicalConnectionColor(edge);
+                break;
+            case 'security':
+                edge.color = getSecurityConnectionColor(edge);
+                break;
+        }
+    });
+    
+    networkMap.setData({ nodes, edges });
+}
+
+// Get logical view colors
+function getLogicalColor(node) {
+    const colors = {
+        'internal': '#10b981',
+        'external': '#3b82f6',
+        'dmz': '#f59e0b',
+        'management': '#8b5cf6'
+    };
+    return colors[node.network_zone] || '#6b7280';
+}
+
+// Get security view colors
+function getSecurityColor(node) {
+    const colors = {
+        'low': '#10b981',
+        'medium': '#f59e0b',
+        'high': '#ef4444',
+        'critical': '#dc2626'
+    };
+    return colors[node.threat_level?.toLowerCase()] || '#6b7280';
+}
+
+// Get logical connection colors
+function getLogicalConnectionColor(edge) {
+    const colors = {
+        'internal': '#10b981',
+        'external': '#3b82f6',
+        'management': '#8b5cf6'
+    };
+    return colors[edge.zone] || '#6b7280';
+}
+
+// Get security connection colors
+function getSecurityConnectionColor(edge) {
+    const colors = {
+        'trusted': '#10b981',
+        'untrusted': '#ef4444',
+        'monitored': '#f59e0b'
+    };
+    return colors[edge.security_status] || '#6b7280';
+}
+
+// Update network map visibility based on checkboxes
+function updateNetworkMapVisibility() {
+    const nodes = networkMap.body.data.nodes;
+    const edges = networkMap.body.data.edges;
+    
+    // Update node labels
+    nodes.forEach(node => {
+        node.font.size = document.getElementById('show-labels').checked ? 12 : 0;
+    });
+    
+    // Update edge visibility and labels
+    edges.forEach(edge => {
+        edge.hidden = !document.getElementById('show-connections').checked;
+        edge.font.size = document.getElementById('show-traffic').checked ? 10 : 0;
+    });
+    
+    networkMap.setData({ nodes, edges });
+}
+
+// Zoom network map
+function zoomNetworkMap(direction) {
+    const scale = networkMap.getScale();
+    const newScale = direction === 'in' ? scale * 1.2 : scale / 1.2;
+    networkMap.moveTo({ scale: newScale });
+}
+
+// Reset network map view
+function resetNetworkMap() {
+    networkMap.fit({
+        animation: {
+            duration: 1000,
+            easingFunction: 'easeInOutQuad'
         }
     });
 }
@@ -451,15 +1051,6 @@ function setupEventListeners() {
         filterConnections(e.target.value);
     }, 300));
 
-    // View toggle buttons
-    document.querySelectorAll('[data-view]').forEach(button => {
-        button.addEventListener('click', function() {
-            document.querySelectorAll('[data-view]').forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            updateNetworkMapView(this.dataset.view);
-        });
-    });
-
     // Connection filter buttons
     document.querySelectorAll('[data-filter]').forEach(button => {
         button.addEventListener('click', function() {
@@ -472,53 +1063,83 @@ function setupEventListeners() {
 
 // Load network data from the API
 async function loadNetworkData(timeRange = '24h') {
+    console.log('Loading network data...');
     try {
-        const [overview, traffic, protocols, devices, connections] = await Promise.all([
-            fetch('/api/network/overview', {
-                headers: { 'X-API-Key': API_KEY }
-            }).then(r => r.json()),
-            fetch(`/api/network/traffic?range=${timeRange}`, {
-                headers: { 'X-API-Key': API_KEY }
-            }).then(r => r.json()),
-            fetch('/api/network/protocols', {
-                headers: { 'X-API-Key': API_KEY }
-            }).then(r => r.json()),
-            fetch('/api/network/devices', {
-                headers: { 'X-API-Key': API_KEY }
-            }).then(r => r.json()),
-            fetch('/api/network/connections', {
-                headers: { 'X-API-Key': API_KEY }
-            }).then(r => r.json())
-        ]);
+        console.log('Fetching network overview...');
+        const overview = await fetch('/api/network/overview', {
+            headers: { 'X-API-Key': API_KEY }
+        }).then(r => r.json());
+        console.log('Network overview loaded:', overview);
 
+        console.log('Fetching network traffic...');
+        const traffic = await fetch(`/api/network/traffic?range=${timeRange}`, {
+            headers: { 'X-API-Key': API_KEY }
+        }).then(r => r.json());
+        console.log('Network traffic loaded:', traffic);
+
+        console.log('Fetching network protocols...');
+        const protocols = await fetch('/api/network/protocols', {
+            headers: { 'X-API-Key': API_KEY }
+        }).then(r => r.json());
+        console.log('Network protocols loaded:', protocols);
+
+        console.log('Fetching network devices...');
+        const devices = await fetch('/api/network/devices', {
+            headers: { 'X-API-Key': API_KEY }
+        }).then(r => r.json());
+        console.log('Network devices loaded:', devices);
+
+        console.log('Fetching network connections...');
+        const connections = await fetch('/api/network/connections', {
+            headers: { 'X-API-Key': API_KEY }
+        }).then(r => r.json());
+        console.log('Network connections loaded:', connections);
+
+        console.log('Updating network display...');
         updateNetworkDisplay(overview, traffic, protocols, devices, connections);
+        console.log('Network display updated successfully');
     } catch (error) {
         console.error('Error loading network data:', error);
-        showNotification('Error loading network data', 'error');
+        showNotification('Error loading network data: ' + error.message, 'error');
     }
 }
 
 // Update the display with network data
 function updateNetworkDisplay(overview, traffic, protocols, devices, connections) {
     // Update overview statistics
-    document.getElementById('total-devices').textContent = overview.total_devices;
-    document.getElementById('active-connections').textContent = overview.active_connections;
-    document.getElementById('blocked-attempts').textContent = overview.blocked_attempts;
-    document.getElementById('network-load').textContent = `${overview.network_load}%`;
-    document.getElementById('network-load').className = `mt-2 text-3xl font-semibold ${getLoadClass(overview.network_load)}`;
+    document.getElementById('total-devices').textContent = overview.total_devices || 0;
+    document.getElementById('active-connections').textContent = overview.active_connections || 0;
+    document.getElementById('blocked-attempts').textContent = overview.blocked_attempts || 0;
+    document.getElementById('network-load').textContent = `${overview.network_load || 0}%`;
+    document.getElementById('network-load').className = `mt-2 text-3xl font-semibold ${getLoadClass(overview.network_load || 0)}`;
 
-    // Update trends
-    updateTrend('devicesTrend', overview.trends.devices);
-    updateTrend('connectionsTrend', overview.trends.connections);
-    updateTrend('blockedTrend', overview.trends.blocked);
-    updateTrend('loadTrend', overview.trends.load);
+    // Update monitoring stats if available
+    if (overview.monitoring) {
+        document.getElementById('devices-discovered').textContent = overview.monitoring.devices_discovered || 0;
+        document.getElementById('connections-tracked').textContent = overview.monitoring.connections_tracked || 0;
+        document.getElementById('traffic-analyzed').textContent = overview.monitoring.traffic_analyzed || 0;
+    }
+
+    // Update trends (if available)
+    if (overview.trends) {
+        updateTrend('devicesTrend', overview.trends.devices || 0);
+        updateTrend('connectionsTrend', overview.trends.connections || 0);
+        updateTrend('blockedTrend', overview.trends.blocked || 0);
+        updateTrend('loadTrend', overview.trends.load || 0);
+    } else {
+        // Clear trends if not available
+        updateTrend('devicesTrend', 0);
+        updateTrend('connectionsTrend', 0);
+        updateTrend('blockedTrend', 0);
+        updateTrend('loadTrend', 0);
+    }
 
     // Update charts
     updateTrafficChart(traffic);
     updateProtocolChart(protocols);
 
-    // Update network map
-    updateNetworkMap(devices);
+    // Update network map with devices from the overview
+    updateNetworkMap(overview.devices || []);
 
     // Update connections table
     updateConnectionsTable(connections);
@@ -561,65 +1182,6 @@ function updateProtocolChart(protocolData) {
         protocolData.other
     ];
     protocolDistributionChart.update();
-}
-
-// Update network map
-function updateNetworkMap(devices) {
-    const nodes = new vis.DataSet(devices.map(device => ({
-        id: device.id,
-        label: device.name,
-        title: `${device.name}\n${device.ip}\n${device.type}`,
-        color: getDeviceColor(device),
-        shape: getDeviceShape(device)
-    })));
-
-    const edges = new vis.DataSet(devices.flatMap(device => 
-        device.connections.map(conn => ({
-            from: device.id,
-            to: conn.target_id,
-            label: `${conn.protocol}/${conn.port}`,
-            color: getConnectionColor(conn),
-            arrows: {
-                to: { enabled: true, scaleFactor: 1 }
-            }
-        }))
-    ));
-
-    networkMap.setData({ nodes, edges });
-}
-
-// Get device color based on type
-function getDeviceColor(device) {
-    const colors = {
-        'server': '#ef4444',
-        'router': '#3b82f6',
-        'switch': '#10b981',
-        'firewall': '#f59e0b',
-        'client': '#6b7280'
-    };
-    return colors[device.type] || '#6b7280';
-}
-
-// Get device shape based on type
-function getDeviceShape(device) {
-    const shapes = {
-        'server': 'square',
-        'router': 'diamond',
-        'switch': 'triangle',
-        'firewall': 'star',
-        'client': 'dot'
-    };
-    return shapes[device.type] || 'dot';
-}
-
-// Get connection color based on status
-function getConnectionColor(connection) {
-    const colors = {
-        'established': '#10b981',
-        'pending': '#f59e0b',
-        'blocked': '#ef4444'
-    };
-    return colors[connection.status] || '#6b7280';
 }
 
 // Update connections table
@@ -685,77 +1247,169 @@ function formatDataTransferred(bytes) {
 
 // Setup WebSocket connection for real-time updates
 function setupWebSocket() {
+    if (ws) {
+        ws.close();
+    }
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/network?api_key=${API_KEY}`;
+    const wsUrl = `${protocol}//${window.location.host}/ws/network?api_key=${encodeURIComponent(API_KEY)}`;
     
     ws = new WebSocket(wsUrl);
     
-    ws.onopen = () => {
-        document.getElementById('wsStatus').className = 'badge bg-success';
-        document.getElementById('wsStatus').textContent = 'Connected';
-        console.log('WebSocket connected');
-    };
-    
-    ws.onclose = () => {
-        document.getElementById('wsStatus').className = 'badge bg-danger';
-        document.getElementById('wsStatus').textContent = 'Disconnected';
-        console.log('WebSocket disconnected');
-        // Attempt to reconnect after 5 seconds
-        setTimeout(setupWebSocket, 5000);
-    };
-    
-    ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-    };
-    
-    ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+    ws.onopen = function() {
+        console.log('WebSocket connection established');
+        reconnectAttempts = 0;
+        showNotification('Network monitoring connected', 'success');
         
-        if (!isLive) {
-            // Buffer messages when paused
-            messageBuffer.push(data);
-            if (messageBuffer.length > MAX_BUFFER_SIZE) {
-                messageBuffer.shift();
-            }
-            return;
+        // Process any buffered messages
+        while (messageBuffer.length > 0) {
+            const message = messageBuffer.shift();
+            handleWebSocketMessage(message);
         }
+    };
+    
+    ws.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'initial_state') {
+                // Handle initial state
+                updateNetworkDisplay(
+                    data.payload.overview,
+                    data.payload.traffic,
+                    data.payload.protocols,
+                    data.payload.devices,
+                    data.payload.connections
+                );
+            } else if (data.type === 'network_update') {
+                // Handle real-time updates
+                if (isLive) {
+                    handleWebSocketMessage(data);
+                } else {
+                    // Buffer messages when not in live mode
+                    if (messageBuffer.length >= MAX_BUFFER_SIZE) {
+                        messageBuffer.shift(); // Remove oldest message
+                    }
+                    messageBuffer.push(data);
+                }
+            }
+        } catch (error) {
+            console.error('Error processing WebSocket message:', error);
+        }
+    };
+    
+    ws.onclose = function(event) {
+        console.log('WebSocket connection closed:', event.code, event.reason);
         
-        handleWebSocketMessage(data);
+        // Only show disconnection notification if it wasn't a clean close
+        if (event.code !== 1000) {
+            showNotification('Network monitoring disconnected', 'error');
+            
+            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                reconnectAttempts++;
+                console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+                setTimeout(setupWebSocket, RECONNECT_DELAY * reconnectAttempts);
+            } else {
+                console.error('Max reconnection attempts reached');
+                showNotification('Network monitoring connection failed. Please refresh the page.', 'error');
+            }
+        }
+    };
+    
+    ws.onerror = function(error) {
+        console.error('WebSocket error:', error);
+        showNotification('Network monitoring connection error', 'error');
     };
 }
 
-// Handle incoming WebSocket messages
+// Handle WebSocket messages
 function handleWebSocketMessage(data) {
-    switch (data.type) {
-        case 'initial_state':
-            updateNetworkMap(data.payload.devices);
-            updateTrafficChart(data.payload.traffic);
-            updateProtocolChart(data.payload.protocols);
-            updateConnectionsTable(data.payload.connections);
-            break;
+    try {
+        if (data.type === 'network_update') {
+            const payload = data.payload;
             
-        case 'network_update':
-            updateNetworkMap(data.payload.devices);
-            updateTrafficChart(data.payload.traffic);
-            updateProtocolChart(data.payload.protocols);
-            updateConnectionsTable(data.payload.connections);
-            break;
+            // Update monitoring status
+            if (payload.monitoring) {
+                updateMonitoringStatus(payload.monitoring);
+            }
             
-        case 'new_connection':
-            addConnection(data.payload);
-            break;
+            // Update network map
+            if (payload.devices) {
+                updateNetworkMap(payload.devices);
+            }
             
-        case 'connection_closed':
-            removeConnection(data.payload.connection_id);
-            break;
+            // Update connections table
+            if (payload.connections) {
+                updateConnectionsTable(payload.connections);
+            }
             
-        case 'device_update':
-            updateDevice(data.payload);
-            break;
+            // Update traffic chart
+            if (payload.traffic) {
+                updateTrafficChart(payload.traffic);
+            }
+            
+            // Update protocol distribution
+            if (payload.protocols) {
+                updateProtocolChart(payload.protocols);
+            }
+            
+            // Update overview statistics
+            if (payload.overview) {
+                updateOverviewStats(payload.overview);
+            }
+        }
+    } catch (error) {
+        console.error('Error handling WebSocket message:', error);
     }
 }
 
-// View device details
+// Update overview statistics
+function updateOverviewStats(overview) {
+    document.getElementById('total-devices').textContent = overview.total_devices || 0;
+    document.getElementById('active-connections').textContent = overview.active_connections || 0;
+    document.getElementById('blocked-attempts').textContent = overview.blocked_attempts || 0;
+    document.getElementById('network-load').textContent = `${overview.network_load || 0}%`;
+    document.getElementById('network-load').className = `mt-2 text-3xl font-semibold ${getLoadClass(overview.network_load || 0)}`;
+    
+    // Update trends if available
+    if (overview.trends) {
+        updateTrend('devicesTrend', overview.trends.devices || 0);
+        updateTrend('connectionsTrend', overview.trends.connections || 0);
+        updateTrend('blockedTrend', overview.trends.blocked || 0);
+        updateTrend('loadTrend', overview.trends.load || 0);
+    }
+}
+
+// Show connection status change notification
+function showConnectionChange(change) {
+    const statusColors = {
+        'established': 'success',
+        'closed': 'warning',
+        'blocked': 'danger'
+    };
+    
+    const statusIcons = {
+        'established': 'fa-link',
+        'closed': 'fa-unlink',
+        'blocked': 'fa-ban'
+    };
+    
+    const notification = document.createElement('div');
+    notification.className = `fixed bottom-4 right-4 p-4 rounded-lg shadow-lg bg-${statusColors[change.status]}-500 text-white flex items-center space-x-2`;
+    notification.innerHTML = `
+        <i class="fas ${statusIcons[change.status]}"></i>
+        <span>
+            ${change.source.name || change.source.ip} → ${change.destination.name || change.destination.ip}
+            <span class="font-bold">${change.status}</span>
+        </span>
+    `;
+    
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
+// Show device modal with enhanced details
 async function viewDevice(id) {
     try {
         const response = await fetch(`/api/network/devices/${id}`, {
@@ -763,114 +1417,272 @@ async function viewDevice(id) {
         });
         const device = await response.json();
         showDeviceModal(device);
+        updateDeviceTraffic('24h');
+        setupDeviceWebSocket(id);
     } catch (error) {
         console.error('Error viewing device:', error);
         showNotification('Error viewing device details', 'error');
     }
 }
 
-// Show device modal
+// Show device modal with enhanced details
 function showDeviceModal(device) {
     const modal = document.getElementById('device-modal');
-    const details = document.getElementById('device-details');
-    
-    details.innerHTML = `
-        <div class="space-y-4">
-            <div>
-                <h4 class="text-sm font-medium text-gray-400">Device Information</h4>
-                <div class="mt-2 grid grid-cols-2 gap-4">
-                    <div>
-                        <p class="text-sm text-gray-400">Name</p>
-                        <p class="mt-1">${device.name}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-400">Type</p>
-                        <p class="mt-1"><span class="badge bg-${getDeviceColor(device)}">${device.type}</span></p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-400">IP Address</p>
-                        <p class="mt-1">${device.ip}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-400">MAC Address</p>
-                        <p class="mt-1">${device.mac}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-400">Status</p>
-                        <p class="mt-1"><span class="badge bg-${device.status === 'online' ? 'success' : 'danger'}">${device.status}</span></p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-400">Last Seen</p>
-                        <p class="mt-1">${new Date(device.last_seen).toLocaleString()}</p>
-                    </div>
-                </div>
-            </div>
-            ${device.services ? `
-            <div>
-                <h4 class="text-sm font-medium text-gray-400">Active Services</h4>
-                <div class="mt-2 space-y-2">
-                    ${device.services.map(service => `
-                    <div class="flex items-center justify-between p-2 bg-gray-800 rounded-lg">
-                        <div>
-                            <p class="font-medium">${service.name}</p>
-                            <p class="text-sm text-gray-400">${service.port}</p>
-                        </div>
-                        <span class="badge bg-${service.status === 'running' ? 'success' : 'danger'}">${service.status}</span>
-                    </div>
-                    `).join('')}
-                </div>
-            </div>
-            ` : ''}
-        </div>
-    `;
-    
     modal.style.display = 'block';
-}
-
-// Close modal
-function closeModal() {
-    document.getElementById('device-modal').style.display = 'none';
-}
-
-// Block a connection
-async function blockConnection(id) {
-    if (!confirm('Are you sure you want to block this connection?')) return;
     
+    // Update device information
+    document.getElementById('device-name').textContent = device.name;
+    document.getElementById('device-type').innerHTML = `<span class="badge bg-${getDeviceColor(device)}">${device.type}</span>`;
+    document.getElementById('device-ip').textContent = device.ip;
+    document.getElementById('device-mac').textContent = device.mac;
+    document.getElementById('device-os').textContent = device.os || 'Unknown';
+    document.getElementById('device-vendor').textContent = device.vendor || 'Unknown';
+    document.getElementById('device-location').textContent = device.location || 'Unknown';
+    document.getElementById('device-first-seen').textContent = new Date(device.first_seen).toLocaleString();
+    
+    // Update status information
+    document.getElementById('device-status').innerHTML = `<span class="badge bg-${device.status === 'online' ? 'success' : 'danger'}">${device.status}</span>`;
+    document.getElementById('device-uptime').textContent = formatDuration(device.uptime);
+    document.getElementById('device-last-seen').textContent = new Date(device.last_seen).toLocaleString();
+    
+    // Update network usage
+    document.getElementById('device-current-traffic').textContent = formatDataTransferred(device.current_traffic);
+    document.getElementById('device-total-data').textContent = formatDataTransferred(device.total_data);
+    document.getElementById('device-bandwidth').textContent = `${device.bandwidth_usage}%`;
+    
+    // Update security status
+    document.getElementById('device-threat-level').innerHTML = `<span class="badge bg-${getThreatLevelClass(device.threat_level)}">${device.threat_level}</span>`;
+    document.getElementById('device-blocked-attempts').textContent = device.blocked_attempts;
+    document.getElementById('device-last-scan').textContent = new Date(device.last_scan).toLocaleString();
+    
+    // Update services
+    updateDeviceServices(device.services);
+    
+    // Update connections
+    updateDeviceConnections(device.connections);
+}
+
+// Update device traffic chart
+async function updateDeviceTraffic(range) {
     try {
-        const response = await fetch(`/api/network/connections/${id}/block`, {
-            method: 'POST',
+        const deviceId = document.getElementById('device-modal').dataset.deviceId;
+        const response = await fetch(`/api/network/devices/${deviceId}/traffic?range=${range}`, {
             headers: { 'X-API-Key': API_KEY }
         });
-        if (response.ok) {
-            loadNetworkData();
-            showNotification('Connection blocked successfully', 'success');
+        const data = await response.json();
+        
+        // Update active button
+        document.querySelectorAll('[id^="deviceTimeRange"]').forEach(btn => {
+            btn.className = btn.id === `deviceTimeRange${range}` ? 'btn-primary text-xs' : 'btn-secondary text-xs';
+        });
+        
+        // Update chart
+        if (deviceTrafficChart) {
+            deviceTrafficChart.data.labels = data.labels;
+            deviceTrafficChart.data.datasets[0].data = data.inbound;
+            deviceTrafficChart.data.datasets[1].data = data.outbound;
+            deviceTrafficChart.update();
         } else {
-            throw new Error('Failed to block connection');
+            initDeviceTrafficChart(data);
         }
     } catch (error) {
-        console.error('Error blocking connection:', error);
-        showNotification('Error blocking connection', 'error');
+        console.error('Error updating device traffic:', error);
+        showNotification('Error updating device traffic', 'error');
     }
 }
 
-// Export network data
-async function exportNetworkData() {
+// Initialize device traffic chart
+function initDeviceTrafficChart(data) {
+    const ctx = document.getElementById('device-traffic-chart').getContext('2d');
+    deviceTrafficChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Inbound Traffic',
+                data: data.inbound,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Outbound Traffic',
+                data: data.outbound,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Traffic (Mbps)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#94a3b8'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#94a3b8'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Update device services
+function updateDeviceServices(services) {
+    const container = document.getElementById('device-services');
+    container.innerHTML = '';
+    
+    if (!services || services.length === 0) {
+        container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">No services detected</div>';
+        return;
+    }
+    
+    services.forEach(service => {
+        const serviceCard = document.createElement('div');
+        serviceCard.className = 'card bg-gray-800';
+        serviceCard.innerHTML = `
+            <div class="p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h5 class="font-medium">${service.name}</h5>
+                        <p class="text-sm text-gray-400">${service.port}/${service.protocol}</p>
+                    </div>
+                    <span class="badge bg-${service.status === 'running' ? 'success' : 'danger'}">${service.status}</span>
+                </div>
+                ${service.version ? `<p class="mt-2 text-sm text-gray-400">Version: ${service.version}</p>` : ''}
+                ${service.description ? `<p class="mt-1 text-sm text-gray-400">${service.description}</p>` : ''}
+            </div>
+        `;
+        container.appendChild(serviceCard);
+    });
+}
+
+// Update device connections
+function updateDeviceConnections(connections) {
+    const tbody = document.querySelector('#device-connections-table tbody');
+    tbody.innerHTML = '';
+    
+    if (!connections || connections.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-400 py-4">No active connections</td></tr>';
+        return;
+    }
+    
+    connections.forEach(conn => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${conn.remote_address}</td>
+            <td>${conn.protocol}</td>
+            <td>${conn.port}</td>
+            <td><span class="badge bg-${getStatusClass(conn.status)}">${conn.status}</span></td>
+            <td>${formatDuration(conn.duration)}</td>
+            <td>${formatDataTransferred(conn.data_transferred)}</td>
+            <td>
+                <div class="flex space-x-2">
+                    <button class="btn btn-sm btn-outline-danger" onclick="blockConnection('${conn.id}')">
+                        <i class="fas fa-ban"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Get threat level class
+function getThreatLevelClass(level) {
+    const classes = {
+        'low': 'success',
+        'medium': 'warning',
+        'high': 'danger',
+        'critical': 'danger'
+    };
+    return classes[level.toLowerCase()] || 'secondary';
+}
+
+// Setup WebSocket for device updates
+function setupDeviceWebSocket(deviceId) {
+    const ws = new WebSocket(`ws://${window.location.host}/ws/device/${deviceId}`);
+    
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        updateDeviceMetrics(data);
+    };
+    
+    ws.onclose = function() {
+        console.log('Device WebSocket connection closed');
+    };
+    
+    // Store WebSocket connection
+    document.getElementById('device-modal').dataset.ws = ws;
+}
+
+// Update device metrics in real-time
+function updateDeviceMetrics(data) {
+    if (data.type === 'metrics') {
+        document.getElementById('device-current-traffic').textContent = formatDataTransferred(data.current_traffic);
+        document.getElementById('device-bandwidth').textContent = `${data.bandwidth_usage}%`;
+        document.getElementById('device-uptime').textContent = formatDuration(data.uptime);
+    } else if (data.type === 'connection_update') {
+        updateDeviceConnections(data.connections);
+    }
+}
+
+// Refresh device details
+async function refreshDeviceDetails() {
+    const deviceId = document.getElementById('device-modal').dataset.deviceId;
+    await viewDevice(deviceId);
+}
+
+// Refresh device connections
+async function refreshDeviceConnections() {
+    const deviceId = document.getElementById('device-modal').dataset.deviceId;
     try {
-        const response = await fetch('/api/network/export', {
+        const response = await fetch(`/api/network/devices/${deviceId}/connections`, {
             headers: { 'X-API-Key': API_KEY }
         });
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `network-data-${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        const connections = await response.json();
+        updateDeviceConnections(connections);
     } catch (error) {
-        console.error('Error exporting network data:', error);
-        showNotification('Error exporting network data', 'error');
+        console.error('Error refreshing device connections:', error);
+        showNotification('Error refreshing device connections', 'error');
+    }
+}
+
+// Close modal and cleanup
+function closeModal() {
+    const modal = document.getElementById('device-modal');
+    const ws = modal.dataset.ws;
+    if (ws) {
+        ws.close();
+    }
+    modal.style.display = 'none';
+    modal.dataset.deviceId = '';
+    modal.dataset.ws = '';
+    if (deviceTrafficChart) {
+        deviceTrafficChart.destroy();
+        deviceTrafficChart = null;
     }
 }
 
@@ -909,33 +1721,6 @@ function filterConnectionsByStatus(status) {
             row.style.display = statusCell.textContent.toLowerCase().includes(status) ? '' : 'none';
         }
     });
-}
-
-// Update network map view
-function updateNetworkMapView(view) {
-    // TODO: Implement different network map views (physical/logical)
-    console.log('Updating network map view:', view);
-}
-
-// Update traffic view
-function updateTraffic(range) {
-    document.querySelectorAll('[id^="timeRange"]').forEach(btn => {
-        btn.className = btn.id === `timeRange${range}` ? 'btn-primary text-xs' : 'btn-secondary text-xs';
-    });
-    loadNetworkData(range);
-}
-
-// Utility function for debouncing
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
 }
 
 // Initialize monitoring status
@@ -996,24 +1781,29 @@ function updateMonitoringStatus(status) {
 
 // Toggle network monitoring
 async function toggleMonitoring(start) {
+    console.log(`Attempting to ${start ? 'start' : 'stop'} network monitoring...`);
     try {
-        const endpoint = start ? '/api/network-monitoring/start' : '/api/network-monitoring/stop';
-        const response = await fetch(endpoint, {
+        const response = await fetch(`/api/network-monitoring/${start ? 'start' : 'stop'}`, {
             method: 'POST',
-            headers: { 'X-API-Key': API_KEY }
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': API_KEY
+            }
         });
         
-        if (!response.ok) throw new Error('Failed to toggle monitoring');
-        
         const result = await response.json();
-        showNotification(result.message, 'success');
-        await initMonitoringStatus();
+        console.log(`Network monitoring ${start ? 'start' : 'stop'} response:`, result);
         
-        // Refresh network data after status change
-        loadNetworkData();
+        if (response.ok) {
+            showNotification(result.message, 'success');
+            // Refresh monitoring status
+            await initMonitoringStatus();
+        } else {
+            throw new Error(result.detail || 'Failed to toggle monitoring');
+        }
     } catch (error) {
-        console.error('Error toggling monitoring:', error);
-        showNotification('Error toggling network monitoring', 'error');
+        console.error(`Error ${start ? 'starting' : 'stopping'} network monitoring:`, error);
+        showNotification(error.message, 'error');
     }
 }
 

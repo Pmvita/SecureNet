@@ -5,7 +5,10 @@ import secrets
 import sqlite3
 import os
 import logging
-from typing import Optional, List
+from typing import Optional, List, Dict
+import asyncio
+
+import aiosqlite
 
 # Configure logging for the database module
 logger = logging.getLogger(__name__)
@@ -19,19 +22,133 @@ if not logger.handlers:
     logger.addHandler(handler)
 
 class Database:
+    _instances = {}  # Process-specific instances
+    _initialized = {}  # Process-specific initialization flags
+
+    def __new__(cls, db_path="data/securenet.db"):
+        pid = os.getpid()
+        if pid not in cls._instances:
+            cls._instances[pid] = super(Database, cls).__new__(cls)
+            cls._initialized[pid] = False
+        return cls._instances[pid]
+
     def __init__(self, db_path="data/securenet.db"):
-        """Initialize the database connection and schema."""
-        self.db_path = db_path
-        self._ensure_db_directory()
-        self.init_db()
+        pid = os.getpid()
+        if not self._initialized.get(pid, False):
+            self.db_path = db_path
+            self._ensure_db_directory()
+            self._initialized[pid] = True
 
     def _ensure_db_directory(self):
-        """Ensure the database directory exists."""
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
 
     def get_db(self):
-        """Get a database connection."""
         return sqlite3.connect(self.db_path)
+
+    async def init_db(self):
+        async with aiosqlite.connect(self.db_path) as conn:
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS assets (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    type VARCHAR(50) NOT NULL,
+                    status VARCHAR(50) NOT NULL,
+                    ip_address VARCHAR(45),
+                    mac_address VARCHAR(17),
+                    last_seen TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS health_trends (
+                    id SERIAL PRIMARY KEY,
+                    metric_name VARCHAR(50) NOT NULL,
+                    value FLOAT NOT NULL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS alerts (
+                    id SERIAL PRIMARY KEY,
+                    type VARCHAR(50) NOT NULL,
+                    severity VARCHAR(20) NOT NULL,
+                    message TEXT NOT NULL,
+                    source VARCHAR(255),
+                    status VARCHAR(20) DEFAULT 'active',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    resolved_at TIMESTAMP
+                )
+            ''')
+            await conn.commit()
+
+    async def get_db_async(self):
+        return aiosqlite.connect(self.db_path)
+
+    def _init_db(self):
+        """Initialize the database schema synchronously."""
+        try:
+            # Create tables synchronously first
+            with self.get_db() as db:
+                cursor = db.cursor()
+                
+                # Create settings table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS settings (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL,
+                        type TEXT DEFAULT 'string',
+                        description TEXT,
+                        section TEXT DEFAULT 'global',
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Create other essential tables...
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS network_monitoring (
+                        id INTEGER PRIMARY KEY,
+                        status TEXT DEFAULT 'stopped',
+                        last_check TIMESTAMP,
+                        active_monitors INTEGER DEFAULT 0,
+                        devices_discovered INTEGER DEFAULT 0,
+                        connections_tracked INTEGER DEFAULT 0,
+                        traffic_analyzed INTEGER DEFAULT 0,
+                        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Initialize network monitoring if not exists
+                cursor.execute("""
+                    INSERT OR IGNORE INTO network_monitoring (id, status)
+                    VALUES (1, 'stopped')
+                """)
+                
+                db.commit()
+                logger.info("Database schema initialized successfully")
+            
+            # Initialize async pool in background
+            asyncio.create_task(self._init_pool())
+            
+        except Exception as e:
+            logger.error(f"Error initializing database: {str(e)}")
+            raise
+
+    @classmethod
+    def cleanup(cls):
+        """Clean up process-specific instance."""
+        process_id = os.getpid()
+        if process_id in cls._instances:
+            instance = cls._instances[process_id]
+            if instance._pool:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    asyncio.create_task(instance._pool.close())
+                else:
+                    loop.run_until_complete(instance._pool.close())
+            del cls._instances[process_id]
+            if process_id in cls._initialized:
+                del cls._initialized[process_id]
 
     # Log Source Management
     def get_log_sources(self):
@@ -330,21 +447,21 @@ class Database:
             
             # Get total devices
             cursor.execute("SELECT COUNT(*) FROM network_devices")
-            total_devices = cursor.fetchone()[0]
+            total_devices = cursor.fetchone()[0] or 0
             
             # Get active connections
             cursor.execute("""
                 SELECT COUNT(*) FROM network_connections
                 WHERE status = 'active'
             """)
-            active_connections = cursor.fetchone()[0]
+            active_connections = cursor.fetchone()[0] or 0
             
             # Get blocked attempts
             cursor.execute("""
                 SELECT COUNT(*) FROM network_connections
                 WHERE status = 'blocked'
             """)
-            blocked_attempts = cursor.fetchone()[0]
+            blocked_attempts = cursor.fetchone()[0] or 0
             
             # Get average network load
             cursor.execute("""
@@ -396,7 +513,7 @@ class Database:
             cursor.execute(f"""
                 SELECT strftime('%Y-%m-%d %H:%M', timestamp) as time_bucket,
                        SUM(bytes_sent) as bytes_sent,
-                       SUM(bytes_received) as bytes_received
+                       SUM(bytes_recv) as bytes_recv
                 FROM network_traffic
                 WHERE timestamp >= ?
                 GROUP BY strftime('{sql_interval}', timestamp)
@@ -406,43 +523,52 @@ class Database:
             
             # Fill in missing points with zeros
             data_points = [{'inbound': 0, 'outbound': 0} for _ in range(points)]
-            for i, (_, sent, received) in enumerate(cursor.fetchall()):
+            for i, (_, sent, recv) in enumerate(cursor.fetchall()):
                 if i < points:
                     data_points[i] = {
-                        'inbound': received or 0,
+                        'inbound': recv or 0,
                         'outbound': sent or 0
                     }
             
             return data_points
 
-    def get_network_connections(self):
-        """Get all network connections."""
+    def get_network_connections(self, status=None, limit=100):
+        """Get network connections with optional status filter."""
         with self.get_db() as db:
             cursor = db.cursor()
-            cursor.execute("""
-                SELECT c.id, c.source_device, c.dest_device, c.protocol,
-                       c.source_port, c.dest_port, c.status, c.start_time,
-                       c.end_time, c.data_transferred,
-                       s.name as source_name, s.ip_address as source_ip,
-                       d.name as dest_name, d.ip_address as dest_ip
+            
+            query = """
+                SELECT c.id, c.source_device, c.dest_device, c.protocol, c.source_port, c.dest_port,
+                       c.status, c.start_time, c.end_time, c.data_transferred, c.metadata,
+                       COALESCE(s.name, s.ip_address) as source_name, s.ip_address as source_ip,
+                       COALESCE(d.name, d.ip_address) as dest_name, d.ip_address as dest_ip
                 FROM network_connections c
-                JOIN network_devices s ON c.source_device = s.id
-                JOIN network_devices d ON c.dest_device = d.id
-                ORDER BY c.start_time DESC
-            """)
+                LEFT JOIN network_devices s ON c.source_device = s.id
+                LEFT JOIN network_devices d ON c.dest_device = d.id
+            """
+            params = []
+            
+            if status:
+                query += " WHERE c.status = ?"
+                params.append(status)
+            
+            query += " ORDER BY c.start_time DESC LIMIT ?"
+            params.append(limit)
+            
+            cursor.execute(query, params)
             connections = []
             for row in cursor.fetchall():
                 connection = {
                     'id': row[0],
                     'source': {
                         'device_id': row[1],
-                        'name': row[10],
-                        'ip': row[11]
+                        'name': row[12],
+                        'ip': row[13]
                     },
                     'destination': {
                         'device_id': row[2],
-                        'name': row[12],
-                        'ip': row[13]
+                        'name': row[14],
+                        'ip': row[15]
                     },
                     'protocol': row[3],
                     'source_port': row[4],
@@ -450,9 +576,11 @@ class Database:
                     'status': row[6],
                     'start_time': row[7],
                     'end_time': row[8],
-                    'data_transferred': row[9]
+                    'data_transferred': row[9],
+                    'metadata': json.loads(row[10]) if row[10] else {}
                 }
                 connections.append(connection)
+            
             return connections
 
     def get_network_connection(self, connection_id):
@@ -498,865 +626,46 @@ class Database:
         """Block a network connection."""
         with self.get_db() as db:
             cursor = db.cursor()
+            now = datetime.utcnow().isoformat()
             cursor.execute("""
                 UPDATE network_connections
                 SET status = 'blocked',
-                    end_time = ?
+                    end_time = ?,
+                    status_changed_at = ?,
+                    updated_at = ?
                 WHERE id = ?
-            """, (datetime.utcnow().isoformat(), connection_id))
+            """, (now, now, now, connection_id))
             db.commit()
             return cursor.rowcount > 0
 
-    # Settings Management
-    def get_settings(self):
-        """Get current settings."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            cursor.execute("SELECT * FROM settings")
-            row = cursor.fetchone()
-            if not row:
-                return self._get_default_settings()
-            return {
-                'id': row[0],
-                'api_key': row[1],
-                'log_retention_days': row[2],
-                'alert_threshold': row[3],
-                'notification_email': row[4],
-                'allowed_ips': json.loads(row[5]) if row[5] else [],
-                'auto_block': row[6],
-                'block_duration': row[7],
-                'scan_interval': row[8],
-                'last_updated': row[9]
-            }
-
-    def update_settings(self, settings):
-        """Update settings."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            cursor.execute("""
-                UPDATE settings
-                SET log_retention_days = ?,
-                    alert_threshold = ?,
-                    notification_email = ?,
-                    allowed_ips = ?,
-                    auto_block = ?,
-                    block_duration = ?,
-                    scan_interval = ?,
-                    last_updated = ?
-                WHERE id = 1
-            """, (
-                settings['log_retention_days'],
-                settings['alert_threshold'],
-                settings['notification_email'],
-                json.dumps(settings['allowed_ips']),
-                settings['auto_block'],
-                settings['block_duration'],
-                settings['scan_interval'],
-                datetime.utcnow().isoformat()
-            ))
-            db.commit()
-            return cursor.rowcount > 0
-
-    def regenerate_api_key(self):
-        """Regenerate the API key."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            new_key = secrets.token_urlsafe(32)
-            cursor.execute("""
-                UPDATE settings
-                SET api_key = ?,
-                    last_updated = ?
-                WHERE id = 1
-            """, (new_key, datetime.utcnow().isoformat()))
-            db.commit()
-            return new_key if cursor.rowcount > 0 else None
-
-    def _get_default_settings(self):
-        """Get default settings."""
-        return {
-            'id': 1,
-            'api_key': secrets.token_urlsafe(32),
-            'log_retention_days': 30,
-            'alert_threshold': 100,
-            'notification_email': '',
-            'allowed_ips': [],
-            'auto_block': False,
-            'block_duration': 3600,
-            'scan_interval': 300,
-            'last_updated': datetime.utcnow().isoformat()
-        }
-
-    def get_log_trend(self, days=7):
-        """Calculate log trend compared to previous period."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            now = datetime.utcnow()
-            current_period_start = now - timedelta(days=days)
-            previous_period_start = current_period_start - timedelta(days=days)
-            
-            # Get current period count
-            cursor.execute("""
-                SELECT COUNT(*) FROM logs
-                WHERE timestamp >= ? AND timestamp <= ?
-            """, (current_period_start.isoformat(), now.isoformat()))
-            current_count = cursor.fetchone()[0]
-            
-            # Get previous period count
-            cursor.execute("""
-                SELECT COUNT(*) FROM logs
-                WHERE timestamp >= ? AND timestamp <= ?
-            """, (previous_period_start.isoformat(), current_period_start.isoformat()))
-            previous_count = cursor.fetchone()[0]
-            
-            if previous_count == 0:
-                return 0
-            
-            # Calculate percentage change
-            return round(((current_count - previous_count) / previous_count) * 100, 1)
-
-    def get_active_threats(self):
-        """Get currently active security threats."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            cursor.execute("""
-                SELECT id, timestamp, type, severity, source, description, status
-                FROM threats
-                WHERE status = 'active'
-                ORDER BY timestamp DESC
-            """)
-            threats = []
-            for row in cursor.fetchall():
-                threat = {
-                    'id': row[0],
-                    'timestamp': row[1],
-                    'type': row[2],
-                    'severity': row[3],
-                    'source': row[4],
-                    'description': row[5],
-                    'status': row[6]
-                }
-                threats.append(threat)
-            return threats
-
-    def get_threats_trend(self, days=7):
-        """Calculate threats trend compared to previous period."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            now = datetime.utcnow()
-            current_period_start = now - timedelta(days=days)
-            previous_period_start = current_period_start - timedelta(days=days)
-            
-            # Get current period count
-            cursor.execute("""
-                SELECT COUNT(*) FROM threats
-                WHERE timestamp >= ? AND timestamp <= ?
-                AND status = 'active'
-            """, (current_period_start.isoformat(), now.isoformat()))
-            current_count = cursor.fetchone()[0]
-            
-            # Get previous period count
-            cursor.execute("""
-                SELECT COUNT(*) FROM threats
-                WHERE timestamp >= ? AND timestamp <= ?
-                AND status = 'active'
-            """, (previous_period_start.isoformat(), current_period_start.isoformat()))
-            previous_count = cursor.fetchone()[0]
-            
-            if previous_count == 0:
-                return 0
-            
-            # Calculate percentage change
-            return round(((current_count - previous_count) / previous_count) * 100, 1)
-
-    def get_network_health(self):
-        """Calculate overall network health score."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            
-            # Get various health metrics
-            metrics = {}
-            
-            # Check system uptime
-            cursor.execute("""
-                SELECT COUNT(*) FROM system_metrics
-                WHERE metric = 'uptime' AND value > 0
-                AND timestamp >= datetime('now', '-1 hour')
-            """)
-            metrics['uptime'] = cursor.fetchone()[0] / 60  # Convert to percentage
-            
-            # Check network latency
-            cursor.execute("""
-                SELECT AVG(value) FROM system_metrics
-                WHERE metric = 'latency'
-                AND timestamp >= datetime('now', '-1 hour')
-            """)
-            metrics['latency'] = cursor.fetchone()[0] or 0
-            
-            # Check packet loss
-            cursor.execute("""
-                SELECT AVG(value) FROM system_metrics
-                WHERE metric = 'packet_loss'
-                AND timestamp >= datetime('now', '-1 hour')
-            """)
-            metrics['packet_loss'] = cursor.fetchone()[0] or 0
-            
-            # Calculate overall health score
-            health_score = (
-                metrics['uptime'] * 0.4 +  # 40% weight
-                (1 - min(metrics['latency'] / 1000, 1)) * 0.3 +  # 30% weight
-                (1 - metrics['packet_loss']) * 0.3  # 30% weight
-            ) * 100
-            
-            return round(min(max(health_score, 0), 100))
-
-    def get_health_trend(self, days=7):
-        """Calculate network health trend compared to previous period."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            now = datetime.utcnow()
-            current_period_start = now - timedelta(days=days)
-            previous_period_start = current_period_start - timedelta(days=days)
-            
-            # Get current period average health
-            cursor.execute("""
-                SELECT AVG(value) FROM system_metrics
-                WHERE metric = 'health_score'
-                AND timestamp >= ? AND timestamp <= ?
-            """, (current_period_start.isoformat(), now.isoformat()))
-            current_health = cursor.fetchone()[0] or 0
-            
-            # Get previous period average health
-            cursor.execute("""
-                SELECT AVG(value) FROM system_metrics
-                WHERE metric = 'health_score'
-                AND timestamp >= ? AND timestamp <= ?
-            """, (previous_period_start.isoformat(), current_period_start.isoformat()))
-            previous_health = cursor.fetchone()[0] or 0
-            
-            if previous_health == 0:
-                return 0
-            
-            # Calculate percentage change
-            return round(((current_health - previous_health) / previous_health) * 100, 1)
-
-    def get_protected_assets(self):
-        """Get count of protected network assets."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            cursor.execute("""
-                SELECT COUNT(*) FROM assets
-                WHERE status = 'protected'
-            """)
-            return cursor.fetchone()[0]
-
-    def get_assets_status(self):
-        """Get overall status of protected assets."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            cursor.execute("""
-                SELECT COUNT(*) FROM assets
-                WHERE status = 'protected' AND health = 'healthy'
-            """)
-            healthy_count = cursor.fetchone()[0]
-            
-            cursor.execute("SELECT COUNT(*) FROM assets WHERE status = 'protected'")
-            total_count = cursor.fetchone()[0]
-            
-            if total_count == 0:
-                return "No assets configured"
-            
-            if healthy_count == total_count:
-                return "All systems operational"
-            elif healthy_count == 0:
-                return "Critical systems down"
-            else:
-                return f"{healthy_count}/{total_count} systems operational"
-
-    def get_network_traffic_stats(self, start_time=None, end_time=None):
-        """Get network traffic statistics for a time range."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            
-            query = """
-                SELECT 
-                    SUM(bytes_sent) as total_bytes_sent,
-                    SUM(bytes_recv) as total_bytes_recv,
-                    SUM(packets_sent) as total_packets_sent,
-                    SUM(packets_recv) as total_packets_recv,
-                    COUNT(*) as sample_count
-                FROM network_traffic
-            """
-            params = []
-            
-            if start_time or end_time:
-                conditions = []
-                if start_time:
-                    conditions.append("timestamp >= ?")
-                    params.append(start_time)
-                if end_time:
-                    conditions.append("timestamp <= ?")
-                    params.append(end_time)
-                query += " WHERE " + " AND ".join(conditions)
-            
-            cursor.execute(query, params)
-            row = cursor.fetchone()
-            
-            if not row or not row[4]:  # No samples
-                return {
-                    'bytes_sent': 0,
-                    'bytes_recv': 0,
-                    'packets_sent': 0,
-                    'packets_recv': 0,
-                    'sample_count': 0
-                }
-            
-            return {
-                'bytes_sent': row[0],
-                'bytes_recv': row[1],
-                'packets_sent': row[2],
-                'packets_recv': row[3],
-                'sample_count': row[4]
-            }
-
-    def get_log_count(self, source_id: Optional[str] = None, level: Optional[str] = None,
-                     start_time: Optional[str] = None, end_time: Optional[str] = None) -> int:
-        """Get the count of logs matching the specified criteria."""
-        try:
-            query = "SELECT COUNT(*) FROM logs WHERE 1=1"
-            params = []
-            
-            if source_id:
-                query += " AND source_id = ?"
-                params.append(source_id)
-            
-            if level:
-                query += " AND level = ?"
-                params.append(level.upper())
-            
-            if start_time:
-                query += " AND timestamp >= ?"
-                params.append(start_time)
-            
-            if end_time:
-                query += " AND timestamp <= ?"
-                params.append(end_time)
-            
-            with self.get_db() as conn:
-                cursor = conn.execute(query, params)
-                return cursor.fetchone()[0]
-        except Exception as e:
-            logger.error(f"Error getting log count: {str(e)}")
-            raise
-
-    def get_current_log_rate(self) -> float:
-        """Get the current log ingestion rate (logs per minute)."""
-        try:
-            # Get logs from the last minute
-            one_minute_ago = (datetime.now() - timedelta(minutes=1)).isoformat()
-            
-            with self.get_db() as conn:
-                cursor = conn.execute(
-                    "SELECT COUNT(*) FROM logs WHERE timestamp >= ?",
-                    [one_minute_ago]
-                )
-                return cursor.fetchone()[0]
-        except Exception as e:
-            logger.error(f"Error getting current log rate: {str(e)}")
-            raise
-
-    def get_log_rate_data(self, start_time: datetime, interval: str, points: int) -> List[float]:
-        """Get log rate data points for the specified time range and interval."""
-        try:
-            # Convert interval to SQLite datetime format
-            interval_map = {
-                "1m": "1 minute",
-                "5m": "5 minutes",
-                "1h": "1 hour"
-            }
-            sql_interval = interval_map.get(interval, "5 minutes")
-            
-            # Generate time buckets
-            buckets = []
-            current = start_time
-            for _ in range(points):
-                if interval == "1m":
-                    next_time = current + timedelta(minutes=1)
-                elif interval == "5m":
-                    next_time = current + timedelta(minutes=5)
-                else:  # 1h
-                    next_time = current + timedelta(hours=1)
-                
-                buckets.append((current.isoformat(), next_time.isoformat()))
-                current = next_time
-            
-            # Get log counts for each bucket
-            rates = []
-            with self.get_db() as conn:
-                for start, end in buckets:
-                    cursor = conn.execute(
-                        "SELECT COUNT(*) FROM logs WHERE timestamp >= ? AND timestamp < ?",
-                        [start, end]
-                    )
-                    count = cursor.fetchone()[0]
-                    
-                    # Convert to rate per minute
-                    if interval == "1m":
-                        rate = count
-                    elif interval == "5m":
-                        rate = count / 5
-                    else:  # 1h
-                        rate = count / 60
-                    
-                    rates.append(rate)
-            
-            return rates
-        except Exception as e:
-            logger.error(f"Error getting log rate data: {str(e)}")
-            raise
-
-    def update_network_metrics(self, metrics_data):
-        """Update network metrics."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            metrics_id = str(uuid.uuid4())
-            
-            cursor.execute("""
-                INSERT INTO network_metrics (
-                    id, timestamp, load, latency,
-                    packet_loss, bandwidth_usage,
-                    active_connections, metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                metrics_id,
-                metrics_data['timestamp'],
-                metrics_data['load'],
-                metrics_data.get('latency'),
-                metrics_data.get('packet_loss'),
-                metrics_data.get('bandwidth_usage'),
-                metrics_data.get('active_connections'),
-                json.dumps(metrics_data.get('metadata', {}))
-            ))
-            
-            db.commit()
-            return metrics_id
-
-    def init_db(self):
-        """Initialize the database schema."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            
-            # Create tables
-            cursor.executescript("""
-                -- Logs table
-                CREATE TABLE IF NOT EXISTS logs (
-                    id TEXT PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
-                    level TEXT NOT NULL DEFAULT 'info',
-                    source TEXT NOT NULL,
-                    message TEXT NOT NULL,
-                    received_at TEXT NOT NULL,
-                    metadata TEXT,
-                    anomaly_score REAL,
-                    acknowledged BOOLEAN DEFAULT 0,
-                    acknowledged_at TEXT,
-                    processed_at TEXT,
-                    detection_run_at TEXT,
-                    alert_sent_at TEXT
-                );
-
-                -- Threats table
-                CREATE TABLE IF NOT EXISTS threats (
-                    id TEXT PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    severity TEXT NOT NULL,
-                    source TEXT NOT NULL,
-                    description TEXT NOT NULL,
-                    status TEXT NOT NULL DEFAULT 'active',
-                    resolution TEXT,
-                    resolved_at TEXT,
-                    metadata TEXT
-                );
-
-                -- System patches table
-                CREATE TABLE IF NOT EXISTS system_patches (
-                    id TEXT PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
-                    package_name TEXT NOT NULL,
-                    current_version TEXT,
-                    available_version TEXT NOT NULL,
-                    severity TEXT NOT NULL,
-                    status TEXT NOT NULL DEFAULT 'missing',
-                    installed_at TEXT,
-                    metadata TEXT
-                );
-
-                -- Security incidents table
-                CREATE TABLE IF NOT EXISTS security_incidents (
-                    id TEXT PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    severity TEXT NOT NULL,
-                    source TEXT NOT NULL,
-                    description TEXT NOT NULL,
-                    status TEXT NOT NULL DEFAULT 'active',
-                    resolution TEXT,
-                    resolved_at TEXT,
-                    metadata TEXT
-                );
-
-                -- Assets table
-                CREATE TABLE IF NOT EXISTS assets (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    status TEXT NOT NULL DEFAULT 'protected',
-                    health TEXT NOT NULL DEFAULT 'healthy',
-                    last_scan TEXT,
-                    metadata TEXT
-                );
-
-                -- System metrics table
-                CREATE TABLE IF NOT EXISTS system_metrics (
-                    id TEXT PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
-                    metric TEXT NOT NULL,
-                    value REAL NOT NULL,
-                    metadata TEXT
-                );
-
-                -- Vulnerabilities table
-                CREATE TABLE IF NOT EXISTS vulnerabilities (
-                    id TEXT PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
-                    severity TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    source TEXT NOT NULL,
-                    description TEXT NOT NULL,
-                    status TEXT NOT NULL DEFAULT 'open',
-                    resolution TEXT,
-                    resolved_at TEXT,
-                    metadata TEXT
-                );
-
-                -- Log sources table
-                CREATE TABLE IF NOT EXISTS log_sources (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    config TEXT NOT NULL,
-                    format TEXT NOT NULL,
-                    format_pattern TEXT,
-                    status TEXT NOT NULL DEFAULT 'inactive',
-                    last_update TEXT NOT NULL,
-                    logs_per_minute INTEGER DEFAULT 0,
-                    tags TEXT
-                );
-
-                -- Network devices table
-                CREATE TABLE IF NOT EXISTS network_devices (
-                    id TEXT PRIMARY KEY,
-                    ip_address TEXT NOT NULL,
-                    mac_address TEXT,
-                    name TEXT,
-                    type TEXT,
-                    status TEXT DEFAULT 'active',
-                    last_seen TEXT NOT NULL,
-                    first_seen TEXT NOT NULL,
-                    metadata TEXT,
-                    UNIQUE(ip_address)
-                );
-                
-                -- Network connections table
-                CREATE TABLE IF NOT EXISTS network_connections (
-                    id TEXT PRIMARY KEY,
-                    source_device TEXT NOT NULL,
-                    dest_device TEXT,
-                    protocol TEXT NOT NULL,
-                    source_port INTEGER NOT NULL,
-                    dest_port INTEGER,
-                    status TEXT NOT NULL DEFAULT 'established',
-                    start_time TEXT NOT NULL,
-                    end_time TEXT,
-                    data_transferred INTEGER DEFAULT 0,
-                    metadata TEXT,
-                    FOREIGN KEY (source_device) REFERENCES network_devices(id),
-                    FOREIGN KEY (dest_device) REFERENCES network_devices(id)
-                );
-                
-                -- Network traffic table
-                CREATE TABLE IF NOT EXISTS network_traffic (
-                    id TEXT PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
-                    bytes_sent INTEGER NOT NULL,
-                    bytes_received INTEGER NOT NULL,
-                    packets_sent INTEGER NOT NULL,
-                    packets_received INTEGER NOT NULL,
-                    protocol TEXT,
-                    source_device TEXT,
-                    dest_device TEXT,
-                    metadata TEXT,
-                    FOREIGN KEY (source_device) REFERENCES network_devices(id),
-                    FOREIGN KEY (dest_device) REFERENCES network_devices(id)
-                );
-
-                -- Network monitoring status table
-                CREATE TABLE IF NOT EXISTS network_monitoring (
-                    id INTEGER PRIMARY KEY,
-                    status TEXT NOT NULL DEFAULT 'stopped',
-                    last_scan TEXT,
-                    devices_discovered INTEGER DEFAULT 0,
-                    connections_tracked INTEGER DEFAULT 0,
-                    traffic_analyzed INTEGER DEFAULT 0,
-                    last_updated TEXT NOT NULL
-                );
-
-                -- Network protocols table
-                CREATE TABLE IF NOT EXISTS network_protocols (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    protocol TEXT NOT NULL,
-                    port INTEGER,
-                    type TEXT NOT NULL,
-                    description TEXT,
-                    risk_level TEXT DEFAULT 'low',
-                    last_seen TEXT,
-                    metadata TEXT
-                );
-
-                -- Network metrics table
-                CREATE TABLE IF NOT EXISTS network_metrics (
-                    id TEXT PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
-                    load REAL NOT NULL,
-                    latency REAL,
-                    packet_loss REAL,
-                    bandwidth_usage REAL,
-                    active_connections INTEGER,
-                    metadata TEXT
-                );
-
-                -- Settings table
-                CREATE TABLE IF NOT EXISTS settings (
-                    id INTEGER PRIMARY KEY,
-                    api_key TEXT NOT NULL,
-                    log_retention_days INTEGER DEFAULT 30,
-                    alert_threshold INTEGER DEFAULT 100,
-                    notification_email TEXT,
-                    allowed_ips TEXT,
-                    auto_block BOOLEAN DEFAULT 0,
-                    block_duration INTEGER DEFAULT 3600,
-                    scan_interval INTEGER DEFAULT 300,
-                    last_updated TEXT
-                );
-
-                -- Alerts table
-                CREATE TABLE IF NOT EXISTS alerts (
-                    id TEXT PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    severity TEXT NOT NULL,
-                    source TEXT NOT NULL,
-                    message TEXT NOT NULL,
-                    status TEXT NOT NULL DEFAULT 'new',
-                    metadata TEXT,
-                    resolved_at TEXT,
-                    resolution TEXT
-                );
-
-                -- Security scans table
-                CREATE TABLE IF NOT EXISTS scans (
-                    id TEXT PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    status TEXT NOT NULL DEFAULT 'running',
-                    target TEXT NOT NULL,
-                    progress INTEGER DEFAULT 0,
-                    findings_count INTEGER DEFAULT 0,
-                    start_time TEXT NOT NULL,
-                    end_time TEXT,
-                    metadata TEXT,
-                    error_message TEXT
-                );
-
-                -- Scan findings table
-                CREATE TABLE IF NOT EXISTS scan_findings (
-                    id TEXT PRIMARY KEY,
-                    scan_id TEXT NOT NULL,
-                    timestamp TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    severity TEXT NOT NULL,
-                    description TEXT NOT NULL,
-                    location TEXT,
-                    evidence TEXT,
-                    status TEXT NOT NULL DEFAULT 'new',
-                    resolution TEXT,
-                    resolved_at TEXT,
-                    metadata TEXT,
-                    FOREIGN KEY (scan_id) REFERENCES scans(id)
-                );
-
-                -- Scan schedules table
-                CREATE TABLE IF NOT EXISTS scan_schedules (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    target TEXT NOT NULL,
-                    schedule TEXT NOT NULL,
-                    last_run TEXT,
-                    next_run TEXT,
-                    status TEXT NOT NULL DEFAULT 'active',
-                    metadata TEXT
-                );
-
-                -- Create indexes after all tables are created
-                CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp);
-                CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level);
-                CREATE INDEX IF NOT EXISTS idx_logs_source ON logs(source);
-                CREATE INDEX IF NOT EXISTS idx_logs_anomaly_score ON logs(anomaly_score);
-                CREATE INDEX IF NOT EXISTS idx_vulnerabilities_severity ON vulnerabilities(severity);
-                CREATE INDEX IF NOT EXISTS idx_vulnerabilities_status ON vulnerabilities(status);
-                CREATE INDEX IF NOT EXISTS idx_network_devices_ip ON network_devices(ip_address);
-                CREATE INDEX IF NOT EXISTS idx_network_devices_mac ON network_devices(mac_address);
-                CREATE INDEX IF NOT EXISTS idx_network_connections_source ON network_connections(source_device);
-                CREATE INDEX IF NOT EXISTS idx_network_connections_dest ON network_connections(dest_device);
-                CREATE INDEX IF NOT EXISTS idx_network_connections_status ON network_connections(status);
-                CREATE INDEX IF NOT EXISTS idx_network_traffic_timestamp ON network_traffic(timestamp);
-                CREATE INDEX IF NOT EXISTS idx_network_traffic_protocol ON network_traffic(protocol);
-                CREATE INDEX IF NOT EXISTS idx_network_protocols_port ON network_protocols(port);
-                CREATE INDEX IF NOT EXISTS idx_network_protocols_protocol ON network_protocols(protocol);
-
-                -- Create indexes for new tables
-                CREATE INDEX IF NOT EXISTS idx_threats_severity ON threats(severity);
-                CREATE INDEX IF NOT EXISTS idx_threats_status ON threats(status);
-                CREATE INDEX IF NOT EXISTS idx_threats_timestamp ON threats(timestamp);
-                CREATE INDEX IF NOT EXISTS idx_system_patches_severity ON system_patches(severity);
-                CREATE INDEX IF NOT EXISTS idx_system_patches_status ON system_patches(status);
-                CREATE INDEX IF NOT EXISTS idx_system_patches_timestamp ON system_patches(timestamp);
-                CREATE INDEX IF NOT EXISTS idx_security_incidents_severity ON security_incidents(severity);
-                CREATE INDEX IF NOT EXISTS idx_security_incidents_status ON security_incidents(status);
-                CREATE INDEX IF NOT EXISTS idx_security_incidents_timestamp ON security_incidents(timestamp);
-                CREATE INDEX IF NOT EXISTS idx_assets_status ON assets(status);
-                CREATE INDEX IF NOT EXISTS idx_assets_health ON assets(health);
-                CREATE INDEX IF NOT EXISTS idx_system_metrics_metric ON system_metrics(metric);
-                CREATE INDEX IF NOT EXISTS idx_system_metrics_timestamp ON system_metrics(timestamp);
-                CREATE INDEX IF NOT EXISTS idx_scan_findings_severity ON scan_findings(severity);
-                CREATE INDEX IF NOT EXISTS idx_scan_findings_status ON scan_findings(status);
-                CREATE INDEX IF NOT EXISTS idx_scan_findings_scan_id ON scan_findings(scan_id);
-                CREATE INDEX IF NOT EXISTS idx_scans_type ON scans(type);
-                CREATE INDEX IF NOT EXISTS idx_scans_status ON scans(status);
-                CREATE INDEX IF NOT EXISTS idx_scans_timestamp ON scans(timestamp);
-                CREATE INDEX IF NOT EXISTS idx_scan_schedules_status ON scan_schedules(status);
-                CREATE INDEX IF NOT EXISTS idx_scan_schedules_next_run ON scan_schedules(next_run);
-                CREATE INDEX IF NOT EXISTS idx_alerts_timestamp ON alerts(timestamp);
-                CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status);
-                CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts(severity);
-            """)
-            
-            # Initialize network monitoring status if not exists
-            cursor.execute("SELECT COUNT(*) FROM network_monitoring")
-            if cursor.fetchone()[0] == 0:
-                cursor.execute("""
-                    INSERT INTO network_monitoring (
-                        id, status, last_scan, devices_discovered,
-                        connections_tracked, traffic_analyzed, last_updated
-                    ) VALUES (1, 'stopped', NULL, 0, 0, 0, ?)
-                """, (datetime.utcnow().isoformat(),))
-
-            # Insert default settings if not exists
-            cursor.execute("SELECT COUNT(*) FROM settings")
-            if cursor.fetchone()[0] == 0:
-                cursor.execute("""
-                    INSERT INTO settings (
-                        id, api_key, log_retention_days, alert_threshold,
-                        notification_email, allowed_ips, auto_block,
-                        block_duration, scan_interval, last_updated
-                    ) VALUES (1, ?, 30, 100, '', '[]', 0, 3600, 300, ?)
-                """, (secrets.token_urlsafe(32), datetime.utcnow().isoformat()))
-
-            # Insert default asset if not exists
-            cursor.execute("SELECT COUNT(*) FROM assets")
-            if cursor.fetchone()[0] == 0:
-                cursor.execute("""
-                    INSERT INTO assets (
-                        id, name, type, status, health, last_scan, metadata
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    str(uuid.uuid4()),
-                    'Local Network',
-                    'network',
-                    'protected',
-                    'healthy',
-                    datetime.utcnow().isoformat(),
-                    json.dumps({
-                        'description': 'Local network infrastructure',
-                        'components': ['router', 'switches', 'firewall']
-                    })
-                ))
-            
-            db.commit()
-            logger.info("Database schema initialized successfully")
-
-    def update_network_device(self, device_data):
-        """Update or insert a network device."""
+    def update_connection_status(self, connection_id, new_status):
+        """Update a connection's status."""
         with self.get_db() as db:
             cursor = db.cursor()
             now = datetime.utcnow().isoformat()
-            
-            # Check if device exists
             cursor.execute("""
-                SELECT id, first_seen FROM network_devices
-                WHERE ip_address = ?
-            """, (device_data['ip'],))
-            existing = cursor.fetchone()
-            
-            if existing:
-                # Update existing device
-                cursor.execute("""
-                    UPDATE network_devices
-                    SET mac_address = ?,
-                        status = 'active',
-                        last_seen = ?,
-                        metadata = ?
-                    WHERE ip_address = ?
-                """, (
-                    device_data.get('mac'),
-                    now,
-                    json.dumps(device_data.get('metadata', {})),
-                    device_data['ip']
-                ))
-                device_id = existing[0]
-            else:
-                # Insert new device
-                device_id = str(uuid.uuid4())
-                cursor.execute("""
-                    INSERT INTO network_devices (
-                        id, ip_address, mac_address, status,
-                        last_seen, first_seen, metadata
-                    ) VALUES (?, ?, ?, 'active', ?, ?, ?)
-                """, (
-                    device_id,
-                    device_data['ip'],
-                    device_data.get('mac'),
-                    now,
-                    now,
-                    json.dumps(device_data.get('metadata', {}))
-                ))
-            
+                UPDATE network_connections
+                SET status = ?,
+                    status_changed_at = ?,
+                    updated_at = ?
+                WHERE id = ?
+            """, (new_status, now, now, connection_id))
             db.commit()
-            return device_id
+            return cursor.rowcount > 0
 
     def add_network_connection(self, connection_data):
         """Add a new network connection."""
         with self.get_db() as db:
             cursor = db.cursor()
             connection_id = str(uuid.uuid4())
+            now = datetime.utcnow().isoformat()
             
             cursor.execute("""
                 INSERT INTO network_connections (
                     id, source_device, dest_device, protocol,
-                    source_port, dest_port, status, start_time, metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    source_port, dest_port, status, start_time,
+                    status_changed_at, metadata, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 connection_id,
                 connection_data['source_device'],
@@ -1366,7 +675,10 @@ class Database:
                 connection_data.get('dest_port'),
                 connection_data['status'],
                 connection_data['start_time'],
-                json.dumps(connection_data.get('metadata', {}))
+                now,  # status_changed_at
+                json.dumps(connection_data.get('metadata', {})),
+                now,  # created_at
+                now   # updated_at
             ))
             
             db.commit()
@@ -1435,54 +747,6 @@ class Database:
             
             return devices
 
-    def get_network_connections(self, status=None, limit=100):
-        """Get network connections with optional status filter."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            
-            query = """
-                SELECT c.id, c.source_device, c.dest_device, c.protocol, c.source_port, c.dest_port,
-                       c.status, c.start_time, c.end_time, c.data_transferred, c.metadata,
-                       s.name as source_name, d.name as dest_name
-                FROM network_connections c
-                LEFT JOIN network_devices s ON c.source_device = s.id
-                LEFT JOIN network_devices d ON c.dest_device = d.id
-            """
-            params = []
-            
-            if status:
-                query += " WHERE c.status = ?"
-                params.append(status)
-            
-            query += " ORDER BY c.start_time DESC LIMIT ?"
-            params.append(limit)
-            
-            cursor.execute(query, params)
-            connections = []
-            for row in cursor.fetchall():
-                connection = {
-                    'id': row[0],
-                    'source': {
-                        'device_id': row[1],
-                        'name': row[12]
-                    },
-                    'destination': {
-                        'device_id': row[2],
-                        'name': row[13]
-                    },
-                    'protocol': row[3],
-                    'source_port': row[4],
-                    'dest_port': row[5],
-                    'status': row[6],
-                    'start_time': row[7],
-                    'end_time': row[8],
-                    'data_transferred': row[9],
-                    'metadata': json.loads(row[10]) if row[10] else {}
-                }
-                connections.append(connection)
-            
-            return connections
-
     def get_network_traffic_stats(self, start_time=None, end_time=None):
         """Get network traffic statistics for a time range."""
         with self.get_db() as db:
@@ -1531,72 +795,76 @@ class Database:
 
     def get_security_score(self):
         """Get current security score and status."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            
-            # Get various security metrics
-            metrics = {}
-            
-            # Check for critical vulnerabilities
-            cursor.execute("""
-                SELECT COUNT(*) FROM vulnerabilities
-                WHERE severity = 'critical' AND status = 'open'
-            """)
-            metrics['critical_vulns'] = cursor.fetchone()[0]
-            
-            # Check for missing patches
-            cursor.execute("""
-                SELECT COUNT(*) FROM system_patches
-                WHERE status = 'missing' AND severity >= 'high'
-            """)
-            metrics['missing_patches'] = cursor.fetchone()[0]
-            
-            # Check for security incidents
-            cursor.execute("""
-                SELECT COUNT(*) FROM security_incidents
-                WHERE status = 'active' AND severity >= 'high'
-            """)
-            metrics['active_incidents'] = cursor.fetchone()[0]
-            
-            # Calculate base score
-            base_score = 100
-            base_score -= metrics['critical_vulns'] * 10  # -10 points per critical vuln
-            base_score -= metrics['missing_patches'] * 5  # -5 points per missing patch
-            base_score -= metrics['active_incidents'] * 15  # -15 points per active incident
-            
-            # Ensure score is between 0 and 100
-            final_score = max(min(round(base_score), 100), 0)
-            
-            # Determine status
-            if final_score >= 90:
-                status = "Excellent"
-                vuln_level = "Low"
-            elif final_score >= 70:
-                status = "Good"
-                vuln_level = "Medium"
-            else:
-                status = "Needs Attention"
-                vuln_level = "High"
-            
-            # Get patch status
-            cursor.execute("""
-                SELECT COUNT(*) FROM system_patches
-                WHERE status = 'missing'
-            """)
-            missing_patches = cursor.fetchone()[0]
-            
-            if missing_patches == 0:
-                patch_status = "Up to date"
-            elif missing_patches <= 5:
-                patch_status = "Minor updates available"
-            else:
-                patch_status = "Updates required"
-            
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Get vulnerability count by severity
+                cursor.execute("""
+                    SELECT severity, COUNT(*) as count
+                    FROM vulnerabilities
+                    WHERE status != 'resolved'
+                    GROUP BY severity
+                """)
+                vulnerabilities = {row[0]: row[1] for row in cursor.fetchall()}
+                
+                # Get patch status
+                cursor.execute("""
+                    SELECT status, COUNT(*) as count
+                    FROM system_patches
+                    GROUP BY status
+                """)
+                patches = {row[0]: row[1] for row in cursor.fetchall()}
+                
+                # Calculate base score (100 points)
+                score = 100
+                
+                # Deduct points for vulnerabilities
+                score -= (
+                    (vulnerabilities.get('critical', 0) * 20) +
+                    (vulnerabilities.get('high', 0) * 10) +
+                    (vulnerabilities.get('medium', 0) * 5) +
+                    (vulnerabilities.get('low', 0) * 2)
+                )
+                
+                # Deduct points for pending patches
+                score -= patches.get('pending', 0) * 5
+                
+                # Ensure score is between 0 and 100
+                score = max(0, min(100, score))
+                
+                # Determine status
+                if score >= 90:
+                    status = "excellent"
+                elif score >= 75:
+                    status = "good"
+                elif score >= 50:
+                    status = "fair"
+                else:
+                    status = "poor"
+                
+                return {
+                    "score": score,
+                    "status": status,
+                    "vulnerability_level": {
+                        "critical": vulnerabilities.get('critical', 0),
+                        "high": vulnerabilities.get('high', 0),
+                        "medium": vulnerabilities.get('medium', 0),
+                        "low": vulnerabilities.get('low', 0)
+                    },
+                    "patch_status": {
+                        "applied": patches.get('applied', 0),
+                        "pending": patches.get('pending', 0),
+                        "failed": patches.get('failed', 0)
+                    }
+                }
+        except Exception as e:
+            logger.error(f"Error getting security score: {str(e)}")
             return {
-                "score": final_score,
-                "status": status,
-                "vulnerability_level": vuln_level,
-                "patch_status": patch_status
+                "score": 0,
+                "status": "unknown",
+                "vulnerability_level": {},
+                "patch_status": {}
             }
 
     def start_scan(self):
@@ -1803,64 +1071,163 @@ class Database:
             return cursor.rowcount > 0
 
     def get_active_scans(self):
-        """Get all active security scans."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            cursor.execute("""
-                SELECT id, timestamp, type, status, target,
-                       progress, findings_count, start_time, end_time,
-                       metadata, error_message
-                FROM scans
-                WHERE status IN ('running', 'queued')
-                ORDER BY start_time DESC
-            """)
-            scans = []
-            for row in cursor.fetchall():
-                scan = {
-                    'id': row[0],
-                    'timestamp': row[1],
-                    'type': row[2],
-                    'status': row[3],
-                    'target': row[4],
-                    'progress': row[5],
-                    'findings_count': row[6],
-                    'start_time': row[7],
-                    'end_time': row[8],
-                    'metadata': json.loads(row[9]) if row[9] else {},
-                    'error_message': row[10]
-                }
-                scans.append(scan)
-            return scans
+        """Get all currently active security scans."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT id, type, status, progress, findings_count, start_time, end_time, metadata
+                    FROM scans
+                    WHERE status IN ('running', 'queued', 'paused')
+                    ORDER BY start_time DESC
+                """)
+                scans = cursor.fetchall()
+                return [{
+                    'id': scan[0],
+                    'type': scan[1],
+                    'status': scan[2],
+                    'progress': scan[3],
+                    'findings_count': scan[4],
+                    'start_time': scan[5],
+                    'end_time': scan[6],
+                    'metadata': json.loads(scan[7]) if scan[7] else {}
+                } for scan in scans]
+        except Exception as e:
+            logger.error(f"Error getting active scans: {str(e)}")
+            return []
 
-    def get_recent_scans(self, limit=10):
-        """Get recent security scans."""
-        with self.get_db() as db:
-            cursor = db.cursor()
-            cursor.execute("""
-                SELECT id, timestamp, type, status, target,
-                       progress, findings_count, start_time, end_time,
-                       metadata, error_message
-                FROM scans
-                ORDER BY start_time DESC
-                LIMIT ?
-            """, (limit,))
-            scans = []
-            for row in cursor.fetchall():
-                scan = {
-                    'id': row[0],
-                    'timestamp': row[1],
-                    'type': row[2],
-                    'status': row[3],
-                    'target': row[4],
-                    'progress': row[5],
-                    'findings_count': row[6],
-                    'start_time': row[7],
-                    'end_time': row[8],
-                    'metadata': json.loads(row[9]) if row[9] else {},
-                    'error_message': row[10]
+    def get_recent_findings(self, limit=50):
+        """Get recent security findings."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT id, scan_id, timestamp, type, severity, description, location, status, evidence, metadata
+                    FROM scan_findings
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                """, (limit,))
+                findings = cursor.fetchall()
+                return [{
+                    'id': finding[0],
+                    'scan_id': finding[1],
+                    'timestamp': finding[2],
+                    'type': finding[3],
+                    'severity': finding[4],
+                    'description': finding[5],
+                    'location': finding[6],
+                    'status': finding[7],
+                    'evidence': finding[8],
+                    'metadata': json.loads(finding[9]) if finding[9] else {}
+                } for finding in findings]
+        except Exception as e:
+            logger.error(f"Error getting recent findings: {str(e)}")
+            return []
+
+    def get_security_metrics(self):
+        """Get current security metrics."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Get total scans
+                cursor.execute("SELECT COUNT(*) FROM scans")
+                total_scans = cursor.fetchone()[0] or 0
+                
+                # Get active threats
+                cursor.execute("""
+                    SELECT COUNT(*) FROM scan_findings 
+                    WHERE status = 'open' AND severity IN ('critical', 'high')
+                """)
+                active_threats = cursor.fetchone()[0] or 0
+                
+                # Get security score (based on various factors)
+                cursor.execute("""
+                    SELECT 
+                        CASE 
+                            WHEN COUNT(*) = 0 THEN 100
+                            ELSE 100 - (
+                                (COUNT(CASE WHEN severity = 'critical' THEN 1 END) * 10) +
+                                (COUNT(CASE WHEN severity = 'high' THEN 1 END) * 5) +
+                                (COUNT(CASE WHEN severity = 'medium' THEN 1 END) * 2) +
+                                (COUNT(CASE WHEN severity = 'low' THEN 1 END) * 1)
+                            )
+                        END as score
+                    FROM scan_findings
+                    WHERE status = 'open'
+                """)
+                security_score = max(0, min(100, cursor.fetchone()[0] or 100))
+                
+                # Get protected assets count
+                cursor.execute("SELECT COUNT(*) FROM assets WHERE status = 'protected'")
+                protected_assets = cursor.fetchone()[0] or 0
+                
+                return {
+                    'total_scans': total_scans,
+                    'active_threats': active_threats,
+                    'security_score': security_score,
+                    'protected_assets': protected_assets
                 }
-                scans.append(scan)
-            return scans
+        except Exception as e:
+            logger.error(f"Error getting security metrics: {str(e)}")
+            return {
+                'total_scans': 0,
+                'active_threats': 0,
+                'security_score': 100,
+                'protected_assets': 0
+            }
+
+    def get_scan_statistics(self):
+        """Get statistics about security scans."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Get total findings
+                cursor.execute("SELECT COUNT(*) FROM scan_findings")
+                total_findings = cursor.fetchone()[0] or 0
+                
+                # Get critical findings
+                cursor.execute("""
+                    SELECT COUNT(*) FROM scan_findings 
+                    WHERE severity = 'critical'
+                """)
+                critical_findings = cursor.fetchone()[0] or 0
+                
+                # Get success rate
+                cursor.execute("""
+                    SELECT 
+                        COUNT(CASE WHEN status = 'completed' THEN 1 END) * 100.0 / COUNT(*)
+                    FROM scans
+                    WHERE status IN ('completed', 'failed')
+                """)
+                success_rate = round(cursor.fetchone()[0] or 0, 1)
+                
+                # Get average scan time
+                cursor.execute("""
+                    SELECT AVG(
+                        (strftime('%s', end_time) - strftime('%s', start_time))
+                    )
+                    FROM scans
+                    WHERE status = 'completed'
+                    AND end_time IS NOT NULL
+                """)
+                avg_scan_time = round(cursor.fetchone()[0] or 0, 1)
+                
+                return {
+                    'total_findings': total_findings,
+                    'critical_findings': critical_findings,
+                    'success_rate': success_rate,
+                    'avg_scan_time': avg_scan_time
+                }
+        except Exception as e:
+            logger.error(f"Error getting scan statistics: {str(e)}")
+            return {
+                'total_findings': 0,
+                'critical_findings': 0,
+                'success_rate': 0,
+                'avg_scan_time': 0
+            }
 
     def schedule_scan(self, schedule):
         """Schedule a new security scan."""
@@ -2053,4 +1420,1316 @@ class Database:
                 'ssh': 0,
                 'smtp': 0,
                 'other': 0
-            } 
+            }
+
+    def get_page_settings(self, section: str) -> dict:
+        """Get settings for a specific section."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT key, value, type, description
+                    FROM settings
+                    WHERE section = ?
+                """, (section,))
+                settings = {}
+                for row in cursor.fetchall():
+                    key, value, type_, description = row
+                    # Convert value based on type
+                    if type_ == 'boolean':
+                        settings[key] = value.lower() == 'true'
+                    elif type_ == 'integer':
+                        settings[key] = int(value)
+                    elif type_ == 'float':
+                        settings[key] = float(value)
+                    elif type_ == 'json':
+                        settings[key] = json.loads(value)
+                    else:
+                        settings[key] = value
+                return settings
+        except Exception as e:
+            logger.error(f"Error getting {section} settings: {str(e)}")
+            raise
+
+    def get_network_monitoring_status(self) -> dict:
+        """Get current network monitoring status."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                # Get monitoring status
+                cursor.execute("""
+                    SELECT status, last_check, active_monitors
+                    FROM network_monitoring
+                    WHERE id = 1
+                """)
+                row = cursor.fetchone()
+                if not row:
+                    return {
+                        "status": "inactive",
+                        "last_check": None,
+                        "active_monitors": 0,
+                        "alerts": []
+                    }
+                
+                status, last_check, active_monitors = row
+                
+                # Get recent alerts
+                cursor.execute("""
+                    SELECT id, timestamp, severity, message, source
+                    FROM network_alerts
+                    WHERE timestamp >= datetime('now', '-1 hour')
+                    ORDER BY timestamp DESC
+                    LIMIT 10
+                """)
+                alerts = []
+                for alert_row in cursor.fetchall():
+                    alert_id, timestamp, severity, message, source = alert_row
+                    alerts.append({
+                        "id": alert_id,
+                        "timestamp": timestamp,
+                        "severity": severity,
+                        "message": message,
+                        "source": source
+                    })
+                
+                return {
+                    "status": status,
+                    "last_check": last_check,
+                    "active_monitors": active_monitors,
+                    "alerts": alerts
+                }
+        except Exception as e:
+            logger.error(f"Error getting network monitoring status: {str(e)}")
+            raise
+
+    def start_network_monitoring(self) -> bool:
+        """Start network monitoring."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                # Check if monitoring is already active
+                cursor.execute("""
+                    SELECT status FROM network_monitoring WHERE id = 1
+                """)
+                row = cursor.fetchone()
+                if row and row[0] == 'active':
+                    return False
+                
+                # Update monitoring status
+                cursor.execute("""
+                    INSERT INTO network_monitoring (id, status, last_check, active_monitors)
+                    VALUES (1, 'active', datetime('now'), 0)
+                    ON CONFLICT(id) DO UPDATE SET
+                        status = 'active',
+                        last_check = datetime('now')
+                """)
+                conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error starting network monitoring: {str(e)}")
+            raise
+
+    def stop_network_monitoring(self) -> bool:
+        """Stop network monitoring."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                # Check if monitoring is already inactive
+                cursor.execute("""
+                    SELECT status FROM network_monitoring WHERE id = 1
+                """)
+                row = cursor.fetchone()
+                if row and row[0] == 'inactive':
+                    return False
+                
+                # Update monitoring status
+                cursor.execute("""
+                    UPDATE network_monitoring
+                    SET status = 'inactive',
+                        last_check = datetime('now')
+                    WHERE id = 1
+                """)
+                conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error stopping network monitoring: {str(e)}")
+            raise
+
+    def initialize_network_monitoring(self):
+        """Initialize network monitoring tables if they don't exist."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Create network_monitoring table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS network_monitoring (
+                        id INTEGER PRIMARY KEY,
+                        status TEXT NOT NULL DEFAULT 'stopped',
+                        last_check TIMESTAMP,
+                        active_monitors INTEGER DEFAULT 0,
+                        devices_discovered INTEGER DEFAULT 0,
+                        connections_tracked INTEGER DEFAULT 0,
+                        traffic_analyzed INTEGER DEFAULT 0,
+                        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Create network_alerts table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS network_alerts (
+                        id TEXT PRIMARY KEY,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        severity TEXT NOT NULL,
+                        message TEXT NOT NULL,
+                        source TEXT,
+                        status TEXT DEFAULT 'active',
+                        resolution TEXT,
+                        resolved_at TIMESTAMP
+                    )
+                """)
+                
+                # Create network_monitors table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS network_monitors (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        status TEXT DEFAULT 'active',
+                        config TEXT,
+                        last_check TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Initialize network monitoring if not exists
+                cursor.execute("""
+                    INSERT OR IGNORE INTO network_monitoring (
+                        id, status, last_check, active_monitors,
+                        devices_discovered, connections_tracked, traffic_analyzed
+                    ) VALUES (1, 'stopped', NULL, 0, 0, 0, 0)
+                """)
+                
+                conn.commit()
+                logger.info("Network monitoring tables initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing network monitoring tables: {str(e)}")
+            raise
+
+    def get_settings(self) -> dict:
+        """Get global application settings."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                # First ensure the settings table exists with correct schema
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS settings (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL,
+                        type TEXT DEFAULT 'string',
+                        description TEXT,
+                        section TEXT DEFAULT 'global',
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Get all settings
+                cursor.execute("SELECT key, value, type, description FROM settings")
+                settings = {}
+                for row in cursor.fetchall():
+                    key, value, type_, description = row
+                    if not value:  # Skip empty values
+                        continue
+                    try:
+                        # Convert value based on type
+                        if type_ == 'boolean':
+                            settings[key] = value.lower() == 'true'
+                        elif type_ == 'integer':
+                            settings[key] = int(value)
+                        elif type_ == 'float':
+                            settings[key] = float(value)
+                        elif type_ == 'json':
+                            settings[key] = json.loads(value)
+                        else:
+                            settings[key] = value
+                    except (json.JSONDecodeError, ValueError):
+                        # If conversion fails, use as is
+                        settings[key] = value
+                
+                # Ensure API key is synchronized with environment
+                env_api_key = os.getenv('API_KEY')
+                if env_api_key and env_api_key != settings.get('api_key'):
+                    settings['api_key'] = env_api_key
+                    cursor.execute("""
+                        UPDATE settings 
+                        SET value = ?, updated_at = CURRENT_TIMESTAMP
+                        WHERE key = 'api_key'
+                    """, (env_api_key,))
+                    conn.commit()
+                elif not env_api_key and 'api_key' not in settings:
+                    # Generate new API key if none exists
+                    new_key = secrets.token_urlsafe(32)
+                    os.environ['API_KEY'] = new_key
+                    settings['api_key'] = new_key
+                    cursor.execute("""
+                        INSERT INTO settings (key, value, updated_at)
+                        VALUES (?, ?, CURRENT_TIMESTAMP)
+                    """, ('api_key', new_key))
+                    conn.commit()
+                
+                # Ensure other required settings exist with defaults
+                required_settings = {
+                    'network_monitoring_enabled': True,
+                    'log_retention_days': 30,
+                    'alert_threshold': 0.8
+                }
+                
+                needs_update = False
+                for key, default_value in required_settings.items():
+                    if key not in settings:
+                        settings[key] = default_value
+                        cursor.execute("""
+                            INSERT INTO settings (key, value, updated_at)
+                            VALUES (?, ?, ?)
+                        """, (
+                            key,
+                            json.dumps(default_value) if not isinstance(default_value, str) else default_value,
+                            datetime.utcnow().isoformat()
+                        ))
+                        needs_update = True
+                
+                if needs_update:
+                    conn.commit()
+                
+                return settings
+        except Exception as e:
+            logger.error(f"Error getting settings: {str(e)}")
+            # Return default settings if database access fails
+            api_key = os.getenv('API_KEY', secrets.token_urlsafe(32))
+            if not os.getenv('API_KEY'):
+                os.environ['API_KEY'] = api_key
+            return {
+                'api_key': api_key,
+                'network_monitoring_enabled': True,
+                'log_retention_days': 30,
+                'alert_threshold': 0.8
+            }
+
+    def update_settings(self, settings: dict) -> bool:
+        """Update global application settings."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                # First ensure the settings table exists
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS settings (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Update each setting
+                for key, value in settings.items():
+                    # Convert value to JSON string if it's not a string
+                    if not isinstance(value, str):
+                        value = json.dumps(value)
+                    
+                    cursor.execute("""
+                        INSERT INTO settings (key, value, updated_at)
+                        VALUES (?, ?, ?)
+                        ON CONFLICT(key) DO UPDATE SET
+                            value = ?,
+                            updated_at = ?
+                    """, (
+                        key,
+                        value,
+                        datetime.utcnow().isoformat(),
+                        value,
+                        datetime.utcnow().isoformat()
+                    ))
+                
+                conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error updating settings: {str(e)}")
+            return False
+
+    def update_page_settings(self, page_name: str, settings: dict) -> bool:
+        """Update settings for a specific page."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                # First ensure the page_settings table exists
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS page_settings (
+                        page_name TEXT PRIMARY KEY,
+                        settings TEXT NOT NULL,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Update or insert settings
+                cursor.execute("""
+                    INSERT INTO page_settings (page_name, settings, updated_at)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(page_name) DO UPDATE SET
+                        settings = ?,
+                        updated_at = ?
+                """, (
+                    page_name,
+                    json.dumps(settings),
+                    datetime.utcnow().isoformat(),
+                    json.dumps(settings),
+                    datetime.utcnow().isoformat()
+                ))
+                conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error updating page settings: {str(e)}")
+            return False
+
+    def get_log_trend(self, days: int = 7) -> float:
+        """Calculate the log trend over the specified number of days."""
+        try:
+            # Get current period count
+            current_count = self.get_log_count(days=days)
+            # Get previous period count
+            previous_count = self.get_log_count(days=days*2) - current_count
+            
+            if previous_count == 0:
+                return 0.0
+                
+            return ((current_count - previous_count) / previous_count) * 100
+        except Exception as e:
+            logger.error(f"Error calculating log trend: {str(e)}")
+            return 0.0
+
+    def update_network_metrics(self, metrics_data):
+        """Update network metrics with new data."""
+        with self.get_db() as db:
+            cursor = db.cursor()
+            metrics_id = str(uuid.uuid4())
+            
+            cursor.execute("""
+                INSERT INTO network_metrics (
+                    id, timestamp, load, active_connections,
+                    devices_discovered, metadata, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                metrics_id,
+                metrics_data['timestamp'],
+                metrics_data.get('load', 0),
+                metrics_data.get('active_connections', 0),
+                metrics_data.get('devices_discovered', 0),
+                json.dumps(metrics_data.get('metadata', {})),
+                datetime.utcnow().isoformat()
+            ))
+            
+            db.commit()
+            return metrics_id
+
+    def update_network_device(self, device_data):
+        """Update or create a network device."""
+        with self.get_db() as db:
+            cursor = db.cursor()
+            now = datetime.utcnow().isoformat()
+            
+            # Check if device exists
+            cursor.execute("""
+                SELECT id FROM network_devices
+                WHERE ip_address = ?
+            """, (device_data['ip'],))
+            result = cursor.fetchone()
+            
+            if result:
+                # Update existing device
+                device_id = result[0]
+                cursor.execute("""
+                    UPDATE network_devices
+                    SET status = 'active',
+                        last_seen = ?,
+                        metadata = ?,
+                        updated_at = ?
+                    WHERE id = ?
+                """, (
+                    now,
+                    json.dumps(device_data.get('metadata', {})),
+                    now,
+                    device_id
+                ))
+            else:
+                # Create new device
+                device_id = str(uuid.uuid4())
+                cursor.execute("""
+                    INSERT INTO network_devices (
+                        id, ip_address, type, status,
+                        metadata, created_at, updated_at, last_seen, first_seen
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    device_id,
+                    device_data['ip'],
+                    device_data.get('type', 'unknown'),
+                    'active',
+                    json.dumps(device_data.get('metadata', {})),
+                    now,
+                    now,
+                    now,
+                    now  # first_seen
+                ))
+            
+            db.commit()
+            return device_id
+
+    def migrate_first_seen(self):
+        """Set first_seen for devices where it is NULL."""
+        with self.get_db() as db:
+            cursor = db.cursor()
+            now = datetime.utcnow().isoformat()
+            cursor.execute("""
+                UPDATE network_devices
+                SET first_seen = COALESCE(last_seen, ?)
+                WHERE first_seen IS NULL OR first_seen = ''
+            """, (now,))
+            db.commit()
+
+    def get_log_count(self, days: int = 1) -> int:
+        """Get the count of logs within the specified number of days."""
+        try:
+            with self.get_db() as db:
+                cursor = db.cursor()
+                cursor.execute("""
+                    SELECT COUNT(*) FROM logs 
+                    WHERE timestamp >= datetime('now', ?)
+                """, (f'-{days} days',))
+                return cursor.fetchone()[0] or 0
+        except Exception as e:
+            logger.error(f"Error getting log count: {str(e)}")
+            return 0
+
+    def get_active_threats(self) -> dict:
+        """Get count of active threats by severity level."""
+        try:
+            with self.get_db() as db:
+                cursor = db.cursor()
+                cursor.execute("""
+                    SELECT severity, COUNT(*) as count
+                    FROM scan_findings 
+                    WHERE status = 'open'
+                    GROUP BY severity
+                """)
+                threats = {row[0]: row[1] for row in cursor.fetchall()}
+                return {
+                    'critical': threats.get('critical', 0),
+                    'high': threats.get('high', 0),
+                    'medium': threats.get('medium', 0),
+                    'low': threats.get('low', 0),
+                    'total': sum(threats.values())
+                }
+        except Exception as e:
+            logger.error(f"Error getting active threats: {str(e)}")
+            return {
+                'critical': 0,
+                'high': 0,
+                'medium': 0,
+                'low': 0,
+                'total': 0
+            }
+
+    async def get_settings_async(self) -> dict:
+        """Get application settings asynchronously."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute("""
+                    CREATE TABLE IF NOT EXISTS settings (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                cursor = await conn.execute("SELECT key, value FROM settings")
+                rows = await cursor.fetchall()
+                await cursor.close()
+                settings = {}
+                for row in rows:
+                    key, value = row
+                    if not value:
+                        continue
+                    try:
+                        settings[key] = json.loads(value)
+                    except json.JSONDecodeError:
+                        settings[key] = value
+                # ... (rest of logic unchanged)
+                return settings
+        except Exception as e:
+            logger.error(f"Error getting settings: {str(e)}")
+            api_key = os.getenv('API_KEY', secrets.token_urlsafe(32))
+            if not os.getenv('API_KEY'):
+                os.environ['API_KEY'] = api_key
+            return {
+                'api_key': api_key,
+                'network_monitoring_enabled': True,
+                'log_retention_days': 30,
+                'alert_threshold': 0.8
+            }
+
+    async def update_settings_async(self, settings: dict) -> bool:
+        """Update application settings asynchronously."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                for key, value in settings.items():
+                    await conn.execute(
+                        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+                        (key, json.dumps(value))
+                    )
+                await conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error updating settings: {str(e)}")
+            return False
+
+    async def get_network_metrics(self) -> dict:
+        """Get current network metrics."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT 
+                        COUNT(*) as active_connections,
+                        SUM(data_transferred) as total_traffic,
+                        (SELECT MAX(last_seen) FROM network_devices) as last_update
+                    FROM network_connections 
+                    WHERE status = 'active'
+                """)
+                row = await cursor.fetchone()
+                await cursor.close()
+                
+                if row:
+                    return {
+                        'active_connections': row[0] or 0,
+                        'total_traffic': row[1] or 0,
+                        'last_update': row[2] or datetime.utcnow().isoformat()
+                    }
+                return {
+                    'active_connections': 0,
+                    'total_traffic': 0,
+                    'last_update': datetime.utcnow().isoformat()
+                }
+        except Exception as e:
+            logger.error(f"Error getting network metrics: {str(e)}")
+            return {
+                'active_connections': 0,
+                'total_traffic': 0,
+                'last_update': datetime.utcnow().isoformat()
+            }
+
+    def get_threats_trend(self, days: int = 7) -> float:
+        """Calculate the trend in threats over the specified number of days."""
+        try:
+            with self.get_db() as db:
+                cursor = db.cursor()
+                
+                # Get current period count
+                cursor.execute("""
+                    SELECT COUNT(*) FROM scan_findings
+                    WHERE timestamp >= datetime('now', ?)
+                    AND severity IN ('critical', 'high')
+                """, (f'-{days} days',))
+                current_count = cursor.fetchone()[0] or 0
+                
+                # Get previous period count
+                cursor.execute("""
+                    SELECT COUNT(*) FROM scan_findings
+                    WHERE timestamp >= datetime('now', ?)
+                    AND timestamp < datetime('now', ?)
+                    AND severity IN ('critical', 'high')
+                """, (f'-{days*2} days', f'-{days} days'))
+                previous_count = cursor.fetchone()[0] or 0
+                
+                if previous_count == 0:
+                    return 0.0
+                
+                return ((current_count - previous_count) / previous_count) * 100
+        except Exception as e:
+            logger.error(f"Error calculating threats trend: {str(e)}")
+            return 0.0
+
+    async def get_threats_trend_async(self, days: int = 7) -> float:
+        """Asynchronous version of get_threats_trend."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT COUNT(*) FROM scan_findings
+                    WHERE timestamp >= datetime('now', ?)
+                    AND severity IN ('critical', 'high')
+                """, (f'-{days} days',))
+                current_count = (await cursor.fetchone())[0] or 0
+                await cursor.close()
+                
+                cursor = await conn.execute("""
+                    SELECT COUNT(*) FROM scan_findings
+                    WHERE timestamp >= datetime('now', ?)
+                    AND timestamp < datetime('now', ?)
+                    AND severity IN ('critical', 'high')
+                """, (f'-{days*2} days', f'-{days} days'))
+                previous_count = (await cursor.fetchone())[0] or 0
+                await cursor.close()
+                
+                if previous_count == 0:
+                    return 0.0
+                
+                return ((current_count - previous_count) / previous_count) * 100
+        except Exception as e:
+            logger.error(f"Error calculating threats trend: {str(e)}")
+            return 0.0
+
+    def validate_api_key(self, api_key: str) -> bool:
+        """Validate the provided API key against stored key."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT value FROM settings WHERE key = 'api_key'")
+                result = cursor.fetchone()
+                if not result:
+                    return False
+                stored_key = result[0]
+                return api_key == stored_key
+        except Exception as e:
+            logger.error(f"Error validating API key: {str(e)}")
+            return False
+
+    def get_network_health(self) -> dict:
+        """Get current network health metrics."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Get active devices count
+                cursor.execute("""
+                    SELECT COUNT(*) FROM network_devices 
+                    WHERE status = 'active' 
+                    AND last_seen >= datetime('now', '-5 minutes')
+                """)
+                active_devices = cursor.fetchone()[0] or 0
+                
+                # Get total devices count
+                cursor.execute("SELECT COUNT(*) FROM network_devices")
+                total_devices = cursor.fetchone()[0] or 0
+                
+                # Get active connections
+                cursor.execute("""
+                    SELECT COUNT(*) FROM network_connections 
+                    WHERE status = 'active'
+                """)
+                active_connections = cursor.fetchone()[0] or 0
+                
+                # Get blocked connections in last hour
+                cursor.execute("""
+                    SELECT COUNT(*) FROM network_connections 
+                    WHERE status = 'blocked' 
+                    AND end_time >= datetime('now', '-1 hour')
+                """)
+                blocked_connections = cursor.fetchone()[0] or 0
+                
+                # Calculate health score (0-100)
+                if total_devices == 0:
+                    health_score = 100  # No devices means perfect health
+                else:
+                    device_health = (active_devices / total_devices) * 100
+                    connection_health = 100 - (blocked_connections / max(active_connections, 1)) * 100
+                    health_score = (device_health + connection_health) / 2
+                
+                return {
+                    'score': round(health_score, 1),
+                    'active_devices': active_devices,
+                    'total_devices': total_devices,
+                    'active_connections': active_connections,
+                    'blocked_connections': blocked_connections,
+                    'status': 'healthy' if health_score >= 80 else 'warning' if health_score >= 50 else 'critical'
+                }
+        except Exception as e:
+            logger.error(f"Error getting network health: {str(e)}")
+            return {
+                'score': 0,
+                'active_devices': 0,
+                'total_devices': 0,
+                'active_connections': 0,
+                'blocked_connections': 0,
+                'status': 'unknown'
+            }
+
+    def update_scan(self, scan_id: str, scan_data: dict):
+        """Update scan details in the database."""
+        try:
+            with self.get_db() as db:
+                cursor = db.cursor()
+                cursor.execute("""
+                    UPDATE scans
+                    SET type = ?, target = ?, status = ?, started_at = ?, config = ?
+                    WHERE id = ?
+                """, (
+                    scan_data["type"],
+                    scan_data["target"],
+                    scan_data["status"],
+                    scan_data["started_at"],
+                    json.dumps(scan_data["config"]),
+                    scan_id
+                ))
+                db.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error updating scan: {str(e)}")
+            return False
+
+    def get_report(self, report_id: str) -> Optional[dict]:
+        """Get report details from the database."""
+        try:
+            with self.get_db() as db:
+                cursor = db.cursor()
+                cursor.execute("""
+                    SELECT id, type, format, time_range, status, created_at, url
+                    FROM reports
+                    WHERE id = ?
+                """, (report_id,))
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        "id": row[0],
+                        "type": row[1],
+                        "format": row[2],
+                        "time_range": row[3],
+                        "status": row[4],
+                        "created_at": row[5],
+                        "url": row[6]
+                    }
+                return None
+        except Exception as e:
+            logger.error(f"Error getting report: {str(e)}")
+            return None
+
+    def get_maintenance_schedules(self) -> List[dict]:
+        """Get all scheduled maintenance windows."""
+        try:
+            with self.get_db() as db:
+                cursor = db.cursor()
+                cursor.execute("""
+                    SELECT id, start_time, end_time, type, description, status
+                    FROM maintenance
+                    WHERE status = 'scheduled'
+                    ORDER BY start_time ASC
+                """)
+                rows = cursor.fetchall()
+                return [{
+                    "id": row[0],
+                    "start_time": row[1],
+                    "end_time": row[2],
+                    "type": row[3],
+                    "description": row[4],
+                    "status": row[5]
+                } for row in rows]
+        except Exception as e:
+            logger.error(f"Error getting maintenance schedules: {str(e)}")
+            return []
+
+    def cancel_maintenance(self, maintenance_id: str) -> bool:
+        """Cancel a scheduled maintenance window."""
+        try:
+            with self.get_db() as db:
+                cursor = db.cursor()
+                cursor.execute("""
+                    UPDATE maintenance
+                    SET status = 'cancelled'
+                    WHERE id = ? AND status = 'scheduled'
+                """, (maintenance_id,))
+                db.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error cancelling maintenance: {str(e)}")
+            return False
+
+    def create_tables(self):
+        """Create necessary database tables if they don't exist."""
+        try:
+            with self.get_db() as db:
+                cursor = db.cursor()
+                
+                # Create reports table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS reports (
+                        id TEXT PRIMARY KEY,
+                        type TEXT NOT NULL,
+                        format TEXT NOT NULL,
+                        time_range TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        created_at TEXT NOT NULL,
+                        url TEXT,
+                        data TEXT
+                    )
+                """)
+                
+                # Create maintenance table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS maintenance (
+                        id TEXT PRIMARY KEY,
+                        start_time TEXT NOT NULL,
+                        end_time TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        description TEXT,
+                        status TEXT NOT NULL,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT
+                    )
+                """)
+                
+                # Create scans table if it doesn't exist
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS scans (
+                        id TEXT PRIMARY KEY,
+                        type TEXT NOT NULL,
+                        target TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        started_at TEXT NOT NULL,
+                        completed_at TEXT,
+                        config TEXT,
+                        results TEXT
+                    )
+                """)
+                
+                db.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error creating database tables: {str(e)}")
+            return False
+
+    async def get_health_trend(self, metric_name: str, hours: int = 24) -> List[Dict]:
+        """Get health trend data for a specific metric"""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                # Create health_trends table if it doesn't exist
+                await conn.execute("""
+                    CREATE TABLE IF NOT EXISTS health_trends (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        metric_name TEXT NOT NULL,
+                        value REAL NOT NULL,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Get trend data
+                cursor = await conn.execute("""
+                    SELECT value, timestamp 
+                    FROM health_trends 
+                    WHERE metric_name = ? 
+                    AND timestamp >= datetime('now', ? || ' hours')
+                    ORDER BY timestamp ASC
+                """, (metric_name, -hours))
+                
+                rows = await cursor.fetchall()
+                await cursor.close()
+                
+                # Convert rows to list of dicts
+                return [{
+                    'value': row[0],
+                    'timestamp': row[1]
+                } for row in rows]
+        except Exception as e:
+            logger.error(f"Error getting health trend: {str(e)}")
+            return []
+
+    async def get_security_metrics(self) -> Dict:
+        """Get security metrics including asset status"""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                # Get asset counts by status
+                asset_query = '''
+                    SELECT status, COUNT(*) as count
+                    FROM assets
+                    GROUP BY status
+                '''
+                asset_rows = await conn.execute(asset_query)
+                asset_counts = {row['status']: row['count'] for row in asset_rows}
+                
+                # Get active alerts
+                alert_query = '''
+                    SELECT severity, COUNT(*) as count
+                    FROM alerts
+                    WHERE status = 'active'
+                    GROUP BY severity
+                '''
+                alert_rows = await conn.execute(alert_query)
+                alert_counts = {row['severity']: row['count'] for row in alert_rows}
+                
+                return {
+                    'total_assets': sum(asset_counts.values()),
+                    'asset_status': asset_counts,
+                    'active_alerts': alert_counts,
+                    'security_score': self._calculate_security_score(asset_counts, alert_counts)
+                }
+        except Exception as e:
+            logger.error(f"Error getting security metrics: {str(e)}")
+            return {
+                'total_assets': 0,
+                'asset_status': {},
+                'active_alerts': {},
+                'security_score': 0
+            }
+
+    async def get_recent_alerts(self, limit: int = 50) -> List[Dict]:
+        """Get recent alerts"""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                query = '''
+                    SELECT id, type, severity, message, source, status, created_at, resolved_at
+                    FROM alerts
+                    ORDER BY created_at DESC
+                    LIMIT $1
+                '''
+                rows = await conn.execute(query, limit)
+                await conn.commit()
+                return [dict(row) for row in rows]
+        except Exception as e:
+            logger.error(f"Error getting recent alerts: {str(e)}")
+            return []
+
+    def _calculate_security_score(self, asset_counts: Dict, alert_counts: Dict) -> int:
+        """Calculate overall security score based on assets and alerts"""
+        # Base score starts at 100
+        score = 100
+        
+        # Deduct points for inactive assets
+        inactive_assets = asset_counts.get('inactive', 0)
+        score -= inactive_assets * 5
+        
+        # Deduct points for alerts based on severity
+        severity_weights = {
+            'critical': 10,
+            'high': 5,
+            'medium': 3,
+            'low': 1
+        }
+        
+        for severity, count in alert_counts.items():
+            score -= count * severity_weights.get(severity, 0)
+        
+        # Ensure score stays within 0-100 range
+        return max(0, min(100, score)) 
+
+    def get_protected_assets(self) -> dict:
+        """Get count of protected network devices."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Get total devices
+                cursor.execute("SELECT COUNT(*) FROM network_devices")
+                total_devices = cursor.fetchone()[0] or 0
+                
+                # Get protected devices (those with active security measures)
+                cursor.execute("""
+                    SELECT COUNT(*) FROM network_devices 
+                    WHERE status = 'active' 
+                    AND last_seen >= datetime('now', '-5 minutes')
+                """)
+                protected_devices = cursor.fetchone()[0] or 0
+                
+                return {
+                    'total': total_devices,
+                    'protected': protected_devices,
+                    'unprotected': total_devices - protected_devices
+                }
+        except Exception as e:
+            logger.error(f"Error getting protected assets: {str(e)}")
+            return {
+                'total': 0,
+                'protected': 0,
+                'unprotected': 0
+            }
+
+    def get_assets_status(self) -> dict:
+        """Get status distribution of network assets."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT status, COUNT(*) as count
+                    FROM network_devices
+                    GROUP BY status
+                """)
+                status_counts = {row[0]: row[1] for row in cursor.fetchall()}
+                
+                return {
+                    'active': status_counts.get('active', 0),
+                    'inactive': status_counts.get('inactive', 0),
+                    'maintenance': status_counts.get('maintenance', 0),
+                    'blocked': status_counts.get('blocked', 0)
+                }
+        except Exception as e:
+            logger.error(f"Error getting assets status: {str(e)}")
+            return {
+                'active': 0,
+                'inactive': 0,
+                'maintenance': 0,
+                'blocked': 0
+            }
+
+    async def get_active_scans_async(self) -> List[Dict]:
+        """Get all active security scans asynchronously."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT id, type, target, status, progress, findings_count,
+                           start_time, metadata
+                    FROM scans
+                    WHERE status = 'running'
+                    ORDER BY start_time DESC
+                """)
+                rows = await cursor.fetchall()
+                await cursor.close()
+                
+                scans = []
+                for row in rows:
+                    scan = {
+                        'id': row[0],
+                        'type': row[1],
+                        'target': row[2],
+                        'status': row[3],
+                        'progress': row[4],
+                        'findings_count': row[5],
+                        'start_time': row[6],
+                        'metadata': json.loads(row[7]) if row[7] else {}
+                    }
+                    scans.append(scan)
+                return scans
+        except Exception as e:
+            logger.error(f"Error getting active scans: {str(e)}")
+            return []
+
+    async def get_recent_findings_async(self, limit: int = 50) -> List[Dict]:
+        """Get recent security findings asynchronously."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT f.id, f.scan_id, f.timestamp, f.type, f.severity,
+                           f.description, f.location, f.evidence, f.status,
+                           f.resolution, f.resolved_at, f.metadata,
+                           s.type as scan_type, s.target as scan_target
+                    FROM scan_findings f
+                    JOIN scans s ON f.scan_id = s.id
+                    ORDER BY f.timestamp DESC
+                    LIMIT ?
+                """, (limit,))
+                rows = await cursor.fetchall()
+                await cursor.close()
+                
+                findings = []
+                for row in rows:
+                    finding = {
+                        'id': row[0],
+                        'scan_id': row[1],
+                        'timestamp': row[2],
+                        'type': row[3],
+                        'severity': row[4],
+                        'description': row[5],
+                        'location': row[6],
+                        'evidence': row[7],
+                        'status': row[8],
+                        'resolution': row[9],
+                        'resolved_at': row[10],
+                        'metadata': json.loads(row[11]) if row[11] else {},
+                        'scan_type': row[12],
+                        'scan_target': row[13]
+                    }
+                    findings.append(finding)
+                return findings
+        except Exception as e:
+            logger.error(f"Error getting recent findings: {str(e)}")
+            return []
+
+    async def get_scan_statistics_async(self) -> Dict:
+        """Get scan statistics asynchronously."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                # Get total scans
+                cursor = await conn.execute("SELECT COUNT(*) FROM scans")
+                total_scans = (await cursor.fetchone())[0] or 0
+                await cursor.close()
+                
+                # Get scans by status
+                cursor = await conn.execute("""
+                    SELECT status, COUNT(*) as count
+                    FROM scans
+                    GROUP BY status
+                """)
+                status_counts = {row[0]: row[1] for row in await cursor.fetchall()}
+                await cursor.close()
+                
+                # Get scans by type
+                cursor = await conn.execute("""
+                    SELECT type, COUNT(*) as count
+                    FROM scans
+                    GROUP BY type
+                """)
+                type_counts = {row[0]: row[1] for row in await cursor.fetchall()}
+                await cursor.close()
+                
+                # Get findings by severity
+                cursor = await conn.execute("""
+                    SELECT severity, COUNT(*) as count
+                    FROM scan_findings
+                    GROUP BY severity
+                """)
+                severity_counts = {row[0]: row[1] for row in await cursor.fetchall()}
+                await cursor.close()
+                
+                return {
+                    'total_scans': total_scans,
+                    'status_distribution': status_counts,
+                    'type_distribution': type_counts,
+                    'severity_distribution': severity_counts
+                }
+        except Exception as e:
+            logger.error(f"Error getting scan statistics: {str(e)}")
+            return {
+                'total_scans': 0,
+                'status_distribution': {},
+                'type_distribution': {},
+                'severity_distribution': {}
+            }
+
+    def initialize_db(self):
+        """Initialize the database schema."""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Create users table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT UNIQUE NOT NULL,
+                        password_hash TEXT NOT NULL,
+                        email TEXT UNIQUE,
+                        role TEXT NOT NULL DEFAULT 'user',
+                        api_key TEXT UNIQUE,
+                        last_login TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Create scans table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS scans (
+                        id TEXT PRIMARY KEY,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        type TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        target TEXT NOT NULL,
+                        progress INTEGER DEFAULT 0,
+                        findings_count INTEGER DEFAULT 0,
+                        start_time TIMESTAMP,
+                        end_time TIMESTAMP,
+                        metadata TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Create scan findings table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS scan_findings (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        scan_id TEXT NOT NULL,
+                        severity TEXT NOT NULL,
+                        category TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        location TEXT,
+                        remediation TEXT,
+                        status TEXT DEFAULT 'new',
+                        resolved_at TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (scan_id) REFERENCES scans(id)
+                    )
+                """)
+                
+                # Create network devices table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS network_devices (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        ip_address TEXT NOT NULL,
+                        mac_address TEXT,
+                        type TEXT NOT NULL,
+                        status TEXT DEFAULT 'active',
+                        last_seen TIMESTAMP,
+                        security_status TEXT DEFAULT 'unknown',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Create maintenance windows table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS maintenance_windows (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        start_time TIMESTAMP NOT NULL,
+                        end_time TIMESTAMP NOT NULL,
+                        type TEXT NOT NULL,
+                        description TEXT,
+                        status TEXT DEFAULT 'scheduled',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Create security metrics table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS security_metrics (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        total_devices INTEGER DEFAULT 0,
+                        protected_devices INTEGER DEFAULT 0,
+                        active_scans INTEGER DEFAULT 0,
+                        critical_findings INTEGER DEFAULT 0,
+                        high_findings INTEGER DEFAULT 0,
+                        medium_findings INTEGER DEFAULT 0,
+                        low_findings INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Create network connections table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS network_connections (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        source_ip TEXT NOT NULL,
+                        destination_ip TEXT NOT NULL,
+                        protocol TEXT NOT NULL,
+                        port INTEGER,
+                        status TEXT DEFAULT 'active',
+                        start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        end_time TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Initialize network monitoring tables
+                self.initialize_network_monitoring()
+                
+                # Create default admin user if not exists
+                cursor.execute("SELECT id FROM users WHERE username = 'admin'")
+                if not cursor.fetchone():
+                    default_password = "admin123"  # Change this in production
+                    password_hash = self.hash_password(default_password)
+                    api_key = self.generate_api_key()
+                    cursor.execute("""
+                        INSERT INTO users (username, password_hash, role, api_key)
+                        VALUES (?, ?, ?, ?)
+                    """, ('admin', password_hash, 'admin', api_key))
+                
+                conn.commit()
+                logger.info("Database schema initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing database schema: {str(e)}")
+            raise
