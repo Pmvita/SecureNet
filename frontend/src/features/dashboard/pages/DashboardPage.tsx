@@ -308,11 +308,11 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Recent Security Alerts */}
         <div className="xl:col-span-1">
-          <Card>
-            <div className="p-4 border-b border-gray-700">
+          <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+            <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <ShieldExclamationIcon className="h-5 w-5" />
+                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <ShieldExclamationIcon className="h-6 w-6 text-red-400" />
                   Security Alerts
                 </h2>
                 <Badge variant="error" className="text-xs">
@@ -320,7 +320,7 @@ export function DashboardPage() {
                 </Badge>
               </div>
             </div>
-            <div className="p-4">
+            <div className="p-6 bg-gray-900/30">
               {activeAnomalies.length === 0 ? (
                 <div className="text-center py-8">
                   <CheckCircleIcon className="h-12 w-12 text-green-400 mx-auto mb-4" />
@@ -370,11 +370,11 @@ export function DashboardPage() {
 
         {/* Recent Logs */}
         <div className="xl:col-span-1">
-          <Card>
-            <div className="p-4 border-b border-gray-700">
+          <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+            <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <DocumentTextIcon className="h-5 w-5" />
+                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <DocumentTextIcon className="h-6 w-6 text-orange-400" />
                   Critical Logs
                 </h2>
                 <Badge variant="error" className="text-xs">
@@ -382,7 +382,7 @@ export function DashboardPage() {
                 </Badge>
               </div>
             </div>
-            <div className="p-4">
+            <div className="p-6 bg-gray-900/30">
               {criticalLogs.length === 0 ? (
                 <div className="text-center py-8">
                   <CheckCircleIcon className="h-12 w-12 text-green-400 mx-auto mb-4" />
@@ -429,14 +429,14 @@ export function DashboardPage() {
 
         {/* System Status */}
         <div className="xl:col-span-1">
-          <Card>
-            <div className="p-4 border-b border-gray-700">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <CpuChipIcon className="h-5 w-5" />
+          <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+            <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                <CpuChipIcon className="h-6 w-6 text-green-400" />
                 System Performance
               </h2>
             </div>
-            <div className="p-4">
+            <div className="p-6 bg-gray-900/30">
               <div className="space-y-4">
                 {/* Network Performance */}
                 <div>
@@ -532,14 +532,14 @@ export function DashboardPage() {
       </div>
 
       {/* Recent Activity Timeline */}
-      <Card>
-        <div className="p-4 border-b border-gray-700">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <ClockIcon className="h-5 w-5" />
+      <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+        <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+            <ClockIcon className="h-6 w-6 text-purple-400" />
             Recent Activity
           </h2>
         </div>
-        <div className="p-4">
+        <div className="p-6 bg-gray-900/30">
           <div className="space-y-4">
             {/* Combine recent logs and anomalies for timeline */}
             {[

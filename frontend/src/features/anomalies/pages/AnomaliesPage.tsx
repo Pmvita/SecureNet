@@ -4,7 +4,7 @@ import { useAnomalies, type Anomaly, type AnomalyMetrics } from '../api/useAnoma
 // Extended Anomaly interface with optional properties
 interface ExtendedAnomaly extends Anomaly {
   confidence?: number;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   impact_score?: string | number;
 }
 import { Card } from '@/components/common/Card';
@@ -192,9 +192,9 @@ const AnomalyDetailsModal: React.FC<AnomalyDetailsModalProps> = ({
               </div>
               <div>
                 <span className="text-sm text-gray-400">Confidence Score</span>
-                                 <div className="text-white text-lg font-semibold">
-                   {(anomaly as any).confidence ? `${((anomaly as any).confidence * 100).toFixed(1)}%` : 'N/A'}
-                 </div>
+                <div className="text-white text-lg font-semibold">
+                  {(anomaly as ExtendedAnomaly).confidence ? `${((anomaly as ExtendedAnomaly).confidence! * 100).toFixed(1)}%` : 'N/A'}
+                </div>
               </div>
             </div>
           </div>
@@ -308,7 +308,7 @@ export const AnomaliesPage: React.FC = () => {
   // Filter anomalies locally based on search term
   const filteredAnomalies = useMemo(() => {
     if (!searchTerm) return anomalies;
-    return anomalies.filter(anomaly =>
+    return anomalies.filter((anomaly: Anomaly) =>
       anomaly.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       anomaly.type.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -318,12 +318,12 @@ export const AnomaliesPage: React.FC = () => {
   const anomalyStats = useMemo(() => {
     return {
       total: anomalies.length,
-      critical: anomalies.filter(a => a.severity === 'critical').length,
-      high: anomalies.filter(a => a.severity === 'high').length,
-      medium: anomalies.filter(a => a.severity === 'medium').length,
-      low: anomalies.filter(a => a.severity === 'low').length,
-      active: anomalies.filter(a => a.status === 'active').length,
-      resolved: anomalies.filter(a => a.status === 'resolved').length,
+      critical: anomalies.filter((a: Anomaly) => a.severity === 'critical').length,
+      high: anomalies.filter((a: Anomaly) => a.severity === 'high').length,
+      medium: anomalies.filter((a: Anomaly) => a.severity === 'medium').length,
+      low: anomalies.filter((a: Anomaly) => a.severity === 'low').length,
+      active: anomalies.filter((a: Anomaly) => a.status === 'active').length,
+      resolved: anomalies.filter((a: Anomaly) => a.status === 'resolved').length,
     };
   }, [anomalies]);
 
@@ -553,20 +553,23 @@ export const AnomaliesPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Search and Filters */}
-      <Card>
-        <div className="p-4">
+      {/* Enhanced Search and Filters */}
+      <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+        <div className="p-6 bg-gray-800/20">
           <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search Bar */}
-            <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search anomalies by description or type..."
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-              />
+            {/* Enhanced Search Bar */}
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-300 mb-2">Search Anomalies</label>
+              <div className="relative">
+                <MagnifyingGlassIcon className="h-5 w-5 absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search anomalies by description or type..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                />
+              </div>
             </div>
 
             {/* Quick Filter Buttons */}
@@ -684,27 +687,27 @@ export const AnomaliesPage: React.FC = () => {
         </div>
       </Card>
 
-      {/* Anomalies List */}
-      <Card>
-        <div className="p-4 border-b border-gray-700">
+      {/* Enhanced Anomalies List */}
+      <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+        <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-              <BugAntIcon className="h-5 w-5" />
+            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <BugAntIcon className="h-6 w-6 text-red-400" />
               Detected Anomalies
             </h2>
-            <div className="flex items-center gap-2 text-sm text-gray-400">
+            <div className="flex items-center gap-3 text-sm text-gray-400">
               <span>Showing {filteredAnomalies.length} of {total} anomalies</span>
               {isAnalyzing && (
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                  <span>Analyzing</span>
+                  <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse" />
+                  <span className="text-blue-400 font-medium">Analyzing</span>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        <div className="p-4">
+        <div className="p-6 bg-gray-900/30">
           {isLoading ? (
             <div className="text-center py-12">
               <BugAntIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -723,8 +726,8 @@ export const AnomaliesPage: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredAnomalies.map((anomaly) => {
+            <div className="space-y-4">
+              {filteredAnomalies.map((anomaly: ExtendedAnomaly) => {
                 const severityInfo = severityConfig[anomaly.severity as keyof typeof severityConfig];
                 const statusInfo = statusConfig[anomaly.status as keyof typeof statusConfig];
                 const typeInfo = typeConfig[anomaly.type as keyof typeof typeConfig];
@@ -732,8 +735,8 @@ export const AnomaliesPage: React.FC = () => {
                 return (
                   <div
                     key={anomaly.id}
-                    className={`p-4 rounded-lg border transition-colors hover:border-gray-600 cursor-pointer ${
-                      severityInfo?.bgColor || 'bg-gray-800/50 border-gray-700'
+                    className={`p-5 rounded-lg border transition-all duration-200 hover:border-gray-500 hover:bg-gray-700/30 cursor-pointer ${
+                      severityInfo?.bgColor || 'bg-gray-800/30 border-gray-600/50'
                     }`}
                     onClick={() => handleAnomalyClick(anomaly)}
                   >

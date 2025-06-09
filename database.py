@@ -1676,6 +1676,81 @@ class Database:
             logger.error(f"Error storing security scan config: {str(e)}")
             raise
 
+    async def get_settings(self) -> Dict:
+        """Get all system settings."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                conn.row_factory = aiosqlite.Row
+                cursor = await conn.cursor()
+                
+                # Create settings table if it doesn't exist
+                await cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS settings (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL,
+                        updated_at TEXT NOT NULL
+                    )
+                """)
+                
+                # Get all settings
+                await cursor.execute("SELECT key, value FROM settings")
+                rows = await cursor.fetchall()
+                
+                settings = {}
+                for row in rows:
+                    try:
+                        settings[row['key']] = json.loads(row['value'])
+                    except json.JSONDecodeError:
+                        # Fallback for non-JSON values
+                        settings[row['key']] = row['value']
+                
+                # Return default settings if none exist
+                if not settings:
+                    default_settings = {
+                        'system': {
+                            'app_name': 'SecureNet',
+                            'theme': 'dark',
+                            'auto_refresh': True,
+                            'refresh_interval': 30
+                        },
+                        'network_monitoring': {
+                            'enabled': True,
+                            'interval': 300,
+                            'timeout': 30,
+                            'interface': 'auto',
+                            'ip_ranges': '192.168.1.0/24,10.0.0.0/8',
+                            'discovery_method': 'ping_arp',
+                            'max_devices': 1000,
+                            'traffic_analysis': False,
+                            'packet_capture': False,
+                            'capture_filter': 'tcp port 80 or tcp port 443',
+                            'dns_monitoring': True,
+                            'port_scan_detection': True,
+                            'bandwidth_threshold': 100
+                        },
+                        'security_scanning': {
+                            'enabled': True,
+                            'interval': 3600,
+                            'severity_threshold': 'medium'
+                        },
+                        'notifications': {
+                            'enabled': True,
+                            'email': '',
+                            'slack_webhook': ''
+                        },
+                        'logging': {
+                            'level': 'info',
+                            'retention_days': 30,
+                            'audit_enabled': True
+                        }
+                    }
+                    return default_settings
+                
+                return settings
+        except Exception as e:
+            logger.error(f"Error getting settings: {str(e)}")
+            raise
+
     async def update_settings(self, settings: Dict) -> None:
         """Update system settings."""
         try:

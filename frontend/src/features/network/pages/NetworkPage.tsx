@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNetwork, type NetworkDevice, type NetworkConnection } from '../api/useNetwork';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
@@ -24,7 +24,31 @@ import {
   ExclamationTriangleIcon,
   ChartBarIcon,
   ClockIcon,
+  PlayIcon,
+  PauseIcon,
+  ArrowRightIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  DocumentTextIcon,
+  FireIcon,
+  BoltIcon,
 } from '@heroicons/react/24/outline';
+
+// Traffic log interface
+interface TrafficLog {
+  id: string;
+  timestamp: string;
+  sourceIp: string;
+  destinationIp: string;
+  sourcePort: number;
+  destinationPort: number;
+  protocol: string;
+  packetSize: number;
+  direction: 'inbound' | 'outbound';
+  status: 'allowed' | 'blocked' | 'flagged';
+  application?: string;
+  country?: string;
+}
 
 // Device type icons mapping
 const deviceTypeIcons = {
@@ -58,6 +82,25 @@ const statusConfig = {
   },
 };
 
+// Protocol colors
+const protocolConfig = {
+  HTTP: { color: 'text-blue-400', bgColor: 'bg-blue-400/10' },
+  HTTPS: { color: 'text-green-400', bgColor: 'bg-green-400/10' },
+  TCP: { color: 'text-purple-400', bgColor: 'bg-purple-400/10' },
+  UDP: { color: 'text-orange-400', bgColor: 'bg-orange-400/10' },
+  FTP: { color: 'text-cyan-400', bgColor: 'bg-cyan-400/10' },
+  SSH: { color: 'text-yellow-400', bgColor: 'bg-yellow-400/10' },
+  DNS: { color: 'text-pink-400', bgColor: 'bg-pink-400/10' },
+  ICMP: { color: 'text-red-400', bgColor: 'bg-red-400/10' },
+};
+
+// Traffic status config
+const trafficStatusConfig = {
+  allowed: { variant: 'success' as const, color: 'text-green-400', icon: CheckCircleIcon },
+  blocked: { variant: 'error' as const, color: 'text-red-400', icon: XMarkIcon },
+  flagged: { variant: 'warning' as const, color: 'text-yellow-400', icon: ExclamationTriangleIcon },
+};
+
 export const NetworkPage: React.FC = () => {
   const [selectedConnection, setSelectedConnection] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'block' | 'unblock' | null>(null);
@@ -66,6 +109,14 @@ export const NetworkPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedDevice, setSelectedDevice] = useState<NetworkDevice | null>(null);
   const [showDeviceDetails, setShowDeviceDetails] = useState(false);
+  
+  // Traffic logs state
+  const [trafficLogs, setTrafficLogs] = useState<TrafficLog[]>([]);
+  const [isTrafficMonitoring, setIsTrafficMonitoring] = useState(true);
+  const [trafficFilter, setTrafficFilter] = useState<string>('all');
+  const [trafficStatusFilter, setTrafficStatusFilter] = useState<string>('all');
+  const [trafficSearchTerm, setTrafficSearchTerm] = useState('');
+  
   const { toast } = useToast();
 
   const {
@@ -82,6 +133,50 @@ export const NetworkPage: React.FC = () => {
     isUnblocking,
     isScanning,
   } = useNetwork();
+
+  // Generate mock traffic logs
+  const generateTrafficLog = (): TrafficLog => {
+    const protocols = ['HTTP', 'HTTPS', 'TCP', 'UDP', 'FTP', 'SSH', 'DNS', 'ICMP'];
+    const applications = ['Chrome', 'Firefox', 'Slack', 'Zoom', 'Teams', 'Spotify', 'Steam', 'WhatsApp'];
+    const countries = ['US', 'UK', 'CA', 'DE', 'FR', 'JP', 'AU', 'SG'];
+    const statuses: TrafficLog['status'][] = ['allowed', 'allowed', 'allowed', 'blocked', 'flagged'];
+    
+    const sourceIp = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+    const destinationIp = `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+    
+    return {
+      id: Math.random().toString(36).substr(2, 9),
+      timestamp: new Date().toISOString(),
+      sourceIp,
+      destinationIp,
+      sourcePort: Math.floor(Math.random() * 65535),
+      destinationPort: Math.floor(Math.random() * 65535),
+      protocol: protocols[Math.floor(Math.random() * protocols.length)],
+      packetSize: Math.floor(Math.random() * 1500) + 64,
+      direction: Math.random() > 0.5 ? 'inbound' : 'outbound',
+      status: statuses[Math.floor(Math.random() * statuses.length)],
+      application: Math.random() > 0.3 ? applications[Math.floor(Math.random() * applications.length)] : undefined,
+      country: countries[Math.floor(Math.random() * countries.length)],
+    };
+  };
+
+  // Simulate real-time traffic logs
+  useEffect(() => {
+    if (!isTrafficMonitoring) return;
+
+    const interval = setInterval(() => {
+      const newLog = generateTrafficLog();
+      setTrafficLogs(prev => [newLog, ...prev.slice(0, 199)]); // Keep last 200 logs
+    }, Math.random() * 2000 + 500); // Random interval between 500ms-2.5s
+
+    return () => clearInterval(interval);
+  }, [isTrafficMonitoring]);
+
+  // Initialize with some traffic logs
+  useEffect(() => {
+    const initialLogs = Array.from({ length: 20 }, () => generateTrafficLog());
+    setTrafficLogs(initialLogs);
+  }, []);
 
   // Filter devices based on search and filters
   const filteredDevices = useMemo(() => {
@@ -103,6 +198,40 @@ export const NetworkPage: React.FC = () => {
       connection.protocol.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [connections, searchTerm]);
+
+  // Filter traffic logs
+  const filteredTrafficLogs = useMemo(() => {
+    return trafficLogs.filter(log => {
+      const matchesSearch = 
+        log.sourceIp.includes(trafficSearchTerm) ||
+        log.destinationIp.includes(trafficSearchTerm) ||
+        log.protocol.toLowerCase().includes(trafficSearchTerm.toLowerCase()) ||
+        log.application?.toLowerCase().includes(trafficSearchTerm.toLowerCase());
+      
+      const matchesProtocol = trafficFilter === 'all' || log.protocol === trafficFilter;
+      const matchesStatus = trafficStatusFilter === 'all' || log.status === trafficStatusFilter;
+      
+      return matchesSearch && matchesProtocol && matchesStatus;
+    });
+  }, [trafficLogs, trafficSearchTerm, trafficFilter, trafficStatusFilter]);
+
+  // Calculate traffic statistics
+  const trafficStats = useMemo(() => {
+    const last100 = trafficLogs.slice(0, 100);
+    return {
+      totalPackets: last100.length,
+      blockedPackets: last100.filter(log => log.status === 'blocked').length,
+      flaggedPackets: last100.filter(log => log.status === 'flagged').length,
+      inboundPackets: last100.filter(log => log.direction === 'inbound').length,
+      outboundPackets: last100.filter(log => log.direction === 'outbound').length,
+      topProtocols: Object.entries(
+        last100.reduce((acc, log) => {
+          acc[log.protocol] = (acc[log.protocol] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      ).sort(([,a], [,b]) => b - a).slice(0, 5),
+    };
+  }, [trafficLogs]);
 
   const handleBlockConnection = async (connectionId: string) => {
     try {
@@ -171,6 +300,15 @@ export const NetworkPage: React.FC = () => {
     return `${latency.toFixed(1)}ms`;
   };
 
+  const toggleTrafficMonitoring = () => {
+    setIsTrafficMonitoring(!isTrafficMonitoring);
+    toast({
+      title: isTrafficMonitoring ? 'Traffic monitoring paused' : 'Traffic monitoring resumed',
+      description: isTrafficMonitoring ? 'Live traffic updates stopped' : 'Live traffic updates started',
+      variant: 'info',
+    });
+  };
+
   if (isError) {
     const errorMessage = error instanceof Error 
       ? error.message 
@@ -212,7 +350,7 @@ export const NetworkPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white">Network Monitoring</h1>
-          <p className="text-gray-400 mt-1">Real-time network infrastructure overview</p>
+          <p className="text-gray-400 mt-1">Real-time network infrastructure and traffic analysis</p>
         </div>
         <div className="flex gap-3">
           <Button
@@ -323,45 +461,355 @@ export const NetworkPage: React.FC = () => {
         </div>
       )}
 
-      {/* Search and Filters */}
-      <Card>
-        <div className="p-4">
+      {/* Live Traffic Monitoring Section */}
+      <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+        {/* Enhanced Header with Live Indicator */}
+        <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className={`relative w-4 h-4 rounded-full ${isTrafficMonitoring ? 'bg-green-500' : 'bg-gray-500'}`}>
+                  {isTrafficMonitoring && (
+                    <div className="absolute inset-0 rounded-full bg-green-400 animate-ping"></div>
+                  )}
+                  <div className={`absolute inset-0 rounded-full ${isTrafficMonitoring ? 'bg-green-500' : 'bg-gray-500'}`}></div>
+                </div>
+                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <BoltIcon className="h-6 w-6 text-yellow-400" />
+                  Live Network Traffic
+                </h2>
+                {isTrafficMonitoring && (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="success" className="text-sm font-semibold px-3 py-1 bg-green-500/20 text-green-400 border-green-500/30">
+                      ● LIVE
+                    </Badge>
+                    <span className="text-sm text-gray-400">Real-time monitoring active</span>
+                  </div>
+                )}
+                {!isTrafficMonitoring && (
+                  <Badge variant="default" className="text-sm px-3 py-1 bg-gray-500/20 text-gray-400 border-gray-500/30">
+                    ⏸ PAUSED
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-sm text-gray-400">
+                {filteredTrafficLogs.length} packets shown
+              </div>
+              <Button
+                variant={isTrafficMonitoring ? "secondary" : "primary"}
+                size="sm"
+                onClick={toggleTrafficMonitoring}
+                className={`flex items-center gap-2 px-4 py-2 font-semibold ${
+                  isTrafficMonitoring 
+                    ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400 border-red-500/30' 
+                    : 'bg-green-500/20 hover:bg-green-500/30 text-green-400 border-green-500/30'
+                }`}
+              >
+                {isTrafficMonitoring ? (
+                  <>
+                    <PauseIcon className="h-4 w-4" />
+                    Pause Monitor
+                  </>
+                ) : (
+                  <>
+                    <PlayIcon className="h-4 w-4" />
+                    Resume Monitor
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced Traffic Statistics */}
+        <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/30 to-gray-700/30">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+            <div className="text-center p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <div className="flex items-center justify-center mb-2">
+                <DocumentTextIcon className="h-6 w-6 text-blue-400" />
+              </div>
+              <div className="text-3xl font-bold text-blue-400">{trafficStats.totalPackets}</div>
+              <div className="text-sm text-gray-300 font-medium">Total Packets</div>
+              <div className="text-xs text-gray-500 mt-1">Last 100 packets</div>
+            </div>
+            <div className="text-center p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+              <div className="flex items-center justify-center mb-2">
+                <ArrowDownIcon className="h-6 w-6 text-green-400" />
+              </div>
+              <div className="text-3xl font-bold text-green-400">{trafficStats.inboundPackets}</div>
+              <div className="text-sm text-gray-300 font-medium">Inbound</div>
+              <div className="text-xs text-gray-500 mt-1">{((trafficStats.inboundPackets / Math.max(trafficStats.totalPackets, 1)) * 100).toFixed(1)}%</div>
+            </div>
+            <div className="text-center p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
+              <div className="flex items-center justify-center mb-2">
+                <ArrowUpIcon className="h-6 w-6 text-purple-400" />
+              </div>
+              <div className="text-3xl font-bold text-purple-400">{trafficStats.outboundPackets}</div>
+              <div className="text-sm text-gray-300 font-medium">Outbound</div>
+              <div className="text-xs text-gray-500 mt-1">{((trafficStats.outboundPackets / Math.max(trafficStats.totalPackets, 1)) * 100).toFixed(1)}%</div>
+            </div>
+            <div className="text-center p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+              <div className="flex items-center justify-center mb-2">
+                <XMarkIcon className="h-6 w-6 text-red-400" />
+              </div>
+              <div className="text-3xl font-bold text-red-400">{trafficStats.blockedPackets}</div>
+              <div className="text-sm text-gray-300 font-medium">Blocked</div>
+              <div className="text-xs text-gray-500 mt-1">{((trafficStats.blockedPackets / Math.max(trafficStats.totalPackets, 1)) * 100).toFixed(1)}%</div>
+            </div>
+            <div className="text-center p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+              <div className="flex items-center justify-center mb-2">
+                <ExclamationTriangleIcon className="h-6 w-6 text-yellow-400" />
+              </div>
+              <div className="text-3xl font-bold text-yellow-400">{trafficStats.flaggedPackets}</div>
+              <div className="text-sm text-gray-300 font-medium">Flagged</div>
+              <div className="text-xs text-gray-500 mt-1">{((trafficStats.flaggedPackets / Math.max(trafficStats.totalPackets, 1)) * 100).toFixed(1)}%</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced Traffic Filters */}
+        <div className="p-6 border-b border-gray-600 bg-gray-800/20">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-300 mb-2">Search Traffic</label>
               <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by IP address, protocol, or application..."
+                  value={trafficSearchTerm}
+                  onChange={(e) => setTrafficSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                />
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Protocol</label>
+                <select
+                  value={trafficFilter}
+                  onChange={(e) => setTrafficFilter(e.target.value)}
+                  className="px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                >
+                  <option value="all">All Protocols</option>
+                  <option value="HTTP">HTTP</option>
+                  <option value="HTTPS">HTTPS</option>
+                  <option value="TCP">TCP</option>
+                  <option value="UDP">UDP</option>
+                  <option value="FTP">FTP</option>
+                  <option value="SSH">SSH</option>
+                  <option value="DNS">DNS</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Status</label>
+                <select
+                  value={trafficStatusFilter}
+                  onChange={(e) => setTrafficStatusFilter(e.target.value)}
+                  className="px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                >
+                  <option value="all">All Status</option>
+                  <option value="allowed">Allowed</option>
+                  <option value="blocked">Blocked</option>
+                  <option value="flagged">Flagged</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced Traffic Logs Table */}
+        <div className="overflow-x-auto bg-gray-900/30">
+          <table className="w-full">
+            <thead className="bg-gradient-to-r from-gray-800 to-gray-700 border-b border-gray-600">
+              <tr>
+                <th className="text-left py-4 px-6 text-sm font-bold text-gray-200 uppercase tracking-wider">
+                  <div className="flex items-center gap-2">
+                    <ClockIcon className="h-4 w-4" />
+                    Time
+                  </div>
+                </th>
+                <th className="text-left py-4 px-6 text-sm font-bold text-gray-200 uppercase tracking-wider">
+                  <div className="flex items-center gap-2">
+                    <ServerIcon className="h-4 w-4" />
+                    Source
+                  </div>
+                </th>
+                <th className="text-left py-4 px-6 text-sm font-bold text-gray-200 uppercase tracking-wider">
+                  <div className="flex items-center gap-2">
+                    <GlobeAltIcon className="h-4 w-4" />
+                    Destination
+                  </div>
+                </th>
+                <th className="text-left py-4 px-6 text-sm font-bold text-gray-200 uppercase tracking-wider">Protocol</th>
+                <th className="text-left py-4 px-6 text-sm font-bold text-gray-200 uppercase tracking-wider">Size</th>
+                <th className="text-left py-4 px-6 text-sm font-bold text-gray-200 uppercase tracking-wider">Direction</th>
+                <th className="text-left py-4 px-6 text-sm font-bold text-gray-200 uppercase tracking-wider">Status</th>
+                <th className="text-left py-4 px-6 text-sm font-bold text-gray-200 uppercase tracking-wider">Application</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-700/50">
+              {filteredTrafficLogs.slice(0, 20).map((log, index) => {
+                const protocolInfo = protocolConfig[log.protocol as keyof typeof protocolConfig] || 
+                  { color: 'text-gray-400', bgColor: 'bg-gray-400/10' };
+                const statusInfo = trafficStatusConfig[log.status];
+                const isRecent = index < 3; // Highlight recent entries
+
+                return (
+                  <tr 
+                    key={log.id} 
+                    className={`border-b border-gray-800/50 hover:bg-gray-700/30 transition-all duration-200 ${
+                      isRecent ? 'bg-blue-500/5 border-blue-500/20' : ''
+                    }`}
+                  >
+                    <td className="py-4 px-6">
+                      <div className={`text-sm font-mono ${isRecent ? 'text-blue-300' : 'text-gray-300'}`}>
+                        {format(new Date(log.timestamp), 'HH:mm:ss.SSS')}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="space-y-1">
+                        <div className="text-sm font-mono text-white font-semibold">{log.sourceIp}</div>
+                        <div className="text-xs text-gray-400">Port: {log.sourcePort}</div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-3">
+                        <div className="space-y-1">
+                          <div className="text-sm font-mono text-white font-semibold">{log.destinationIp}</div>
+                          <div className="text-xs text-gray-400">Port: {log.destinationPort}</div>
+                        </div>
+                        {log.country && (
+                          <Badge variant="default" className="text-xs px-2 py-1 bg-gray-600/30 text-gray-300 border-gray-600">
+                            {log.country}
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <Badge 
+                        variant="default" 
+                        className={`text-sm px-3 py-1 font-semibold ${protocolInfo.color} ${protocolInfo.bgColor} border-current/30`}
+                      >
+                        {log.protocol}
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="text-sm text-gray-300 font-medium">
+                        {formatBytes(log.packetSize)}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1 rounded-full ${log.direction === 'inbound' ? 'bg-green-500/20' : 'bg-blue-500/20'}`}>
+                          {log.direction === 'inbound' ? (
+                            <ArrowDownIcon className="h-4 w-4 text-green-400" />
+                          ) : (
+                            <ArrowUpIcon className="h-4 w-4 text-blue-400" />
+                          )}
+                        </div>
+                        <span className={`text-sm font-semibold capitalize ${log.direction === 'inbound' ? 'text-green-400' : 'text-blue-400'}`}>
+                          {log.direction}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1 rounded-full ${statusInfo.color.replace('text-', 'bg-').replace('-400', '-500/20')}`}>
+                          <statusInfo.icon className={`h-4 w-4 ${statusInfo.color}`} />
+                        </div>
+                        <Badge variant={statusInfo.variant} className="text-sm px-3 py-1 font-semibold">
+                          {log.status.toUpperCase()}
+                        </Badge>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="text-sm text-gray-300">
+                        {log.application ? (
+                          <span className="px-2 py-1 bg-gray-600/30 rounded text-xs font-medium">
+                            {log.application}
+                          </span>
+                        ) : (
+                          <span className="text-gray-500">—</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {filteredTrafficLogs.length === 0 && (
+          <div className="text-center py-8">
+            <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">No Traffic Data</h3>
+            <p className="text-gray-400 text-sm">
+              {trafficSearchTerm || trafficFilter !== 'all' || trafficStatusFilter !== 'all' 
+                ? 'No traffic matches your current filters' 
+                : 'Waiting for network traffic...'}
+            </p>
+          </div>
+        )}
+
+        {filteredTrafficLogs.length > 50 && (
+          <div className="p-4 text-center border-t border-gray-700">
+            <p className="text-sm text-gray-400">
+              Showing latest 50 of {filteredTrafficLogs.length} traffic logs
+            </p>
+          </div>
+        )}
+      </Card>
+
+      {/* Enhanced Search and Filters */}
+      <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+        <div className="p-6 bg-gray-800/20">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-300 mb-2">Search Network</label>
+              <div className="relative">
+                <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search devices, connections, or IP addresses..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
                 />
               </div>
             </div>
-            <div className="flex gap-3">
-              <select
-                value={deviceFilter}
-                onChange={(e) => setDeviceFilter(e.target.value)}
-                className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-              >
-                <option value="all">All Types</option>
-                <option value="router">Routers</option>
-                <option value="switch">Switches</option>
-                <option value="firewall">Firewalls</option>
-                <option value="server">Servers</option>
-                <option value="endpoint">Endpoints</option>
-              </select>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-              >
-                <option value="all">All Status</option>
-                <option value="online">Online</option>
-                <option value="offline">Offline</option>
-                <option value="warning">Warning</option>
-              </select>
+            <div className="flex gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Device Type</label>
+                <select
+                  value={deviceFilter}
+                  onChange={(e) => setDeviceFilter(e.target.value)}
+                  className="px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                >
+                  <option value="all">All Types</option>
+                  <option value="router">Routers</option>
+                  <option value="switch">Switches</option>
+                  <option value="firewall">Firewalls</option>
+                  <option value="server">Servers</option>
+                  <option value="endpoint">Endpoints</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Status</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                >
+                  <option value="all">All Status</option>
+                  <option value="online">Online</option>
+                  <option value="offline">Offline</option>
+                  <option value="warning">Warning</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -369,13 +817,13 @@ export const NetworkPage: React.FC = () => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Devices Section */}
+        {/* Enhanced Devices Section */}
         <div className="xl:col-span-2">
-          <Card>
-            <div className="p-4 border-b border-gray-700">
+          <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+            <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <ServerIcon className="h-5 w-5" />
+                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <ServerIcon className="h-6 w-6 text-blue-400" />
                   Network Devices ({filteredDevices.length})
                 </h2>
                 <Button
@@ -383,12 +831,13 @@ export const NetworkPage: React.FC = () => {
                   size="sm"
                   onClick={handleScanNetwork}
                   disabled={isScanning}
+                  className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border-blue-500/30 px-4 py-2"
                 >
                   {isScanning ? 'Scanning...' : 'Refresh'}
                 </Button>
               </div>
             </div>
-            <div className="p-4">
+            <div className="p-6 bg-gray-900/30">
               {filteredDevices.length === 0 ? (
                 <EmptyState
                   title="No Devices Found"
@@ -462,27 +911,27 @@ export const NetworkPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Connections Sidebar */}
+        {/* Enhanced Connections Sidebar */}
         <div>
-          <Card>
-            <div className="p-4 border-b border-gray-700">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <WifiIcon className="h-5 w-5" />
+          <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+            <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                <WifiIcon className="h-6 w-6 text-purple-400" />
                 Active Connections ({filteredConnections.length})
               </h2>
             </div>
-            <div className="p-4">
+            <div className="p-6 bg-gray-900/30">
               {filteredConnections.length === 0 ? (
                 <EmptyState
                   title="No Connections"
                   description="No active network connections found."
                 />
               ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div className="space-y-4 max-h-96 overflow-y-auto">
                   {filteredConnections.slice(0, 10).map((connection: NetworkConnection) => (
                     <div
                       key={connection.id}
-                      className="p-3 bg-gray-800/50 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors"
+                      className="p-4 bg-gray-800/30 rounded-lg border border-gray-600/50 hover:border-gray-500 hover:bg-gray-700/30 transition-all duration-200"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <Badge 
@@ -621,7 +1070,7 @@ export const NetworkPage: React.FC = () => {
       {/* Connection Action Confirmation */}
       <ConfirmDialog
         isOpen={!!selectedConnection && !!actionType}
-        onClose={() => {
+        onCancel={() => {
           setSelectedConnection(null);
           setActionType(null);
         }}
@@ -633,8 +1082,8 @@ export const NetworkPage: React.FC = () => {
           }
         }}
         title={`${actionType === 'block' ? 'Block' : 'Unblock'} Connection`}
-        description={`Are you sure you want to ${actionType} this network connection?`}
-        confirmText={actionType === 'block' ? 'Block' : 'Unblock'}
+        message={`Are you sure you want to ${actionType} this network connection?`}
+        confirmLabel={actionType === 'block' ? 'Block' : 'Unblock'}
         isLoading={isBlocking || isUnblocking}
       />
     </div>

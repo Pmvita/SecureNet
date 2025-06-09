@@ -76,6 +76,19 @@ SecureNet provides real-time updates through WebSocket connections. All WebSocke
 | `/api/network/protocols` | GET | Get protocol distribution data |
 | `/api/network/history` | GET | Get connection history |
 | `/api/network/devices` | GET | Get network device information |
+| `/api/network/traffic` | GET | Get live network traffic data with filtering |
+| `/api/network/traffic/stats` | GET | Get traffic statistics (total, inbound, outbound, blocked, flagged) |
+| `/api/network/traffic/start` | POST | Start live traffic monitoring |
+| `/api/network/traffic/stop` | POST | Stop live traffic monitoring |
+| `/api/network/traffic/filter` | GET | Get filtered traffic logs by protocol, status, or application |
+
+### Live Network Traffic Monitoring
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/ws/network/traffic` | WebSocket | Real-time network traffic streaming |
+| `/api/network/traffic/logs` | GET | Get paginated traffic logs with filtering options |
+| `/api/network/traffic/export` | GET | Export traffic data in various formats (CSV, JSON) |
 
 ### Security Management
 
@@ -87,17 +100,59 @@ SecureNet provides real-time updates through WebSocket connections. All WebSocke
 | `/api/security/scan/{id}/stop` | POST | Stop a running scan |
 | `/api/security/scan/{id}/findings` | GET | Get scan findings |
 | `/api/security/scan/{id}/findings/{finding_id}` | PUT | Update finding status |
-| `/api/anomalies` | GET | Get all detected anomalies |
-| `/api/anomalies/{anomaly_id}` | GET | Get specific anomaly details |
+| `/api/anomalies` | GET | Get all detected anomalies with filtering and pagination |
+| `/api/anomalies/{anomaly_id}` | GET | Get specific anomaly details with ML insights |
 | `/api/anomalies/{anomaly_id}/resolve` | POST | Resolve an anomaly |
+| `/api/anomalies/{anomaly_id}/false-positive` | POST | Mark anomaly as false positive |
+| `/api/anomalies/stats` | GET | Get anomaly statistics and metrics |
+| `/api/anomalies/filter` | GET | Get filtered anomalies by severity, status, or type |
+| `/api/anomalies/export` | GET | Export anomaly data in various formats |
+| `/api/anomalies/analysis` | POST | Run new anomaly analysis |
 
 ### Settings & Configuration
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/settings` | GET | Get current system settings |
-| `/api/settings` | PUT | Update system settings |
+| `/api/settings` | GET | Get current system settings including network monitoring configuration |
+| `/api/settings` | PUT | Update system settings with advanced network monitoring options |
 | `/api/settings/api-key` | POST | Regenerate API key |
+
+#### Advanced Network Monitoring Settings
+
+The `/api/settings` endpoints now support comprehensive network monitoring configuration:
+
+**Network Monitoring Configuration Options:**
+- `network_monitoring.enabled` - Enable/disable network monitoring
+- `network_monitoring.interval` - Monitoring interval in seconds (60-3600)
+- `network_monitoring.timeout` - Connection timeout in seconds (5-120)
+- `network_monitoring.interface` - Network interface selection (auto, eth0, wlan0, all)
+- `network_monitoring.ip_ranges` - IP ranges to monitor (CIDR notation)
+- `network_monitoring.discovery_method` - Device discovery method (ping_arp, ping_only, arp_only, passive)
+- `network_monitoring.max_devices` - Maximum devices to track (10-10000)
+- `network_monitoring.traffic_analysis` - Enable traffic analysis
+- `network_monitoring.packet_capture` - Enable packet capture (requires privileges)
+- `network_monitoring.capture_filter` - BPF filter expression for packet capture
+- `network_monitoring.dns_monitoring` - Enable DNS query monitoring
+- `network_monitoring.port_scan_detection` - Enable port scan detection
+- `network_monitoring.bandwidth_threshold` - Bandwidth alert threshold in Mbps (1-10000)
+
+**Example Settings Request:**
+```json
+{
+  "network_monitoring": {
+    "enabled": true,
+    "interval": 300,
+    "interface": "auto",
+    "ip_ranges": "192.168.1.0/24,10.0.0.0/8",
+    "discovery_method": "ping_arp",
+    "traffic_analysis": true,
+    "packet_capture": false,
+    "dns_monitoring": true,
+    "port_scan_detection": true,
+    "bandwidth_threshold": 100
+  }
+}
+```
 
 ## WebSocket Connection Examples
 

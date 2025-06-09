@@ -259,11 +259,11 @@ export const SecurityPage: React.FC = () => {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Active Scans */}
-        <Card>
-          <div className="p-4 border-b border-gray-700">
+        <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+          <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <MagnifyingGlassIcon className="h-5 w-5" />
+              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                <MagnifyingGlassIcon className="h-6 w-6 text-blue-400" />
                 Active Scans
               </h2>
               <Badge variant="info" className="text-xs">
@@ -271,7 +271,7 @@ export const SecurityPage: React.FC = () => {
               </Badge>
             </div>
           </div>
-          <div className="p-4">
+          <div className="p-6 bg-gray-900/30">
             {!activeScans || activeScans.length === 0 ? (
               <div className="text-center py-8">
                 <MagnifyingGlassIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -329,11 +329,11 @@ export const SecurityPage: React.FC = () => {
         </Card>
 
         {/* Security Findings */}
-        <Card>
-          <div className="p-4 border-b border-gray-700">
+        <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+          <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <BugAntIcon className="h-5 w-5" />
+              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                <BugAntIcon className="h-6 w-6 text-red-400" />
                 Recent Findings
               </h2>
               <Badge variant="error" className="text-xs">
@@ -342,7 +342,7 @@ export const SecurityPage: React.FC = () => {
             </div>
           </div>
           
-          <div className="p-4">
+          <div className="p-6 bg-gray-900/30">
             {!recentFindings || recentFindings.length === 0 ? (
               <div className="text-center py-8">
                 <CheckCircleIcon className="h-12 w-12 text-green-400 mx-auto mb-4" />
@@ -387,14 +387,14 @@ export const SecurityPage: React.FC = () => {
       </div>
 
       {/* Recent Scan History */}
-      <Card>
-        <div className="p-4 border-b border-gray-700">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <ClockIcon className="h-5 w-5" />
+      <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+        <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+            <ClockIcon className="h-6 w-6 text-cyan-400" />
             Recent Scan History
           </h2>
         </div>
-        <div className="p-4">
+        <div className="p-6 bg-gray-900/30">
           {!recentScans || recentScans.length === 0 ? (
             <div className="text-center py-8">
               <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />

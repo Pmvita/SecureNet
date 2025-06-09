@@ -234,6 +234,94 @@ export function SettingsPage() {
           min: 5,
           max: 120,
         },
+        {
+          id: 'network_monitoring.interface',
+          label: 'Network Interface',
+          description: 'Primary network interface to monitor',
+          type: 'select',
+          value: formValues['network_monitoring.interface'] || 'auto',
+          options: [
+            { value: 'auto', label: 'Auto-detect' },
+            { value: 'eth0', label: 'Ethernet (eth0)' },
+            { value: 'wlan0', label: 'WiFi (wlan0)' },
+            { value: 'all', label: 'Monitor all interfaces' },
+          ],
+        },
+        {
+          id: 'network_monitoring.ip_ranges',
+          label: 'IP Ranges to Monitor',
+          description: 'Comma-separated list of IP ranges (e.g., 192.168.1.0/24)',
+          type: 'textarea',
+          value: formValues['network_monitoring.ip_ranges'] || '192.168.1.0/24,10.0.0.0/8',
+          placeholder: '192.168.1.0/24, 10.0.0.0/8, 172.16.0.0/12',
+        },
+        {
+          id: 'network_monitoring.discovery_method',
+          label: 'Device Discovery Method',
+          description: 'How to discover devices on the network',
+          type: 'select',
+          value: formValues['network_monitoring.discovery_method'] || 'ping_arp',
+          options: [
+            { value: 'ping_arp', label: 'Ping + ARP scanning' },
+            { value: 'ping_only', label: 'Ping scanning only' },
+            { value: 'arp_only', label: 'ARP scanning only' },
+            { value: 'passive', label: 'Passive monitoring' },
+          ],
+        },
+        {
+          id: 'network_monitoring.max_devices',
+          label: 'Maximum Devices to Track',
+          description: 'Limit the number of devices tracked simultaneously',
+          type: 'number',
+          value: formValues['network_monitoring.max_devices'] || 1000,
+          min: 10,
+          max: 10000,
+        },
+        {
+          id: 'network_monitoring.traffic_analysis',
+          label: 'Enable Traffic Analysis',
+          description: 'Analyze network traffic patterns and bandwidth usage',
+          type: 'switch',
+          value: formValues['network_monitoring.traffic_analysis'] ?? false,
+        },
+        {
+          id: 'network_monitoring.packet_capture',
+          label: 'Enable Packet Capture',
+          description: 'Capture packets for deep inspection (requires elevated privileges)',
+          type: 'switch',
+          value: formValues['network_monitoring.packet_capture'] ?? false,
+        },
+        {
+          id: 'network_monitoring.capture_filter',
+          label: 'Packet Capture Filter',
+          description: 'BPF filter expression for packet capture',
+          type: 'text',
+          value: formValues['network_monitoring.capture_filter'] || 'tcp port 80 or tcp port 443',
+          placeholder: 'tcp port 80 or tcp port 443 or icmp',
+        },
+        {
+          id: 'network_monitoring.dns_monitoring',
+          label: 'Enable DNS Monitoring',
+          description: 'Monitor DNS queries and responses',
+          type: 'switch',
+          value: formValues['network_monitoring.dns_monitoring'] ?? true,
+        },
+        {
+          id: 'network_monitoring.port_scan_detection',
+          label: 'Port Scan Detection',
+          description: 'Detect potential port scanning activities',
+          type: 'switch',
+          value: formValues['network_monitoring.port_scan_detection'] ?? true,
+        },
+        {
+          id: 'network_monitoring.bandwidth_threshold',
+          label: 'Bandwidth Alert Threshold (Mbps)',
+          description: 'Alert when bandwidth usage exceeds this threshold',
+          type: 'number',
+          value: formValues['network_monitoring.bandwidth_threshold'] || 100,
+          min: 1,
+          max: 10000,
+        },
       ],
     },
     {
@@ -499,8 +587,14 @@ export function SettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Categories Sidebar */}
         <div className="lg:col-span-1">
-          <Card className="p-4">
-            <h3 className="text-lg font-semibold text-white mb-4">Settings Categories</h3>
+          <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+            <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
+              <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                <CogIcon className="h-6 w-6 text-blue-400" />
+                Settings Categories
+              </h3>
+            </div>
+            <div className="p-6 bg-gray-900/30">
             <nav className="space-y-2">
               {categories.map((category) => (
                 <button
@@ -517,20 +611,23 @@ export function SettingsPage() {
                 </button>
               ))}
             </nav>
+            </div>
           </Card>
         </div>
 
         {/* Settings Content */}
         <div className="lg:col-span-3">
           {activeSettings && (
-            <Card className="p-6">
-              <div className="mb-6">
+            <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
+              <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
                 <div className="flex items-center gap-3 mb-2">
                   <activeSettings.icon className={`h-6 w-6 ${activeSettings.color}`} />
-                  <h2 className="text-xl font-semibold text-white">{activeSettings.title}</h2>
+                  <h2 className="text-2xl font-bold text-white">{activeSettings.title}</h2>
                 </div>
                 <p className="text-gray-400">{activeSettings.description}</p>
               </div>
+
+              <div className="p-6 bg-gray-900/30">
 
               <div className="space-y-6">
                 {activeSettings.settings.map((setting) => (
@@ -549,6 +646,7 @@ export function SettingsPage() {
                     </div>
                   </div>
                 ))}
+              </div>
               </div>
             </Card>
           )}
