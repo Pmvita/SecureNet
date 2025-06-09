@@ -43,7 +43,7 @@ export const useAuth = (): AuthContextType => {
 };
 
 // Development mode bypass
-const DEV_MODE = true; // Set to false in production
+const DEV_MODE = process.env.REACT_APP_MOCK_DATA === 'true';
 const DEV_USER: User = {
   id: '1',
   username: 'admin',

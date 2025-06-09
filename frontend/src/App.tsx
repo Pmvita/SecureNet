@@ -17,10 +17,10 @@ import { initializeApiClient } from './api/client';
 import LoadingSpinner from './components/LoadingSpinner';
 
 // Development mode bypass
-const DEV_MODE = true; // Set to false in production
+const DEV_MODE = process.env.REACT_APP_MOCK_DATA === 'true';
 
 const App: React.FC = () => {
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(DEV_MODE);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,7 +44,9 @@ const App: React.FC = () => {
       }
     };
 
-    init();
+    if (!DEV_MODE) {
+      init();
+    }
   }, []);
 
   // Navigation items for the sidebar
@@ -92,6 +94,7 @@ const App: React.FC = () => {
           <AuthProvider>
             <Routes>
               {!DEV_MODE && <Route path="/login" element={<LoginPage />} />}
+              {DEV_MODE && <Route path="/login" element={<Navigate to="/" replace />} />}
               <Route
                 path="/*"
                 element={

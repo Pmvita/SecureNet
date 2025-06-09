@@ -3,6 +3,9 @@ import { apiClient } from '../../../api/client';
 import type { ApiResponse } from '../../../api/endpoints';
 import axios from 'axios';
 
+// Development mode bypass
+const DEV_MODE = process.env.REACT_APP_MOCK_DATA === 'true';
+
 export interface NetworkDevice {
   id: string;
   name: string;
@@ -105,6 +108,66 @@ export const useNetwork = (options: UseNetworkOptions = {}) => {
   } = useQuery({
     queryKey: ['network'],
     queryFn: async () => {
+      // In development mode, return mock data
+      if (DEV_MODE) {
+        return {
+          data: {
+            status: 'success',
+            data: {
+              devices: [
+                {
+                  id: '1',
+                  name: 'Router-01',
+                  type: 'router',
+                  status: 'online',
+                  last_seen: new Date().toISOString()
+                },
+                {
+                  id: '2',
+                  name: 'Server-01',
+                  type: 'server',
+                  status: 'online',
+                  last_seen: new Date().toISOString()
+                }
+              ],
+              connections: [
+                {
+                  id: '1',
+                  source_device: 'Router-01',
+                  target_device: 'Server-01',
+                  protocol: 'TCP',
+                  status: 'active',
+                  last_seen: new Date().toISOString(),
+                  bytes_transferred: 1024000,
+                  packets_transferred: 500,
+                  latency: 10
+                }
+              ],
+              traffic: [
+                {
+                  timestamp: new Date().toISOString(),
+                  bytes_in: 50000,
+                  bytes_out: 45000,
+                  packets_in: 100,
+                  packets_out: 95
+                }
+              ],
+              protocols: [
+                { name: 'TCP', count: 150 },
+                { name: 'UDP', count: 75 },
+                { name: 'HTTP', count: 100 }
+              ],
+              stats: {
+                total_devices: 2,
+                active_devices: 2,
+                average_latency: 10,
+                total_traffic: 95000
+              }
+            } as NetworkResponseData
+          }
+        };
+      }
+
       try {
         const response = await apiClient.get<ApiResponse<NetworkResponseData>>('/api/network');
         if (!response.data) {
@@ -124,7 +187,7 @@ export const useNetwork = (options: UseNetworkOptions = {}) => {
         throw new Error('Failed to fetch network data');
       }
     },
-    refetchInterval: refreshInterval,
+    refetchInterval: DEV_MODE ? false : refreshInterval,
   });
 
   const responseData = apiResponse?.data?.data;

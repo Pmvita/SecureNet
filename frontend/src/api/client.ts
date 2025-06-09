@@ -111,9 +111,13 @@ export class ApiClient {
       return;
     }
 
-    // In development mode, set a default API key
-    if (process.env.NODE_ENV === 'development') {
+    // In development mode, set a default API key and token
+    if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
       this.setApiKey('dev-api-key');
+      // Set a dev token if none exists
+      if (!localStorage.getItem('auth_token')) {
+        localStorage.setItem('auth_token', 'dev-token');
+      }
       this.isInitialized = true;
       return;
     }

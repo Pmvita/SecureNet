@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../../api/client';
 import type { ApiResponse, ApiEndpoints } from '../../../api/endpoints';
 
+// Development mode bypass
+const DEV_MODE = process.env.REACT_APP_MOCK_DATA === 'true';
+
 export interface Anomaly {
   id: string;
   type: 'security' | 'network' | 'system' | 'application';
@@ -50,6 +53,40 @@ export const useAnomalies = (options: UseAnomaliesOptions = {}) => {
   } = useQuery({
     queryKey: ['anomalies', 'list', filters, page, pageSize],
     queryFn: async () => {
+      // In development mode, return mock data
+      if (DEV_MODE) {
+        return {
+          data: {
+            items: [
+              {
+                id: '1',
+                type: 'security',
+                severity: 'high',
+                status: 'active',
+                description: 'Unusual login pattern detected',
+                timestamp: new Date(Date.now() - 3600000).toISOString(),
+                source: 'Authentication System',
+                metrics: { attempts: 5, success_rate: 0.2 }
+              },
+              {
+                id: '2',
+                type: 'network',
+                severity: 'medium',
+                status: 'investigating',
+                description: 'Bandwidth spike detected',
+                timestamp: new Date(Date.now() - 7200000).toISOString(),
+                source: 'Network Monitor',
+                metrics: { bandwidth: '150%', duration: '15min' }
+              }
+            ],
+            total: 2,
+            page: page,
+            page_size: pageSize,
+            total_pages: 1
+          }
+        };
+      }
+
       const response = await apiClient.get<ApiEndpoints['GET']['/api/anomalies/list']['response']>('/api/anomalies/list', {
         params: {
           ...filters,
@@ -59,7 +96,7 @@ export const useAnomalies = (options: UseAnomaliesOptions = {}) => {
       });
       return response;
     },
-    refetchInterval: refreshInterval,
+    refetchInterval: DEV_MODE ? false : refreshInterval,
     staleTime: 30000,
   });
 
@@ -74,10 +111,24 @@ export const useAnomalies = (options: UseAnomaliesOptions = {}) => {
   } = useQuery({
     queryKey: ['anomalies', 'stats'],
     queryFn: async () => {
+      // In development mode, return mock data
+      if (DEV_MODE) {
+        return {
+          data: {
+            total: 2,
+            open: 1,
+            critical: 0,
+            resolved: 1,
+            by_type: { security: 1, network: 1, system: 0, application: 0 },
+            by_severity: { low: 0, medium: 1, high: 1, critical: 0 }
+          }
+        };
+      }
+
       const response = await apiClient.get<ApiEndpoints['GET']['/api/anomalies/stats']['response']>('/api/anomalies/stats');
       return response;
     },
-    refetchInterval: refreshInterval,
+    refetchInterval: DEV_MODE ? false : refreshInterval,
     staleTime: 30000,
   });
 

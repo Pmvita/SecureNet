@@ -2,16 +2,55 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../../api/client';
 import type { ApiResponse, SecurityResponse, SecurityMetrics } from '../../../api/endpoints';
 
+// Development mode bypass
+const DEV_MODE = process.env.REACT_APP_MOCK_DATA === 'true';
+
 export function useSecurity() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ['security'],
     queryFn: async () => {
+      // In development mode, return mock data
+      if (DEV_MODE) {
+        return {
+          data: {
+            metrics: {
+              active_scans: 2,
+              total_findings: 15,
+              critical_findings: 3,
+              security_score: 85,
+              last_scan: new Date(Date.now() - 3600000).toISOString(),
+              scan_status: 'idle' as const
+            },
+            recent_scans: [
+              {
+                id: '1',
+                type: 'vulnerability',
+                status: 'completed',
+                findings_count: 5,
+                start_time: new Date(Date.now() - 7200000).toISOString(),
+                end_time: new Date(Date.now() - 3600000).toISOString()
+              }
+            ],
+            active_scans: [],
+            recent_findings: [
+              {
+                id: '1',
+                severity: 'high',
+                type: 'vulnerability',
+                description: 'Outdated SSL certificate detected',
+                timestamp: new Date(Date.now() - 1800000).toISOString()
+              }
+            ]
+          }
+        };
+      }
+
       const response = await apiClient.get<SecurityResponse>('/api/security');
       return response;
     },
-    refetchInterval: 60000, // Changed from 30000 to 60000 (1 minute)
+    refetchInterval: DEV_MODE ? false : 60000, // Changed from 30000 to 60000 (1 minute)
     staleTime: 30000, // Consider data fresh for 30 seconds
   });
 

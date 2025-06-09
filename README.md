@@ -297,6 +297,41 @@ python scripts/generate_api_key.py
 
 The application consists of two parts: the backend API server and the frontend development server.
 
+#### Development Mode Options
+
+The frontend can be run in two different modes:
+
+**Option 1: Mock Data Mode (Recommended for Development)**
+```bash
+cd frontend
+npm run dev          # Uses mock data, no backend required
+# OR
+npm run dev:mock     # Same as above, explicit mock mode
+```
+
+**Option 2: Real API Mode**
+```bash
+# First, start the backend server (in one terminal):
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+uvicorn app:app --reload
+
+# Then start the frontend with real API calls (in another terminal):
+cd frontend
+npm run dev:api      # Connects to real backend API
+```
+
+#### Quick Start (Mock Mode)
+For quick development and testing without setting up the backend:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+This will start the frontend with mock data at `http://localhost:5173`
+
+#### Full Setup (Real API Mode)
+For full functionality with real data:
+
 1. Start the backend server (in one terminal):
 ```bash
 # Make sure you're in the project root and virtual environment is activated
@@ -306,10 +341,10 @@ uvicorn app:app --host 0.0.0.0 --port 8000
 uvicorn app:app --reload
 ```
 
-2. Start the frontend development server (in another terminal):
+2. Start the frontend with real API calls (in another terminal):
 ```bash
 cd frontend
-npm run dev
+npm run dev:api
 ```
 
 The application will be available at:
