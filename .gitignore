@@ -86,7 +86,7 @@ frontend/.svelte-kit/
 frontend/.vite/
 
 # Screenshots
-screenshots/
+#screenshots/
 *.png
 *.jpg
 *.jpeg
