@@ -87,11 +87,11 @@ frontend/.vite/
 
 # Screenshots
 #screenshots/
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.svg
+#*.png
+#*.jpg
+#*.jpeg
+#*.gif
+#*.svg
 
 # Models
 models/*.pkl
