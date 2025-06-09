@@ -3,7 +3,7 @@ import { apiClient } from '../../../api/client';
 import type { ApiResponse, SecurityResponse, SecurityMetrics } from '../../../api/endpoints';
 
 // Development mode bypass
-const DEV_MODE = process.env.REACT_APP_MOCK_DATA === 'true';
+const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
 
 export function useSecurity() {
   const queryClient = useQueryClient();

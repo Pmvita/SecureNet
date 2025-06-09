@@ -4,7 +4,7 @@ import type { ApiResponse } from '../../../api/endpoints';
 import axios from 'axios';
 
 // Development mode bypass
-const DEV_MODE = process.env.REACT_APP_MOCK_DATA === 'true';
+const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
 
 export interface NetworkDevice {
   id: string;

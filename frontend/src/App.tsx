@@ -17,7 +17,7 @@ import { initializeApiClient } from './api/client';
 import LoadingSpinner from './components/LoadingSpinner';
 
 // Development mode bypass
-const DEV_MODE = process.env.REACT_APP_MOCK_DATA === 'true';
+const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
 
 const App: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(DEV_MODE);
