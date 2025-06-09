@@ -1,0 +1,585 @@
+{% extends "base.html" %}
+
+{% block title %}Anomalies - SecureNet{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Connection Status and Controls -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge bg-secondary" id="wsStatus">Disconnected</span>
+                    <button class="btn btn-sm btn-outline-secondary ms-2" id="toggleLive">
+                        <i class="fas fa-pause"></i> Pause Live Feed
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary ms-2" id="clearAlerts">
+                        <i class="fas fa-trash"></i> Clear Alerts
+                    </button>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-primary" id="exportCsv">
+                        <i class="fas fa-file-csv"></i> Export CSV
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" id="exportJson">
+                        <i class="fas fa-file-code"></i> Export JSON
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card glass-card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Total Anomalies</h6>
+                    <h2 class="card-title mb-0" id="totalAnomalies">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card glass-card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Active Anomalies</h6>
+                    <h2 class="card-title mb-0" id="activeAnomalies">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card glass-card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Critical Alerts</h6>
+                    <h2 class="card-title mb-0 text-danger" id="criticalAlerts">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card glass-card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Detection Rate</h6>
+                    <h2 class="card-title mb-0" id="detectionRate">0%</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card glass-card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="severityFilter">Severity</label>
+                            <select class="form-select" id="severityFilter">
+                                <option value="">All Severities</option>
+                                <option value="critical">Critical</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="statusFilter">Status</label>
+                            <select class="form-select" id="statusFilter">
+                                <option value="">All Statuses</option>
+                                <option value="active">Active</option>
+                                <option value="investigating">Investigating</option>
+                                <option value="resolved">Resolved</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="searchQuery">Search</label>
+                            <input type="text" class="form-control" id="searchQuery" 
+                                   placeholder="Search anomalies...">
+                        </div>
+                        <div class="col-md-2">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary w-100" id="applyFilters">
+                                Apply Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anomalies Timeline -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card glass-card">
+                <div class="card-body">
+                    <h5 class="card-title">Anomaly Timeline</h5>
+                    <canvas id="anomalyTimeline" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anomalies Table -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card glass-card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="anomaliesTable">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Severity</th>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// WebSocket connection management
+let ws = null;
+let isLive = true;
+let messageBuffer = [];
+const MAX_BUFFER_SIZE = 1000;
+let currentFilters = {
+    severity: '',
+    status: '',
+    search: ''
+};
+
+// Charts
+let timelineChart = null;
+
+// Initialize WebSocket connection
+function initWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/alerts?api_key=${encodeURIComponent('{{ api_key }}')}`;
+    
+    ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+        document.getElementById('wsStatus').className = 'badge bg-success';
+        document.getElementById('wsStatus').textContent = 'Connected';
+        console.log('WebSocket connected');
+    };
+    
+    ws.onclose = () => {
+        document.getElementById('wsStatus').className = 'badge bg-danger';
+        document.getElementById('wsStatus').textContent = 'Disconnected';
+        console.log('WebSocket disconnected');
+        // Attempt to reconnect after 5 seconds
+        setTimeout(initWebSocket, 5000);
+    };
+    
+    ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+    };
+    
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        if (!isLive) {
+            // Buffer messages when paused
+            messageBuffer.push(data);
+            if (messageBuffer.length > MAX_BUFFER_SIZE) {
+                messageBuffer.shift();
+            }
+            return;
+        }
+        
+        handleWebSocketMessage(data);
+    };
+}
+
+// Handle incoming WebSocket messages
+function handleWebSocketMessage(data) {
+    switch (data.type) {
+        case 'initial_alerts':
+            updateStatistics(data.payload.statistics);
+            updateTimeline(data.payload.timeline);
+            updateAnomaliesTable(data.payload.anomalies);
+            break;
+            
+        case 'new_alert':
+            if (shouldDisplayAlert(data.payload)) {
+                updateStatistics(data.payload.statistics);
+                updateTimeline(data.payload.timeline);
+                appendAlert(data.payload.anomaly);
+            }
+            break;
+            
+        case 'alert_update':
+            updateAlert(data.payload);
+            break;
+            
+        case 'alert_resolved':
+            updateAlertStatus(data.payload.anomaly_id, 'resolved');
+            break;
+    }
+}
+
+// Initialize timeline chart
+function initTimelineChart() {
+    const ctx = document.getElementById('anomalyTimeline').getContext('2d');
+    timelineChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Anomalies',
+                data: [],
+                borderColor: 'rgb(255, 99, 132)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            animation: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+// Update statistics
+function updateStatistics(stats) {
+    document.getElementById('totalAnomalies').textContent = stats.total;
+    document.getElementById('activeAnomalies').textContent = stats.active;
+    document.getElementById('criticalAlerts').textContent = stats.critical;
+    document.getElementById('detectionRate').textContent = `${stats.detection_rate}%`;
+}
+
+// Update timeline chart
+function updateTimeline(timeline) {
+    timelineChart.data.labels = timeline.labels;
+    timelineChart.data.datasets[0].data = timeline.values;
+    timelineChart.update();
+}
+
+// Update anomalies table
+function updateAnomaliesTable(anomalies) {
+    const tbody = document.querySelector('#anomaliesTable tbody');
+    tbody.innerHTML = '';
+    
+    anomalies.forEach(anomaly => {
+        if (shouldDisplayAlert(anomaly)) {
+            appendAlert(anomaly);
+        }
+    });
+}
+
+// Append a single alert
+function appendAlert(anomaly) {
+    const tbody = document.querySelector('#anomaliesTable tbody');
+    const tr = document.createElement('tr');
+    tr.className = `anomaly-entry severity-${anomaly.severity}`;
+    tr.dataset.anomalyId = anomaly.id;
+    
+    tr.innerHTML = `
+        <td>${formatTimestamp(anomaly.timestamp)}</td>
+        <td><span class="badge bg-${getSeverityColor(anomaly.severity)}">${anomaly.severity}</span></td>
+        <td>${escapeHtml(anomaly.type)}</td>
+        <td>${escapeHtml(anomaly.description)}</td>
+        <td><span class="badge bg-${getStatusColor(anomaly.status)}">${anomaly.status}</span></td>
+        <td>
+            <div class="btn-group">
+                <button class="btn btn-sm btn-outline-primary" onclick="showAlertDetails('${anomaly.id}')">
+                    <i class="fas fa-search"></i>
+                </button>
+                ${anomaly.status === 'active' ? `
+                    <button class="btn btn-sm btn-outline-warning" onclick="updateAlertStatus('${anomaly.id}', 'investigating')">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" onclick="updateAlertStatus('${anomaly.id}', 'resolved')">
+                        <i class="fas fa-check"></i>
+                    </button>
+                ` : ''}
+            </div>
+        </td>
+    `;
+    
+    tbody.insertBefore(tr, tbody.firstChild);
+    
+    // Limit table to 1000 rows
+    while (tbody.children.length > 1000) {
+        tbody.removeChild(tbody.lastChild);
+    }
+}
+
+// Update alert status
+async function updateAlertStatus(anomalyId, status) {
+    try {
+        const response = await fetch(`/api/anomalies/${anomalyId}/status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': '{{ api_key }}'
+            },
+            body: JSON.stringify({ status })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to update alert status');
+        }
+        
+        const tr = document.querySelector(`tr[data-anomaly-id="${anomalyId}"]`);
+        if (tr) {
+            const statusBadge = tr.querySelector('td:nth-child(5) .badge');
+            statusBadge.className = `badge bg-${getStatusColor(status)}`;
+            statusBadge.textContent = status;
+            
+            // Update action buttons
+            const actionsTd = tr.querySelector('td:last-child');
+            if (status === 'resolved') {
+                actionsTd.innerHTML = `
+                    <button class="btn btn-sm btn-outline-primary" onclick="showAlertDetails('${anomalyId}')">
+                        <i class="fas fa-search"></i>
+                    </button>
+                `;
+            }
+        }
+        
+        showToast(`Alert status updated to ${status}`, 'success');
+    } catch (error) {
+        console.error('Error updating alert status:', error);
+        showToast('Failed to update alert status', 'error');
+    }
+}
+
+// Show alert details
+async function showAlertDetails(anomalyId) {
+    try {
+        const response = await fetch(`/api/anomalies/${anomalyId}`, {
+            headers: {
+                'X-API-Key': '{{ api_key }}'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch alert details');
+        }
+        
+        const anomaly = await response.json();
+        
+        // Show modal with alert details
+        const modal = new bootstrap.Modal(document.getElementById('alertDetailsModal'));
+        document.getElementById('alertDetailsContent').innerHTML = `
+            <dl class="row">
+                <dt class="col-sm-3">Timestamp</dt>
+                <dd class="col-sm-9">${formatTimestamp(anomaly.timestamp)}</dd>
+                
+                <dt class="col-sm-3">Severity</dt>
+                <dd class="col-sm-9"><span class="badge bg-${getSeverityColor(anomaly.severity)}">${anomaly.severity}</span></dd>
+                
+                <dt class="col-sm-3">Type</dt>
+                <dd class="col-sm-9">${escapeHtml(anomaly.type)}</dd>
+                
+                <dt class="col-sm-3">Description</dt>
+                <dd class="col-sm-9">${escapeHtml(anomaly.description)}</dd>
+                
+                <dt class="col-sm-3">Status</dt>
+                <dd class="col-sm-9"><span class="badge bg-${getStatusColor(anomaly.status)}">${anomaly.status}</span></dd>
+                
+                ${anomaly.evidence ? `
+                    <dt class="col-sm-3">Evidence</dt>
+                    <dd class="col-sm-9"><pre>${JSON.stringify(anomaly.evidence, null, 2)}</pre></dd>
+                ` : ''}
+                
+                ${anomaly.recommendation ? `
+                    <dt class="col-sm-3">Recommendation</dt>
+                    <dd class="col-sm-9">${escapeHtml(anomaly.recommendation)}</dd>
+                ` : ''}
+            </dl>
+        `;
+        modal.show();
+    } catch (error) {
+        console.error('Error fetching alert details:', error);
+        showToast('Failed to fetch alert details', 'error');
+    }
+}
+
+// Check if alert should be displayed based on current filters
+function shouldDisplayAlert(alert) {
+    if (currentFilters.severity && alert.severity !== currentFilters.severity) {
+        return false;
+    }
+    
+    if (currentFilters.status && alert.status !== currentFilters.status) {
+        return false;
+    }
+    
+    if (currentFilters.search) {
+        const searchLower = currentFilters.search.toLowerCase();
+        return alert.description.toLowerCase().includes(searchLower) ||
+               alert.type.toLowerCase().includes(searchLower);
+    }
+    
+    return true;
+}
+
+// Get color for severity level
+function getSeverityColor(severity) {
+    const colors = {
+        'critical': 'danger',
+        'high': 'warning',
+        'medium': 'info',
+        'low': 'secondary'
+    };
+    return colors[severity] || 'secondary';
+}
+
+// Get color for status
+function getStatusColor(status) {
+    const colors = {
+        'active': 'danger',
+        'investigating': 'warning',
+        'resolved': 'success'
+    };
+    return colors[status] || 'secondary';
+}
+
+// Format timestamp
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleString();
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Export alerts
+async function exportAlerts(format) {
+    try {
+        const response = await fetch(`/api/anomalies/export?format=${format}`, {
+            headers: {
+                'X-API-Key': '{{ api_key }}'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to export alerts');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `securenet_alerts.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showToast(`Alerts exported as ${format.toUpperCase()}`, 'success');
+    } catch (error) {
+        console.error('Error exporting alerts:', error);
+        showToast('Failed to export alerts', 'error');
+    }
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize WebSocket and chart
+    initWebSocket();
+    initTimelineChart();
+    
+    // Toggle live feed
+    document.getElementById('toggleLive').addEventListener('click', function() {
+        isLive = !isLive;
+        this.innerHTML = isLive ? 
+            '<i class="fas fa-pause"></i> Pause Live Feed' : 
+            '<i class="fas fa-play"></i> Resume Live Feed';
+        
+        if (isLive && messageBuffer.length > 0) {
+            // Process buffered messages
+            messageBuffer.forEach(handleWebSocketMessage);
+            messageBuffer = [];
+        }
+    });
+    
+    // Clear alerts
+    document.getElementById('clearAlerts').addEventListener('click', () => {
+        document.querySelector('#anomaliesTable tbody').innerHTML = '';
+    });
+    
+    // Export buttons
+    document.getElementById('exportCsv').addEventListener('click', () => exportAlerts('csv'));
+    document.getElementById('exportJson').addEventListener('click', () => exportAlerts('json'));
+    
+    // Apply filters
+    document.getElementById('applyFilters').addEventListener('click', () => {
+        currentFilters = {
+            severity: document.getElementById('severityFilter').value,
+            status: document.getElementById('statusFilter').value,
+            search: document.getElementById('searchQuery').value
+        };
+        
+        // Refresh table with current filters
+        const tbody = document.querySelector('#anomaliesTable tbody');
+        const alerts = Array.from(tbody.children).map(tr => ({
+            id: tr.dataset.anomalyId,
+            timestamp: tr.dataset.timestamp,
+            severity: tr.querySelector('.badge').textContent,
+            type: tr.children[2].textContent,
+            description: tr.children[3].textContent,
+            status: tr.children[4].querySelector('.badge').textContent
+        }));
+        
+        tbody.innerHTML = '';
+        alerts.forEach(alert => {
+            if (shouldDisplayAlert(alert)) {
+                appendAlert(alert);
+            }
+        });
+    });
+});
+</script>
+
+<!-- Alert Details Modal -->
+<div class="modal fade" id="alertDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Alert Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="alertDetailsContent">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

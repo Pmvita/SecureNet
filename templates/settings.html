@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - SecureNet{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="fas fa-cog"></i>
+        System Settings
+    </h1>
+    <div class="header-actions">
+        <button class="btn btn-primary" onclick="saveAllSettings()">
+            <i class="fas fa-save"></i>
+            Save All Changes
+        </button>
+    </div>
+</div>
+
+<!-- Settings Navigation -->
+<div class="settings-nav mb-4">
+    <div class="nav nav-tabs" role="tablist">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#general" type="button" role="tab">
+            <i class="fas fa-sliders-h"></i> General
+        </button>
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#logs" type="button" role="tab">
+            <i class="fas fa-list"></i> Log Management
+        </button>
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab">
+            <i class="fas fa-shield-alt"></i> Security Center
+        </button>
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#anomalies" type="button" role="tab">
+            <i class="fas fa-exclamation-triangle"></i> Anomalies
+        </button>
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#network" type="button" role="tab">
+            <i class="fas fa-network-wired"></i> Network
+        </button>
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#notifications" type="button" role="tab">
+            <i class="fas fa-bell"></i> Notifications
+        </button>
+    </div>
+</div>
+
+<!-- Settings Content -->
+<div class="tab-content">
+    <!-- General Settings -->
+    <div class="tab-pane fade show active" id="general" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-sliders-h"></i>
+                    General Settings
+                </h2>
+            </div>
+            <div class="card-body">
+                <form id="general-settings">
+                    <div class="mb-3">
+                        <label for="system-name" class="form-label">System Name</label>
+                        <input type="text" class="form-control" id="system-name" name="system_name" value="{{ settings.system_name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="timezone" class="form-label">Timezone</label>
+                        <select class="form-select" id="timezone" name="timezone">
+                            {% for tz in timezones %}
+                            <option value="{{ tz }}" {% if tz == settings.timezone %}selected{% endif %}>{{ tz }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="log-retention" class="form-label">Log Retention (days)</label>
+                        <input type="number" class="form-control" id="log-retention" name="log_retention" value="{{ settings.log_retention }}" min="1" max="365">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="debug-mode" name="debug_mode" {% if settings.debug_mode %}checked{% endif %}>
+                            <label class="form-check-label" for="debug-mode">Debug Mode</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Management Settings -->
+    <div class="tab-pane fade" id="logs" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-list"></i>
+                    Log Management Settings
+                </h2>
+            </div>
+            <div class="card-body">
+                <form id="logs-settings">
+                    <div class="mb-3">
+                        <label for="refresh-interval" class="form-label">Refresh Interval (seconds)</label>
+                        <input type="number" class="form-control" id="refresh-interval" name="refresh_interval" min="5" max="300">
+                    </div>
+                    <div class="mb-3">
+                        <label for="max-logs" class="form-label">Maximum Logs Displayed</label>
+                        <input type="number" class="form-control" id="max-logs" name="max_logs_displayed" min="100" max="10000">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Log Levels to Display</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="log-level-info" name="log_levels" value="INFO" checked>
+                            <label class="form-check-label" for="log-level-info">INFO</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="log-level-warning" name="log_levels" value="WARNING" checked>
+                            <label class="form-check-label" for="log-level-warning">WARNING</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="log-level-error" name="log_levels" value="ERROR" checked>
+                            <label class="form-check-label" for="log-level-error">ERROR</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="log-level-critical" name="log_levels" value="CRITICAL" checked>
+                            <label class="form-check-label" for="log-level-critical">CRITICAL</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="auto-refresh" name="auto_refresh" checked>
+                            <label class="form-check-label" for="auto-refresh">Auto-refresh Logs</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="default-time-range" class="form-label">Default Time Range</label>
+                        <select class="form-select" id="default-time-range" name="default_time_range">
+                            <option value="15m">Last 15 minutes</option>
+                            <option value="1h" selected>Last hour</option>
+                            <option value="6h">Last 6 hours</option>
+                            <option value="24h">Last 24 hours</option>
+                            <option value="7d">Last 7 days</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Center Settings -->
+    <div class="tab-pane fade" id="security" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-shield-alt"></i>
+                    Security Center Settings
+                </h2>
+            </div>
+            <div class="card-body">
+                <form id="security-settings">
+                    <div class="mb-3">
+                        <label for="scan-interval" class="form-label">Scan Interval (seconds)</label>
+                        <input type="number" class="form-control" id="scan-interval" name="scan_interval" min="300" max="86400">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="auto-scan" name="auto_scan" checked>
+                            <label class="form-check-label" for="auto-scan">Enable Auto-scanning</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Scan Types</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="scan-type-full" name="scan_types" value="full" checked>
+                            <label class="form-check-label" for="scan-type-full">Full System Scan</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="scan-type-vulnerability" name="scan_types" value="vulnerability" checked>
+                            <label class="form-check-label" for="scan-type-vulnerability">Vulnerability Scan</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="scan-type-compliance" name="scan_types" value="compliance" checked>
+                            <label class="form-check-label" for="scan-type-compliance">Compliance Check</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="max-findings" class="form-label">Maximum Findings Displayed</label>
+                        <input type="number" class="form-control" id="max-findings" name="max_findings_displayed" min="10" max="1000">
+                    </div>
+                    <div class="mb-3">
+                        <label for="auto-block-threshold" class="form-label">Auto-block Threshold</label>
+                        <select class="form-select" id="auto-block-threshold" name="auto_block_threshold">
+                            <option value="critical">Critical</option>
+                            <option value="high" selected>High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anomalies Settings -->
+    <div class="tab-pane fade" id="anomalies" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Anomaly Detection Settings
+                </h2>
+            </div>
+            <div class="card-body">
+                <form id="anomalies-settings">
+                    <div class="mb-3">
+                        <label for="detection-sensitivity" class="form-label">Detection Sensitivity</label>
+                        <select class="form-select" id="detection-sensitivity" name="detection_sensitivity">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="auto-detect" name="auto_detect" checked>
+                            <label class="form-check-label" for="auto-detect">Enable Auto-detection</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="min-confidence" class="form-label">Minimum Confidence Threshold</label>
+                        <input type="number" class="form-control" id="min-confidence" name="min_confidence" min="0.1" max="1.0" step="0.1">
+                    </div>
+                    <div class="mb-3">
+                        <label for="max-anomalies" class="form-label">Maximum Anomalies Displayed</label>
+                        <input type="number" class="form-control" id="max-anomalies" name="max_anomalies_displayed" min="10" max="500">
+                    </div>
+                    <div class="mb-3">
+                        <label for="correlation-window" class="form-label">Correlation Window (seconds)</label>
+                        <input type="number" class="form-control" id="correlation-window" name="correlation_window" min="60" max="86400">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Settings -->
+    <div class="tab-pane fade" id="network" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-network-wired"></i>
+                    Network Monitoring Settings
+                </h2>
+            </div>
+            <div class="card-body">
+                <form id="network-settings">
+                    <div class="mb-3">
+                        <label for="monitoring-interval" class="form-label">Monitoring Interval (seconds)</label>
+                        <input type="number" class="form-control" id="monitoring-interval" name="monitoring_interval" min="10" max="300">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="auto-discovery" name="auto_discovery" checked>
+                            <label class="form-check-label" for="auto-discovery">Enable Auto-discovery</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="max-devices" class="form-label">Maximum Devices Displayed</label>
+                        <input type="number" class="form-control" id="max-devices" name="max_devices_displayed" min="10" max="1000">
+                    </div>
+                    <div class="mb-3">
+                        <label for="traffic-threshold" class="form-label">Traffic Alert Threshold (MB/s)</label>
+                        <input type="number" class="form-control" id="traffic-threshold" name="traffic_threshold" min="1" max="10000">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Protocols to Monitor</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="protocol-tcp" name="protocols_monitored" value="TCP" checked>
+                            <label class="form-check-label" for="protocol-tcp">TCP</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="protocol-udp" name="protocols_monitored" value="UDP" checked>
+                            <label class="form-check-label" for="protocol-udp">UDP</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="protocol-icmp" name="protocols_monitored" value="ICMP" checked>
+                            <label class="form-check-label" for="protocol-icmp">ICMP</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="alert-new-device" name="alert_on_new_device" checked>
+                            <label class="form-check-label" for="alert-new-device">Alert on New Device Detection</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Settings -->
+    <div class="tab-pane fade" id="notifications" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-bell"></i>
+                    Notification Settings
+                </h2>
+            </div>
+            <div class="card-body">
+                <form id="notification-settings">
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="email-notifications" name="email_notifications" {% if settings.email_notifications %}checked{% endif %}>
+                            <label class="form-check-label" for="email-notifications">Enable Email Notifications</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="smtp-server" class="form-label">SMTP Server</label>
+                        <input type="text" class="form-control" id="smtp-server" name="smtp_server" value="{{ settings.smtp_server }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="smtp-port" class="form-label">SMTP Port</label>
+                        <input type="number" class="form-control" id="smtp-port" name="smtp_port" value="{{ settings.smtp_port }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="smtp-username" class="form-label">SMTP Username</label>
+                        <input type="text" class="form-control" id="smtp-username" name="smtp_username" value="{{ settings.smtp_username }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="smtp-password" class="form-label">SMTP Password</label>
+                        <input type="password" class="form-control" id="smtp-password" name="smtp_password" value="{{ settings.smtp_password }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="notification-email" class="form-label">Notification Email</label>
+                        <input type="email" class="form-control" id="notification-email" name="notification_email" value="{{ settings.notification_email }}">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API_KEY = "{{ api_key }}";
+
+// Initialize the page
+document.addEventListener('DOMContentLoaded', function() {
+    loadAllSettings();
+});
+
+// Load all settings
+async function loadAllSettings() {
+    try {
+        // Load general settings
+        const generalResponse = await fetch('/api/settings', {
+            headers: { 'Authorization': `Bearer ${API_KEY}` }
+        });
+        const generalSettings = await generalResponse.json();
+        populateGeneralSettings(generalSettings);
+
+        // Load page-specific settings
+        const pages = ['logs', 'security', 'anomalies', 'network'];
+        for (const page of pages) {
+            const response = await fetch(`/api/settings/${page}`, {
+                headers: { 'Authorization': `Bearer ${API_KEY}` }
+            });
+            const settings = await response.json();
+            populatePageSettings(page, settings);
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        showNotification('Error loading settings', 'error');
+    }
+}
+
+// Save all settings
+async function saveAllSettings() {
+    try {
+        // Save general settings
+        const generalSettings = collectGeneralSettings();
+        await fetch('/api/settings', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(generalSettings)
+        });
+
+        // Save page-specific settings
+        const pages = ['logs', 'security', 'anomalies', 'network'];
+        for (const page of pages) {
+            const settings = collectPageSettings(page);
+            await fetch(`/api/settings/${page}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(settings)
+            });
+        }
+
+        showNotification('All settings saved successfully', 'success');
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        showNotification('Error saving settings', 'error');
+    }
+}
+
+// Helper functions for collecting form data
+function collectGeneralSettings() {
+    // ... existing general settings collection ...
+}
+
+function collectPageSettings(page) {
+    const form = document.getElementById(`${page}-settings`);
+    const formData = new FormData(form);
+    const settings = {};
+    
+    for (const [key, value] of formData.entries()) {
+        if (key.endsWith('[]')) {
+            const baseKey = key.slice(0, -2);
+            if (!settings[baseKey]) {
+                settings[baseKey] = [];
+            }
+            settings[baseKey].push(value);
+        } else {
+            settings[key] = value;
+        }
+    }
+
+    // Handle checkboxes
+    form.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        if (checkbox.name.endsWith('[]')) {
+            const baseKey = checkbox.name.slice(0, -2);
+            if (!settings[baseKey]) {
+                settings[baseKey] = [];
+            }
+            if (checkbox.checked) {
+                settings[baseKey].push(checkbox.value);
+            }
+        } else {
+            settings[checkbox.name] = checkbox.checked;
+        }
+    });
+
+    return settings;
+}
+
+// Helper functions for populating form data
+function populateGeneralSettings(settings) {
+    // ... existing general settings population ...
+}
+
+function populatePageSettings(page, settings) {
+    const form = document.getElementById(`${page}-settings`);
+    if (!form) return;
+
+    for (const [key, value] of Object.entries(settings)) {
+        const element = form.elements[key];
+        if (!element) continue;
+
+        if (Array.isArray(value)) {
+            if (element.type === 'checkbox') {
+                element.checked = value.includes(element.value);
+            } else {
+                element.value = value.join(',');
+            }
+        } else if (typeof value === 'boolean') {
+            element.checked = value;
+        } else {
+            element.value = value;
+        }
+    }
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    // TODO: Implement notification system
+    console.log(`${type.toUpperCase()}: ${message}`);
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,1039 @@
+{% extends "base.html" %}
+
+{% block title %}SecureNet - Security Center{% endblock %}
+
+{% block content %}
+<div class="page-header flex justify-between items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-white flex items-center gap-3">
+            <i class="fas fa-shield-alt text-primary-500"></i>
+            Security Center
+        </h1>
+        <p class="mt-1 text-sm text-gray-400">Monitor and manage security scans, findings, and compliance</p>
+    </div>
+    <div class="flex gap-4">
+        <div class="relative">
+            <input type="text" id="searchFindings" placeholder="Search findings..." 
+                   class="input-field pl-10 w-64" onkeyup="filterFindings()">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        </div>
+        <button class="btn-secondary flex items-center gap-2" onclick="exportReport()">
+            <i class="fas fa-file-export"></i>
+            Export Report
+        </button>
+        <button class="btn-primary flex items-center gap-2" onclick="scheduleScan()">
+            <i class="fas fa-clock"></i>
+            Schedule Scan
+        </button>
+        <button class="btn-primary flex items-center gap-2" onclick="startNewScan()">
+            <i class="fas fa-play"></i>
+            Start New Scan
+        </button>
+    </div>
+</div>
+
+<!-- Security Score and Quick Stats -->
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
+    <!-- Security Score Card -->
+    <div class="lg:col-span-2 glass-card">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                <i class="fas fa-chart-line text-primary-500"></i>
+                Security Score
+            </h2>
+            <span class="text-sm text-gray-400" id="lastScoreUpdate">Updated just now</span>
+        </div>
+        <div class="flex items-end gap-4">
+            <div class="relative">
+                <div class="w-32 h-32">
+                    <canvas id="scoreGauge"></canvas>
+                </div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-2xl font-bold text-white" id="currentScore">0</span>
+                </div>
+            </div>
+            <div class="flex-1 space-y-3">
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-sm text-gray-400">Vulnerabilities</span>
+                        <span class="text-sm font-medium text-white" id="vulnerabilityCount">0</span>
+                    </div>
+                    <div class="h-2 bg-dark-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-red-500 rounded-full transition-all duration-500" id="vulnerabilityBar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-sm text-gray-400">Patch Status</span>
+                        <span class="text-sm font-medium text-white" id="patchStatus">0%</span>
+                    </div>
+                    <div class="h-2 bg-dark-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-green-500 rounded-full transition-all duration-500" id="patchBar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-sm text-gray-400">Compliance</span>
+                        <span class="text-sm font-medium text-white" id="complianceStatus">0%</span>
+                    </div>
+                    <div class="h-2 bg-dark-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-blue-500 rounded-full transition-all duration-500" id="complianceBar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Cards -->
+    <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Active Scans Card -->
+        <div class="glass-card hover:scale-105 transition-transform">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400">Active Scans</p>
+                    <p class="mt-2 text-3xl font-semibold text-white" id="activeScans">0</p>
+                    <div class="mt-1 flex items-center gap-2">
+                        <span class="text-sm text-gray-400" id="activeScansTrend"></span>
+                        <i class="fas fa-arrow-up text-green-500 hidden" id="activeScansTrendUp"></i>
+                        <i class="fas fa-arrow-down text-red-500 hidden" id="activeScansTrendDown"></i>
+                    </div>
+                </div>
+                <div class="p-3 bg-primary-500/10 rounded-lg animate-pulse">
+                    <i class="fas fa-sync-alt text-primary-500 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Findings Card -->
+        <div class="glass-card hover:scale-105 transition-transform">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400">Total Findings</p>
+                    <p class="mt-2 text-3xl font-semibold text-white" id="totalFindings">0</p>
+                    <div class="mt-1 flex items-center gap-2">
+                        <span class="text-sm text-gray-400" id="findingsTrend"></span>
+                        <i class="fas fa-arrow-up text-red-500 hidden" id="findingsTrendUp"></i>
+                        <i class="fas fa-arrow-down text-green-500 hidden" id="findingsTrendDown"></i>
+                    </div>
+                </div>
+                <div class="p-3 bg-yellow-500/10 rounded-lg">
+                    <i class="fas fa-exclamation-circle text-yellow-500 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Critical Findings Card -->
+        <div class="glass-card hover:scale-105 transition-transform">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400">Critical Findings</p>
+                    <p class="mt-2 text-3xl font-semibold text-red-500" id="criticalFindings">0</p>
+                    <div class="mt-1 flex items-center gap-2">
+                        <span class="text-sm text-gray-400" id="criticalTrend"></span>
+                        <i class="fas fa-arrow-up text-red-500 hidden" id="criticalTrendUp"></i>
+                        <i class="fas fa-arrow-down text-green-500 hidden" id="criticalTrendDown"></i>
+                    </div>
+                </div>
+                <div class="p-3 bg-red-500/10 rounded-lg animate-pulse">
+                    <i class="fas fa-radiation-alt text-red-500 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Active Scans and Findings Panel -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Active Scans Panel -->
+        <div class="glass-card">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <i class="fas fa-list-ul text-primary-500"></i>
+                    Active Scans
+                </h2>
+                <div class="flex gap-2">
+                    <button class="btn-secondary flex items-center gap-2" onclick="refreshScans()">
+                        <i class="fas fa-sync-alt"></i>
+                        Refresh
+                    </button>
+                    <button class="btn-secondary flex items-center gap-2" onclick="exportScans()">
+                        <i class="fas fa-download"></i>
+                        Export
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Enhanced Scan Table -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-700">
+                    <thead>
+                        <tr class="text-left">
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Scan ID</th>
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Progress</th>
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Findings</th>
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700" id="activeScansTable">
+                        <!-- Scan rows will be dynamically inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Findings Panel -->
+        <div class="glass-card">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+                    Recent Findings
+                </h2>
+                <div class="flex gap-2">
+                    <select class="input-field" id="findingSeverityFilter" onchange="filterFindings()">
+                        <option value="all">All Severities</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                    <select class="input-field" id="findingTypeFilter" onchange="filterFindings()">
+                        <option value="all">All Types</option>
+                        <option value="vulnerability">Vulnerability</option>
+                        <option value="compliance">Compliance</option>
+                        <option value="configuration">Configuration</option>
+                        <option value="threat">Threat</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="space-y-4" id="findingsList">
+                <!-- Findings will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics and Timeline Panel -->
+    <div class="lg:col-span-1 space-y-6">
+        <!-- Scan Statistics Panel -->
+        <div class="glass-card">
+            <h2 class="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                <i class="fas fa-chart-pie text-primary-500"></i>
+                Scan Statistics
+            </h2>
+            
+            <!-- Scan Type Distribution -->
+            <div class="mb-6">
+                <h3 class="text-sm font-medium text-gray-400 mb-3">Scan Type Distribution</h3>
+                <canvas id="scanTypeChart" class="w-full h-48"></canvas>
+            </div>
+            
+            <!-- Finding Severity Distribution -->
+            <div class="mb-6">
+                <h3 class="text-sm font-medium text-gray-400 mb-3">Finding Severity</h3>
+                <canvas id="severityChart" class="w-full h-48"></canvas>
+            </div>
+        </div>
+
+        <!-- Scan Timeline Panel -->
+        <div class="glass-card">
+            <h2 class="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                <i class="fas fa-history text-primary-500"></i>
+                Scan Timeline
+            </h2>
+            
+            <div class="relative">
+                <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-700"></div>
+                <div class="space-y-6" id="scanTimeline">
+                    <!-- Timeline items will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scan Details Modal -->
+<div id="scanDetailsModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="glass-card max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-white">Scan Details</h2>
+            <button class="text-gray-400 hover:text-white" onclick="closeScanDetails()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="space-y-6">
+            <!-- Scan Overview -->
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-400 mb-2">Scan Information</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-400">Scan ID</span>
+                            <span class="text-sm text-white" id="modalScanId"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-400">Type</span>
+                            <span class="text-sm text-white" id="modalScanType"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-400">Status</span>
+                            <span class="text-sm text-white" id="modalScanStatus"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-400">Start Time</span>
+                            <span class="text-sm text-white" id="modalScanStartTime"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-400">Duration</span>
+                            <span class="text-sm text-white" id="modalScanDuration"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-sm font-medium text-gray-400 mb-2">Findings Summary</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-400">Total Findings</span>
+                            <span class="text-sm text-white" id="modalTotalFindings"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-400">Critical</span>
+                            <span class="text-sm text-red-500" id="modalCriticalFindings"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-400">High</span>
+                            <span class="text-sm text-orange-500" id="modalHighFindings"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-400">Medium</span>
+                            <span class="text-sm text-yellow-500" id="modalMediumFindings"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-400">Low</span>
+                            <span class="text-sm text-blue-500" id="modalLowFindings"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Scan Progress -->
+            <div>
+                <div class="flex justify-between mb-2">
+                    <span class="text-sm text-gray-400">Progress</span>
+                    <span class="text-sm text-white" id="modalScanProgress">0%</span>
+                </div>
+                <div class="h-2 bg-dark-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-primary-500 rounded-full transition-all duration-500" id="modalProgressBar" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <!-- Findings List -->
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-white">Findings</h3>
+                    <div class="flex gap-2">
+                        <button class="btn-secondary" onclick="exportFindings()">
+                            <i class="fas fa-download"></i>
+                            Export
+                        </button>
+                        <button class="btn-secondary" onclick="generateReport()">
+                            <i class="fas fa-file-alt"></i>
+                            Generate Report
+                        </button>
+                    </div>
+                </div>
+                <div class="space-y-4" id="modalFindingsList">
+                    <!-- Findings will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Scan Modal -->
+<div id="scheduleScanModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="glass-card max-w-lg w-full mx-4">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-white">Schedule New Scan</h2>
+            <button class="text-gray-400 hover:text-white" onclick="closeScheduleModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <form id="scheduleScanForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Scan Type</label>
+                <select class="input-field w-full" id="scanType" required>
+                    <option value="full">Full System Scan</option>
+                    <option value="vulnerability">Vulnerability Scan</option>
+                    <option value="compliance">Compliance Check</option>
+                    <option value="custom">Custom Scan</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Schedule</label>
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="date" class="input-field" id="scanDate" required>
+                    <input type="time" class="input-field" id="scanTime" required>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Target</label>
+                <input type="text" class="input-field w-full" id="scanTarget" placeholder="Enter target IP or hostname" required>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Scan Options</label>
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" class="form-checkbox" id="deepScan">
+                        <label for="deepScan" class="text-sm text-gray-400">Deep Scan</label>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" class="form-checkbox" id="includeRemediation">
+                        <label for="includeRemediation" class="text-sm text-gray-400">Include Remediation Steps</label>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" class="form-checkbox" id="notifyOnComplete">
+                        <label for="notifyOnComplete" class="text-sm text-gray-400">Notify on Completion</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-4">
+                <button type="button" class="btn-secondary" onclick="closeScheduleModal()">Cancel</button>
+                <button type="submit" class="btn-primary">Schedule Scan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gauge-chart"></script>
+<script>
+// WebSocket connection management
+let ws = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_DELAY = 2000;
+
+async function connectWebSocket() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        return;
+    }
+
+    try {
+        // Get API key from server
+        const response = await fetch('/api/get-api-key');
+        if (!response.ok) {
+            throw new Error('Failed to get API key');
+        }
+        const { api_key } = await response.json();
+        
+        // Clean the API key by removing any comments or whitespace
+        const cleanApiKey = api_key.split('#')[0].trim();
+        
+        // Construct WebSocket URL with clean API key
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/security?api_key=${encodeURIComponent(cleanApiKey)}`;
+        
+        ws = new WebSocket(wsUrl);
+        
+        ws.onopen = () => {
+            console.log('WebSocket connection established');
+            reconnectAttempts = 0;
+            updateConnectionStatus(true);
+            showToast('Connected to security monitoring', 'success');
+        };
+        
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            } catch (error) {
+                console.error('Error parsing WebSocket message:', error);
+                showToast('Error processing update', 'error');
+            }
+        };
+        
+        ws.onclose = (event) => {
+            console.log('WebSocket connection closed:', event.code, event.reason);
+            updateConnectionStatus(false);
+            
+            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                const delay = RECONNECT_DELAY * Math.pow(2, reconnectAttempts);
+                showToast(`Connection lost. Reconnecting in ${delay/1000} seconds...`, 'warning');
+                setTimeout(() => {
+                    reconnectAttempts++;
+                    connectWebSocket();
+                }, delay);
+            } else {
+                showToast('Connection lost. Please refresh the page to reconnect.', 'error');
+            }
+        };
+        
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            showToast('Connection error. Please check your network connection.', 'error');
+        };
+    } catch (error) {
+        console.error('Error establishing WebSocket connection:', error);
+        showToast('Failed to establish connection. Please refresh the page.', 'error');
+    }
+}
+
+function updateConnectionStatus(connected) {
+    const statusIndicator = document.getElementById('connection-status');
+    if (statusIndicator) {
+        statusIndicator.className = connected ? 'connected' : 'disconnected';
+        statusIndicator.title = connected ? 'Connected' : 'Disconnected';
+    }
+}
+
+function showError(message) {
+    const errorContainer = document.getElementById('error-container');
+    if (errorContainer) {
+        errorContainer.textContent = message;
+        errorContainer.style.display = 'block';
+        setTimeout(() => {
+            errorContainer.style.display = 'none';
+        }, 5000);
+    }
+}
+
+function handleWebSocketMessage(data) {
+    switch (data.type) {
+        case 'initial_state':
+            updateDashboard(data.payload);
+            break;
+        case 'scan_update':
+            updateScanStatus(data.payload);
+            break;
+        case 'finding_update':
+            updateFindings(data.payload);
+            break;
+        case 'metrics_update':
+            updateMetrics(data.payload);
+            break;
+        case 'error':
+            showError(data.message);
+            break;
+        default:
+            console.warn('Unknown message type:', data.type);
+    }
+}
+
+// Initialize WebSocket connection when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    connectWebSocket();
+    
+    // Reconnect on visibility change
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            connectWebSocket();
+        }
+    });
+});
+
+// Global state
+let currentScanId = null;
+let scanCharts = {
+    typeChart: null,
+    severityChart: null
+};
+
+// Initialize charts
+function initializeCharts() {
+    // Scan Type Distribution Chart
+    const typeCtx = document.getElementById('scanTypeChart').getContext('2d');
+    scanCharts.typeChart = new Chart(typeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Full', 'Vulnerability', 'Compliance', 'Custom'],
+            datasets: [{
+                data: [0, 0, 0, 0],
+                backgroundColor: [
+                    '#0EA5E9',
+                    '#F59E0B',
+                    '#10B981',
+                    '#8B5CF6'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#E2E8F0'
+                    }
+                }
+            }
+        }
+    });
+    
+    // Severity Distribution Chart
+    const severityCtx = document.getElementById('severityChart').getContext('2d');
+    scanCharts.severityChart = new Chart(severityCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Critical', 'High', 'Medium', 'Low'],
+            datasets: [{
+                data: [0, 0, 0, 0],
+                backgroundColor: [
+                    '#EF4444',
+                    '#F59E0B',
+                    '#3B82F6',
+                    '#10B981'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#E2E8F0'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: '#E2E8F0'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Update charts with real data
+function updateCharts(data) {
+    // Update scan type distribution
+    scanCharts.typeChart.data.datasets[0].data = [
+        data.fullScans || 0,
+        data.vulnerabilityScans || 0,
+        data.complianceScans || 0,
+        data.customScans || 0
+    ];
+    scanCharts.typeChart.update();
+    
+    // Update severity distribution
+    scanCharts.severityChart.data.datasets[0].data = [
+        data.criticalFindings || 0,
+        data.highFindings || 0,
+        data.mediumFindings || 0,
+        data.lowFindings || 0
+    ];
+    scanCharts.severityChart.update();
+}
+
+// Enhanced scan row template
+function createScanRow(scan) {
+    return `
+        <tr class="hover:bg-dark-100/50 transition-colors" data-scan-id="${scan.id}">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-white">${scan.id}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <span class="px-2 py-1 rounded-full text-xs font-medium
+                    ${scan.type === 'full' ? 'bg-primary-500/20 text-primary-400' :
+                    scan.type === 'vulnerability' ? 'bg-yellow-500/20 text-yellow-400' :
+                    scan.type === 'compliance' ? 'bg-green-500/20 text-green-400' :
+                    'bg-purple-500/20 text-purple-400'}">
+                    ${scan.type.charAt(0).toUpperCase() + scan.type.slice(1)}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <span class="px-2 py-1 rounded-full text-xs font-medium
+                    ${scan.status === 'running' ? 'bg-green-500/20 text-green-400' :
+                    scan.status === 'completed' ? 'bg-blue-500/20 text-blue-400' :
+                    scan.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                    'bg-gray-500/20 text-gray-400'}">
+                    ${scan.status.charAt(0).toUpperCase() + scan.status.slice(1)}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="w-full bg-dark-100 rounded-full h-2">
+                    <div class="progress-bar h-2 bg-primary-500 rounded-full transition-all duration-500" 
+                         style="width: ${scan.progress}%"></div>
+                </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-white">${scan.findings}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <button class="btn-sm btn-primary" onclick="viewScanDetails('${scan.id}')">
+                    <i class="fas fa-eye"></i>
+                </button>
+                ${scan.status === 'running' ? `
+                    <button class="btn-sm btn-danger ml-2" onclick="stopScan('${scan.id}')">
+                        <i class="fas fa-stop"></i>
+                    </button>
+                ` : ''}
+            </td>
+        </tr>
+    `;
+}
+
+// Enhanced finding item template
+function createFindingItem(finding) {
+    return `
+        <div class="glass-card p-4 hover:scale-[1.02] transition-transform">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h4 class="text-sm font-medium text-white">${finding.type}</h4>
+                    <p class="mt-1 text-sm text-gray-400">${finding.description}</p>
+                </div>
+                <span class="px-2 py-1 rounded-full text-xs font-medium
+                    ${finding.severity === 'critical' ? 'bg-red-500/20 text-red-400' :
+                    finding.severity === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                    finding.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-blue-500/20 text-blue-400'}">
+                    ${finding.severity.charAt(0).toUpperCase() + finding.severity.slice(1)}
+                </span>
+            </div>
+            <div class="mt-3 flex items-center gap-4 text-sm text-gray-400">
+                <span><i class="fas fa-clock mr-1"></i> ${new Date(finding.timestamp).toLocaleString()}</span>
+                <span><i class="fas fa-map-marker-alt mr-1"></i> ${finding.location}</span>
+            </div>
+        </div>
+    `;
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+    initScoreGauge();
+    loadActiveScans();
+    updateStats();
+    loadTimeline();
+    
+    // Set up WebSocket connection
+    connectWebSocket();
+    
+    // Set up periodic refresh
+    setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            loadActiveScans();
+            updateStats();
+            loadTimeline();
+        }
+    }, 30000);
+});
+
+// Export functions
+function exportScans() {
+    // Implementation for exporting scan data
+    showToast('Exporting scan data...', 'info');
+}
+
+// Modal functions
+function showModal(modalId) {
+    document.getElementById(modalId).classList.remove('hidden');
+    document.getElementById(modalId).classList.add('flex');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+    document.getElementById(modalId).classList.remove('flex');
+}
+
+function closeScanDetails() {
+    closeModal('scanDetailsModal');
+    currentScanId = null;
+}
+
+function closeScheduleModal() {
+    closeModal('scheduleScanModal');
+    document.getElementById('scheduleScanForm').reset();
+}
+
+// Event handlers
+function scheduleScan() {
+    showModal('scheduleScanModal');
+}
+
+async function startNewScan() {
+    try {
+        // Get scan options from the UI
+        const scanConfig = {
+            type: 'full',
+            target: 'all',
+            deep_scan: document.getElementById('deepScan')?.checked || false,
+            include_remediation: document.getElementById('includeRemediation')?.checked || false,
+            notify_on_complete: document.getElementById('notifyOnComplete')?.checked || true,
+            modules: ['vulnerabilities', 'configuration', 'compliance']
+        };
+
+        // Show loading state
+        const button = document.querySelector('button[onclick="startNewScan()"]');
+        const originalContent = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = `
+            <i class="fas fa-spinner fa-spin"></i>
+            Starting Scan...
+        `;
+
+        // Get API key and clean it
+        const apiKeyResponse = await fetch('/api/get-api-key');
+        if (!apiKeyResponse.ok) {
+            throw new Error('Failed to get API key');
+        }
+        const { api_key } = await apiKeyResponse.json();
+        const cleanApiKey = api_key.split('#')[0].trim();
+
+        // Start the scan
+        const response = await fetch('/api/security/scan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': cleanApiKey
+            },
+            body: JSON.stringify(scanConfig)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to start scan');
+        }
+
+        const result = await response.json();
+        showToast('Security scan started successfully', 'success');
+        
+        // Update UI
+        loadActiveScans();
+        updateStats();
+    } catch (error) {
+        console.error('Error starting scan:', error);
+        showToast(error.message || 'Failed to start security scan', 'error');
+    } finally {
+        // Restore button state
+        const button = document.querySelector('button[onclick="startNewScan()"]');
+        button.disabled = false;
+        button.innerHTML = `
+            <i class="fas fa-play"></i>
+            Start New Scan
+        `;
+    }
+}
+
+function viewScanDetails(scanId) {
+    currentScanId = scanId;
+    showModal('scanDetailsModal');
+    // Load scan details
+}
+
+function stopScan(scanId) {
+    // Implementation for stopping a scan
+    showToast('Stopping scan...', 'info');
+}
+
+// Form submission
+document.getElementById('scheduleScanForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    // Implementation for scheduling a scan
+    showToast('Scan scheduled successfully', 'success');
+    closeScheduleModal();
+});
+
+// Initialize security score gauge
+function initScoreGauge() {
+    const gauge = document.getElementById('scoreGauge');
+    const opts = {
+        angle: 0.15,
+        lineWidth: 0.44,
+        radiusScale: 1,
+        pointer: {
+            length: 0.6,
+            strokeWidth: 0.035,
+            color: '#fff'
+        },
+        limitMax: false,
+        limitMin: false,
+        colorStart: '#ef4444',
+        colorStop: '#10b981',
+        strokeColor: '#1f2937',
+        generateGradient: true,
+        highDpiSupport: true,
+        percentColors: [[0.0, "#ef4444" ], [0.5, "#f59e0b"], [0.8, "#10b981"]],
+        renderTicks: {
+            divisions: 5,
+            divWidth: 1.1,
+            divLength: 0.7,
+            divColor: '#4b5563',
+            subDivisions: 3,
+            subLength: 0.5,
+            subWidth: 0.6,
+            subColor: '#6b7280'
+        }
+    };
+    
+    const gaugeChart = new GaugeChart(gauge, opts);
+    gaugeChart.setOptions(opts);
+    return gaugeChart;
+}
+
+// Update security score
+function updateSecurityScore(score) {
+    const gaugeChart = initScoreGauge();
+    gaugeChart.setValue(score.overall / 100);
+    
+    document.getElementById('currentScore').textContent = score.overall;
+    document.getElementById('vulnerabilityCount').textContent = score.vulnerabilities;
+    document.getElementById('patchStatus').textContent = `${score.patch_status}%`;
+    document.getElementById('complianceStatus').textContent = `${score.compliance}%`;
+    
+    document.getElementById('vulnerabilityBar').style.width = `${score.vulnerabilities}%`;
+    document.getElementById('patchBar').style.width = `${score.patch_status}%`;
+    document.getElementById('complianceBar').style.width = `${score.compliance}%`;
+    
+    document.getElementById('lastScoreUpdate').textContent = 'Updated just now';
+}
+
+// Create timeline item
+function createTimelineItem(scan) {
+    return `
+        <div class="relative pl-8">
+            <div class="absolute left-0 w-4 h-4 rounded-full bg-primary-500 -translate-x-1/2"></div>
+            <div class="glass-card p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-white">${scan.type} Scan</span>
+                    <span class="text-xs text-gray-400">${new Date(scan.timestamp).toLocaleString()}</span>
+                </div>
+                <p class="text-sm text-gray-400">${scan.description}</p>
+                <div class="mt-2 flex items-center gap-2">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium
+                        ${scan.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                        scan.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                        'bg-yellow-500/20 text-yellow-400'}">
+                        ${scan.status.charAt(0).toUpperCase() + scan.status.slice(1)}
+                    </span>
+                    <span class="text-xs text-gray-400">${scan.findings} findings</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Update timeline
+function updateTimeline(scans) {
+    const timeline = document.getElementById('scanTimeline');
+    timeline.innerHTML = scans.map(scan => createTimelineItem(scan)).join('');
+}
+
+// Filter findings
+function filterFindings() {
+    const searchTerm = document.getElementById('searchFindings').value.toLowerCase();
+    const severityFilter = document.getElementById('findingSeverityFilter').value;
+    const typeFilter = document.getElementById('findingTypeFilter').value;
+    
+    const findings = document.querySelectorAll('#findingsList > div');
+    findings.forEach(finding => {
+        const findingText = finding.textContent.toLowerCase();
+        const findingSeverity = finding.dataset.severity;
+        const findingType = finding.dataset.type;
+        
+        const matchesSearch = findingText.includes(searchTerm);
+        const matchesSeverity = severityFilter === 'all' || findingSeverity === severityFilter;
+        const matchesType = typeFilter === 'all' || findingType === typeFilter;
+        
+        finding.style.display = matchesSearch && matchesSeverity && matchesType ? 'block' : 'none';
+    });
+}
+
+// Export report
+function exportReport() {
+    const report = {
+        timestamp: new Date().toISOString(),
+        securityScore: {
+            overall: document.getElementById('currentScore').textContent,
+            vulnerabilities: document.getElementById('vulnerabilityCount').textContent,
+            patchStatus: document.getElementById('patchStatus').textContent,
+            compliance: document.getElementById('complianceStatus').textContent
+        },
+        activeScans: Array.from(document.querySelectorAll('#activeScansTable tr')).map(row => ({
+            id: row.cells[0].textContent,
+            type: row.cells[1].textContent,
+            status: row.cells[2].textContent,
+            progress: row.cells[3].textContent,
+            findings: row.cells[4].textContent
+        })),
+        findings: Array.from(document.querySelectorAll('#findingsList > div')).map(finding => ({
+            type: finding.querySelector('h4').textContent,
+            description: finding.querySelector('p').textContent,
+            severity: finding.dataset.severity,
+            timestamp: finding.dataset.timestamp
+        }))
+    };
+    
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `security-report-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+</script>
+
+<style>
+/* Add connection status styles */
+#connection-status {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    transition: background-color 0.3s ease;
+}
+
+#connection-status.connected {
+    background-color: #4CAF50;
+    box-shadow: 0 0 8px #4CAF50;
+}
+
+#connection-status.disconnected {
+    background-color: #f44336;
+    box-shadow: 0 0 8px #f44336;
+}
+
+#error-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    background-color: #f44336;
+    color: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    display: none;
+    z-index: 1000;
+    max-width: 400px;
+    text-align: center;
+}
+</style>
+{% endblock %} 

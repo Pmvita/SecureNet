@@ -1,0 +1,43 @@
+.errorContainer {
+  padding: 1.5rem;
+  margin: 1rem 0;
+  border: 1px solid var(--error-color);
+  border-radius: var(--border-radius);
+  background-color: var(--error-bg);
+  color: var(--error-color);
+  text-align: center;
+}
+
+.errorTitle {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.errorMessage {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.resetButton {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--error-color);
+  background-color: transparent;
+  border: 1px solid var(--error-color);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.resetButton:hover {
+  background-color: var(--error-color);
+  color: white;
+}
+
+.resetButton:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--error-color-light);
+} 

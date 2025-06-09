@@ -1,0 +1,536 @@
+{% extends "base.html" %}
+
+{% block title %}SecureNet - Log Management{% endblock %}
+
+{% block content %}
+<!-- Page Header with Enhanced Actions -->
+<div class="page-header flex justify-between items-center mb-6">
+    <div class="flex items-center gap-3">
+        <div class="p-3 bg-primary-500/10 rounded-lg">
+            <i class="fas fa-database text-primary-500 text-2xl"></i>
+        </div>
+        <div>
+            <h1 class="text-2xl font-bold text-white">Log Management</h1>
+            <p class="text-sm text-gray-400 mt-1">Monitor and analyze system logs in real-time</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-3">
+        <div class="relative" x-data="{ open: false }">
+            <button @click="open = !open" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-download"></i>
+                Export
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div x-show="open" @click.away="open = false" 
+                 class="absolute right-0 mt-2 w-48 rounded-lg bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5">
+                <div class="py-1">
+                    <a href="#" onclick="exportLogs('csv')" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">
+                        <i class="fas fa-file-csv"></i> CSV Format
+                    </a>
+                    <a href="#" onclick="exportLogs('json')" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">
+                        <i class="fas fa-file-code"></i> JSON Format
+                    </a>
+                    <a href="#" onclick="exportLogs('pdf')" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">
+                        <i class="fas fa-file-pdf"></i> PDF Report
+                    </a>
+                    <a href="#" onclick="exportLogs('elastic')" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">
+                        <i class="fas fa-server"></i> Elasticsearch
+                    </a>
+                </div>
+            </div>
+        </div>
+        <button onclick="addLogSource()" class="btn-primary flex items-center gap-2">
+            <i class="fas fa-plus"></i>
+            Add Log Source
+        </button>
+    </div>
+</div>
+
+<!-- Quick Stats with Enhanced UI -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <!-- Total Logs Card -->
+    <div class="glass-card hover:scale-105 transition-transform">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Total Logs</p>
+                <p class="mt-2 text-3xl font-semibold text-white" id="totalLogs">0</p>
+                <p class="mt-1 text-sm text-gray-400" id="logsTrend"></p>
+            </div>
+            <div class="p-3 bg-primary-500/10 rounded-lg">
+                <i class="fas fa-list text-primary-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Rate Card -->
+    <div class="glass-card hover:scale-105 transition-transform">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Log Rate</p>
+                <p class="mt-2 text-3xl font-semibold text-white" id="logRate">0/s</p>
+                <p class="mt-1 text-sm text-gray-400" id="rateTrend"></p>
+            </div>
+            <div class="p-3 bg-green-500/10 rounded-lg">
+                <i class="fas fa-chart-line text-green-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Rate Card -->
+    <div class="glass-card hover:scale-105 transition-transform">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Error Rate</p>
+                <p class="mt-2 text-3xl font-semibold text-red-500" id="errorRate">0%</p>
+                <p class="mt-1 text-sm text-gray-400" id="errorTrend"></p>
+            </div>
+            <div class="p-3 bg-red-500/10 rounded-lg">
+                <i class="fas fa-exclamation-circle text-red-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Sources Card -->
+    <div class="glass-card hover:scale-105 transition-transform">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Active Sources</p>
+                <p class="mt-2 text-3xl font-semibold text-white" id="activeSources">0</p>
+                <p class="mt-1 text-sm text-gray-400" id="sourcesTrend"></p>
+            </div>
+            <div class="p-3 bg-blue-500/10 rounded-lg">
+                <i class="fas fa-plug text-blue-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left Column: Log Sources and Analysis -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Log Sources Card -->
+        <div class="glass-card">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <i class="fas fa-plug text-primary-500"></i>
+                    Log Sources
+                </h2>
+                <div class="flex items-center gap-2">
+                    <div class="relative">
+                        <input type="text" 
+                               placeholder="Search sources..." 
+                               class="form-input bg-gray-800/50 border-gray-700 text-sm"
+                               onkeyup="filterLogSources(this.value)">
+                        <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-700">
+                    <thead>
+                        <tr class="text-left">
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Rate</th>
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Last Update</th>
+                            <th class="px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700" id="log-sources">
+                        <!-- Filled by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Log Analysis Card -->
+        <div class="glass-card">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <i class="fas fa-chart-bar text-primary-500"></i>
+                    Log Analysis
+                </h2>
+                <div class="flex items-center gap-2">
+                    <select class="form-select bg-gray-800/50 border-gray-700 text-sm" 
+                            id="analysisType" 
+                            onchange="updateAnalysis()">
+                        <option value="trend">Trends</option>
+                        <option value="distribution">Distribution</option>
+                        <option value="sources">Sources</option>
+                        <option value="correlation">Correlation</option>
+                    </select>
+                    <div class="flex items-center gap-2">
+                        <button onclick="updateTimeRange('1h')" class="btn-secondary text-xs" id="timeRange1h">1H</button>
+                        <button onclick="updateTimeRange('24h')" class="btn-primary text-xs" id="timeRange24h">24H</button>
+                        <button onclick="updateTimeRange('7d')" class="btn-secondary text-xs" id="timeRange7d">7D</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="h-96">
+                <canvas id="analysisChart"></canvas>
+            </div>
+            
+            <div class="mt-6 grid grid-cols-2 gap-4" id="analysisStats">
+                <!-- Filled by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Live Log Feed -->
+    <div class="lg:col-span-1">
+        <div class="glass-card h-full flex flex-col">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <i class="fas fa-stream text-primary-500"></i>
+                    Live Log Feed
+                </h2>
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleLiveFeed()" class="btn-secondary text-sm" id="toggleLiveBtn">
+                        <i class="fas fa-pause"></i> Pause
+                    </button>
+                    <button onclick="clearLogFeed()" class="btn-secondary text-sm">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Log Level Filter -->
+            <div class="flex items-center gap-2 mb-4">
+                <button onclick="filterLogLevel('all')" class="btn-primary text-xs" id="filterAll">All</button>
+                <button onclick="filterLogLevel('error')" class="btn-secondary text-xs" id="filterError">Error</button>
+                <button onclick="filterLogLevel('warning')" class="btn-secondary text-xs" id="filterWarning">Warning</button>
+                <button onclick="filterLogLevel('info')" class="btn-secondary text-xs" id="filterInfo">Info</button>
+            </div>
+            
+            <!-- Live Log Feed -->
+            <div class="flex-1 overflow-y-auto space-y-2" id="logFeed">
+                <!-- Log entries will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Log Source Modal -->
+<div class="modal fade" id="addLogSourceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-gray-800 border border-gray-700">
+            <div class="modal-header border-b border-gray-700">
+                <h5 class="modal-title text-white">Add Log Source</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addLogSourceForm" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="form-label">Source Name</label>
+                            <input type="text" class="form-input" name="name" required>
+                        </div>
+                        <div>
+                            <label class="form-label">Source Type</label>
+                            <select class="form-select" name="type" required>
+                                <option value="syslog">Syslog</option>
+                                <option value="file">File</option>
+                                <option value="api">API</option>
+                                <option value="database">Database</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="form-label">Configuration</label>
+                        <textarea class="form-textarea" name="config" rows="4" required></textarea>
+                        <p class="text-sm text-gray-400 mt-1">Enter configuration in JSON format</p>
+                    </div>
+                    
+                    <div>
+                        <label class="form-label">Log Format</label>
+                        <select class="form-select" name="format" required>
+                            <option value="json">JSON</option>
+                            <option value="syslog">Syslog</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    
+                    <div id="customFormatContainer" class="hidden">
+                        <label class="form-label">Custom Format Pattern</label>
+                        <input type="text" class="form-input" name="format_pattern">
+                        <p class="text-sm text-gray-400 mt-1">Enter regex pattern for custom format</p>
+                    </div>
+                    
+                    <div>
+                        <label class="form-label">Tags</label>
+                        <input type="text" class="form-input" name="tags" placeholder="Enter tags separated by commas">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-t border-gray-700">
+                <button type="button" class="btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn-primary" onclick="submitLogSource()">Add Source</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+<script>
+// WebSocket connection management
+let ws = null;
+let isLive = true;
+let currentLogLevel = 'all';
+let messageBuffer = [];
+const MAX_BUFFER_SIZE = 1000;
+
+// Charts
+let analysisChart = null;
+
+// Initialize WebSocket connection
+function initWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/logs?api_key={{ api_key }}`;
+    
+    ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+        document.getElementById('wsStatus').className = 'badge bg-success';
+        document.getElementById('wsStatus').textContent = 'Connected';
+        showToast('WebSocket connected', 'success');
+    };
+    
+    ws.onclose = () => {
+        document.getElementById('wsStatus').className = 'badge bg-danger';
+        document.getElementById('wsStatus').textContent = 'Disconnected';
+        showToast('WebSocket disconnected', 'error');
+        setTimeout(initWebSocket, 5000); // Reconnect after 5 seconds
+    };
+    
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleLogMessage(data);
+    };
+}
+
+// Handle incoming log message
+function handleLogMessage(data) {
+    if (!isLive) return;
+    
+    // Update statistics
+    updateStatistics(data.stats);
+    
+    // Add to message buffer
+    messageBuffer.unshift(data.log);
+    if (messageBuffer.length > MAX_BUFFER_SIZE) {
+        messageBuffer.pop();
+    }
+    
+    // Update log feed
+    if (shouldDisplayLog(data.log)) {
+        appendLogEntry(data.log);
+    }
+    
+    // Update analysis if needed
+    if (data.analysis) {
+        updateAnalysis(data.analysis);
+    }
+}
+
+// Append log entry to feed
+function appendLogEntry(log) {
+    const feed = document.getElementById('logFeed');
+    const entry = document.createElement('div');
+    entry.className = `log-entry p-3 rounded-lg ${getLogLevelClass(log.level)} hover:bg-gray-700/50 transition-colors`;
+    
+    entry.innerHTML = `
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-medium ${getLogLevelTextClass(log.level)}">${log.level}</span>
+                    <span class="text-xs text-gray-400">${formatTimestamp(log.timestamp)}</span>
+                </div>
+                <p class="mt-1 text-sm text-gray-300">${escapeHtml(log.message)}</p>
+                <div class="mt-2 flex items-center gap-4 text-xs text-gray-400">
+                    <span><i class="fas fa-tag mr-1"></i> ${log.source}</span>
+                    ${log.tags ? `<span><i class="fas fa-hashtag mr-1"></i> ${log.tags.join(', ')}</span>` : ''}
+                </div>
+            </div>
+            <button onclick="showLogDetails('${log.id}')" class="btn-icon">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    `;
+    
+    feed.insertBefore(entry, feed.firstChild);
+    
+    // Limit feed to 100 entries
+    while (feed.children.length > 100) {
+        feed.removeChild(feed.lastChild);
+    }
+}
+
+// Update log sources table
+function updateLogSources(sources) {
+    const tbody = document.getElementById('log-sources');
+    tbody.innerHTML = '';
+    
+    sources.forEach(source => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-700/50 transition-colors';
+        tr.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas ${getSourceIcon(source.type)} text-primary-500"></i>
+                    </div>
+                    <div class="ml-4">
+                        <div class="text-sm font-medium text-white">${escapeHtml(source.name)}</div>
+                        <div class="text-sm text-gray-400">${escapeHtml(source.type)}</div>
+                    </div>
+                </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 py-1 text-xs font-medium rounded-full ${getStatusClass(source.status)}">
+                    ${source.status}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                ${source.logs_per_minute} logs/min
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                ${formatTimestamp(source.last_update)}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleLogSource('${source.id}')" class="btn-icon">
+                        <i class="fas ${source.status === 'active' ? 'fa-pause' : 'fa-play'}"></i>
+                    </button>
+                    <button onclick="editLogSource('${source.id}')" class="btn-icon">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteLogSource('${source.id}')" class="btn-icon text-red-500">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Helper functions
+function getLogLevelClass(level) {
+    const classes = {
+        'error': 'bg-red-500/10',
+        'warning': 'bg-yellow-500/10',
+        'info': 'bg-blue-500/10',
+        'debug': 'bg-gray-500/10'
+    };
+    return classes[level.toLowerCase()] || classes.debug;
+}
+
+function getLogLevelTextClass(level) {
+    const classes = {
+        'error': 'text-red-400',
+        'warning': 'text-yellow-400',
+        'info': 'text-blue-400',
+        'debug': 'text-gray-400'
+    };
+    return classes[level.toLowerCase()] || classes.debug;
+}
+
+function getSourceIcon(type) {
+    const icons = {
+        'syslog': 'fa-server',
+        'file': 'fa-file-alt',
+        'api': 'fa-code',
+        'database': 'fa-database'
+    };
+    return icons[type] || 'fa-plug';
+}
+
+function getStatusClass(status) {
+    const classes = {
+        'active': 'bg-green-500/20 text-green-400',
+        'inactive': 'bg-gray-500/20 text-gray-400',
+        'error': 'bg-red-500/20 text-red-400'
+    };
+    return classes[status] || classes.inactive;
+}
+
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleString();
+}
+
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    initWebSocket();
+    loadLogSources();
+    initAnalysisChart();
+    updateTimeRange('24h'); // Default to 24h view
+});
+
+// Export logs
+async function exportLogs(format) {
+    try {
+        const response = await fetch(`/api/logs/export?format=${format}`, {
+            headers: {
+                'X-API-Key': '{{ api_key }}'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to export logs');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `securenet_logs.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showToast(`Logs exported as ${format.toUpperCase()}`, 'success');
+    } catch (error) {
+        console.error('Error exporting logs:', error);
+        showToast('Failed to export logs', 'error');
+    }
+}
+
+// Event Listeners
+document.getElementById('toggleLiveBtn').addEventListener('click', function() {
+    isLive = !isLive;
+    this.innerHTML = isLive ? 
+        '<i class="fas fa-pause"></i> Pause' : 
+        '<i class="fas fa-play"></i> Resume';
+});
+
+// Initialize Alpine.js components
+document.addEventListener('alpine:init', () => {
+    Alpine.data('logSource', () => ({
+        showConfig: false,
+        toggleConfig() {
+            this.showConfig = !this.showConfig;
+        }
+    }));
+});
+</script>
+{% endblock %} 

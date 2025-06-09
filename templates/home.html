@@ -1,0 +1,771 @@
+{% extends "base.html" %}
+
+{% block title %}SecureNet - Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Welcome Section -->
+    <div class="card">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-white">Welcome to SecureNet</h1>
+                <p class="mt-2 text-gray-400">Enterprise-grade network security monitoring and management</p>
+            </div>
+            <div class="flex space-x-4">
+                <button onclick="startNewScan()" class="btn-primary flex items-center space-x-2" id="scanButton">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span>New Scan</span>
+                </button>
+                <button onclick="refreshDashboard()" class="btn-secondary flex items-center space-x-2" id="refreshButton">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Refresh</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Total Alerts -->
+        <div class="card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400">Total Alerts</p>
+                    <p class="mt-2 text-3xl font-semibold text-white" id="totalAlerts">Loading...</p>
+                    <p class="mt-2 text-sm" id="alertsTrend"></p>
+                </div>
+                <div class="p-3 bg-primary-500/10 rounded-lg">
+                    <svg class="h-6 w-6 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Threats -->
+        <div class="card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400">Active Threats</p>
+                    <p class="mt-2 text-3xl font-semibold text-white" id="activeThreats">Loading...</p>
+                    <p class="mt-2 text-sm" id="threatsTrend"></p>
+                </div>
+                <div class="p-3 bg-red-500/10 rounded-lg">
+                    <svg class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Health -->
+        <div class="card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400">Network Health</p>
+                    <p class="mt-2 text-3xl font-semibold text-white" id="networkHealth">Loading...</p>
+                    <p class="mt-2 text-sm" id="healthTrend"></p>
+                </div>
+                <div class="p-3 bg-green-500/10 rounded-lg">
+                    <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Protected Assets -->
+        <div class="card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400">Protected Assets</p>
+                    <p class="mt-2 text-3xl font-semibold text-white" id="protectedAssets">Loading...</p>
+                    <p class="mt-2 text-sm" id="assetsStatus"></p>
+                </div>
+                <div class="p-3 bg-blue-500/10 rounded-lg">
+                    <svg class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Recent Alerts -->
+        <div class="card">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-semibold text-white">Recent Alerts</h2>
+                <a href="/logs" class="text-sm text-primary-400 hover:text-primary-300">View all</a>
+            </div>
+            <div class="space-y-4" id="recentAlerts">
+                <div class="text-center py-8 text-gray-400">
+                    <svg class="animate-spin h-8 w-8 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Loading alerts...
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Activity -->
+        <div class="card">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-semibold text-white">Network Activity</h2>
+                <div class="flex space-x-2">
+                    <button onclick="updateNetworkActivity('1h')" class="btn-secondary text-xs" id="timeRange1h">1H</button>
+                    <button onclick="updateNetworkActivity('24h')" class="btn-primary text-xs" id="timeRange24h">24H</button>
+                    <button onclick="updateNetworkActivity('7d')" class="btn-secondary text-xs" id="timeRange7d">7D</button>
+                </div>
+            </div>
+            <div class="h-64">
+                <canvas id="networkActivityChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Security Score -->
+        <div class="card">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-semibold text-white">Security Score</h2>
+                <span class="text-sm" id="securityScoreStatus">Loading...</span>
+            </div>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-400">Overall Score</span>
+                    <span class="text-sm font-medium text-white" id="overallScore">Loading...</span>
+                </div>
+                <div class="h-2 bg-dark-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-green-500 rounded-full transition-all duration-500" id="scoreBar" style="width: 0%"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mt-4">
+                    <div class="p-4 bg-dark-100/50 rounded-lg">
+                        <p class="text-sm text-gray-400">Vulnerabilities</p>
+                        <p class="mt-1 text-lg font-semibold text-white" id="vulnerabilityStatus">Loading...</p>
+                    </div>
+                    <div class="p-4 bg-dark-100/50 rounded-lg">
+                        <p class="text-sm text-gray-400">Patch Status</p>
+                        <p class="mt-1 text-lg font-semibold text-white" id="patchStatus">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <h2 class="text-lg font-semibold text-white mb-6">Quick Actions</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="runSecurityScan()" class="p-4 bg-dark-100/50 rounded-lg hover:bg-dark-100 transition-colors text-left" id="scanActionButton">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-primary-500/10 rounded-lg">
+                            <svg class="h-5 w-5 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-white">Run Security Scan</p>
+                            <p class="text-xs text-gray-400">Check for vulnerabilities</p>
+                        </div>
+                    </div>
+                </button>
+                <button onclick="scheduleUpdate()" class="p-4 bg-dark-100/50 rounded-lg hover:bg-dark-100 transition-colors text-left" id="scheduleButton">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-blue-500/10 rounded-lg">
+                            <svg class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-white">Schedule Update</p>
+                            <p class="text-xs text-gray-400">Plan maintenance</p>
+                        </div>
+                    </div>
+                </button>
+                <button onclick="generateReport()" class="p-4 bg-dark-100/50 rounded-lg hover:bg-dark-100 transition-colors text-left" id="reportButton">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-purple-500/10 rounded-lg">
+                            <svg class="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-white">Generate Report</p>
+                            <p class="text-xs text-gray-400">Export security status</p>
+                        </div>
+                    </div>
+                </button>
+                <a href="/settings" class="p-4 bg-dark-100/50 rounded-lg hover:bg-dark-100 transition-colors text-left">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-yellow-500/10 rounded-lg">
+                            <svg class="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-white">Settings</p>
+                            <p class="text-xs text-gray-400">Configure system</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let networkChart = null;
+let ws = null;
+
+// Initialize WebSocket connection
+function initWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const apiKey = '{{ api_key }}';
+    
+    // Validate API key
+    if (!apiKey || apiKey === 'undefined') {
+        console.error('Invalid API key');
+        showNotification('Error: Invalid API key', 'error');
+        return;
+    }
+    
+    // Clean the API key by removing any comments or whitespace
+    const cleanApiKey = apiKey.split('#')[0].trim();
+    if (!cleanApiKey) {
+        console.error('Empty API key after cleaning');
+        showNotification('Error: Invalid API key format', 'error');
+        return;
+    }
+    
+    const wsUrl = `${protocol}//${window.location.host}/ws/notifications?api_key=${encodeURIComponent(cleanApiKey)}`;
+    
+    try {
+        ws = new WebSocket(wsUrl);
+        
+        ws.onopen = function() {
+            console.log('WebSocket connection established');
+        };
+        
+        ws.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                handleRealtimeUpdate(data);
+            } catch (error) {
+                console.error('Error handling WebSocket message:', error);
+            }
+        };
+        
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
+            showNotification('WebSocket connection error', 'error');
+        };
+        
+        ws.onclose = function(event) {
+            console.log('WebSocket connection closed:', event.code, event.reason);
+            // Only attempt to reconnect if the connection was not closed normally
+            if (event.code !== 1000) {
+                setTimeout(initWebSocket, 5000);
+            }
+        };
+    } catch (error) {
+        console.error('Error creating WebSocket connection:', error);
+        showNotification('Error establishing WebSocket connection', 'error');
+    }
+}
+
+// Handle real-time updates from WebSocket
+function handleRealtimeUpdate(data) {
+    switch(data.type) {
+        case 'stats':
+            updateStats(data.stats);
+            break;
+        case 'alert':
+            addNewAlert(data.alert);
+            break;
+        case 'network':
+            updateNetworkData(data.network);
+            break;
+        case 'security':
+            updateSecurityScore(data.security);
+            break;
+    }
+}
+
+// Update dashboard stats
+async function updateStats(stats) {
+    if (!stats) {
+        try {
+            const apiKey = '{{ api_key }}'.split('#')[0].trim();
+            if (!apiKey) {
+                throw new Error('Invalid API key');
+            }
+            
+            const response = await fetch('/api/stats/overview', {
+                headers: { 'X-API-Key': apiKey }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            stats = await response.json();
+        } catch (error) {
+            console.error('Error fetching stats:', error);
+            showNotification('Error fetching dashboard stats', 'error');
+            return;
+        }
+    }
+
+    // Update stats cards
+    document.getElementById('totalAlerts').textContent = stats.total_alerts.toLocaleString();
+    document.getElementById('activeThreats').textContent = stats.active_threats.toLocaleString();
+    document.getElementById('networkHealth').textContent = `${stats.network_health}%`;
+    document.getElementById('protectedAssets').textContent = stats.protected_assets.toLocaleString();
+
+    // Update trends
+    updateTrend('alertsTrend', stats.alerts_trend);
+    updateTrend('threatsTrend', stats.threats_trend);
+    updateTrend('healthTrend', stats.health_trend);
+    document.getElementById('assetsStatus').textContent = stats.assets_status;
+}
+
+// Update trend indicators
+function updateTrend(elementId, trend) {
+    const element = document.getElementById(elementId);
+    if (trend > 0) {
+        element.textContent = `↑ ${trend}% from last period`;
+        element.className = 'mt-2 text-sm text-red-400';
+    } else if (trend < 0) {
+        element.textContent = `↓ ${Math.abs(trend)}% from last period`;
+        element.className = 'mt-2 text-sm text-green-400';
+    } else {
+        element.textContent = 'No change from last period';
+        element.className = 'mt-2 text-sm text-gray-400';
+    }
+}
+
+// Load recent alerts
+async function loadRecentAlerts() {
+    try {
+        const apiKey = '{{ api_key }}'.split('#')[0].trim();
+        if (!apiKey) {
+            throw new Error('Invalid API key');
+        }
+        
+        const response = await fetch('/api/logs?limit=5', {
+            headers: { 'X-API-Key': apiKey }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        const alertsContainer = document.getElementById('recentAlerts');
+        alertsContainer.innerHTML = '';
+        
+        if (data.logs.length === 0) {
+            alertsContainer.innerHTML = `
+                <div class="text-center py-8 text-gray-400">
+                    No recent alerts
+                </div>
+            `;
+            return;
+        }
+        
+        data.logs.forEach(alert => {
+            addAlertToContainer(alert, alertsContainer);
+        });
+    } catch (error) {
+        console.error('Error loading alerts:', error);
+        showNotification('Error loading recent alerts', 'error');
+    }
+}
+
+// Add new alert to the container
+function addNewAlert(alert) {
+    const container = document.getElementById('recentAlerts');
+    const firstChild = container.firstChild;
+    
+    // Remove loading state if present
+    if (firstChild && firstChild.classList.contains('text-center')) {
+        container.innerHTML = '';
+    }
+    
+    // Add new alert at the top
+    addAlertToContainer(alert, container, true);
+    
+    // Remove oldest alert if more than 5
+    while (container.children.length > 5) {
+        container.removeChild(container.lastChild);
+    }
+}
+
+// Add alert to container
+function addAlertToContainer(alert, container, prepend = false) {
+    const alertElement = document.createElement('div');
+    alertElement.className = 'flex items-center justify-between p-4 bg-dark-100/50 rounded-lg';
+    alertElement.innerHTML = `
+        <div class="flex items-center space-x-4">
+            <div class="p-2 bg-${alert.severity === 'high' ? 'red' : alert.severity === 'medium' ? 'yellow' : 'blue'}-500/10 rounded-lg">
+                <svg class="h-5 w-5 text-${alert.severity === 'high' ? 'red' : alert.severity === 'medium' ? 'yellow' : 'blue'}-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-white">${alert.message}</p>
+                <p class="text-xs text-gray-400">${alert.source}</p>
+            </div>
+        </div>
+        <span class="text-xs text-gray-400">${formatTimeAgo(alert.timestamp)}</span>
+    `;
+    
+    if (prepend) {
+        container.insertBefore(alertElement, container.firstChild);
+    } else {
+        container.appendChild(alertElement);
+    }
+}
+
+// Format time ago
+function formatTimeAgo(timestamp) {
+    const seconds = Math.floor((new Date() - new Date(timestamp)) / 1000);
+    
+    if (seconds < 60) return `${seconds}s ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+// Update network activity chart
+async function updateNetworkActivity(timeRange = '24h') {
+    try {
+        const response = await fetch(`/api/network/traffic?range=${timeRange}`, {
+            headers: { 'X-API-Key': '{{ api_key }}' }
+        });
+        const data = await response.json();
+        
+        // Update active button
+        document.querySelectorAll('[id^="timeRange"]').forEach(btn => {
+            btn.className = btn.id === `timeRange${timeRange}` ? 'btn-primary text-xs' : 'btn-secondary text-xs';
+        });
+        
+        // Update chart
+        if (networkChart) {
+            networkChart.data.labels = data.labels;
+            networkChart.data.datasets[0].data = data.values;
+            networkChart.update();
+        } else {
+            initNetworkChart(data);
+        }
+    } catch (error) {
+        console.error('Error updating network activity:', error);
+    }
+}
+
+// Initialize network chart
+function initNetworkChart(data) {
+    const ctx = document.getElementById('networkActivityChart').getContext('2d');
+    networkChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Network Traffic',
+                data: data.values,
+                borderColor: '#0ea5e9',
+                backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#94a3b8'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#94a3b8'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Update security score
+async function updateSecurityScore(score) {
+    if (!score) {
+        try {
+            const response = await fetch('/api/security/score', {
+                headers: { 'X-API-Key': '{{ api_key }}' }
+            });
+            score = await response.json();
+        } catch (error) {
+            console.error('Error fetching security score:', error);
+            return;
+        }
+    }
+    
+    const scoreElement = document.getElementById('overallScore');
+    const scoreBar = document.getElementById('scoreBar');
+    const statusElement = document.getElementById('securityScoreStatus');
+    const vulnerabilityElement = document.getElementById('vulnerabilityStatus');
+    const patchElement = document.getElementById('patchStatus');
+    
+    // Update score
+    scoreElement.textContent = `${score.overall}/100`;
+    scoreBar.style.width = `${score.overall}%`;
+    
+    // Update status color
+    let statusColor = 'text-green-400';
+    if (score.overall < 60) statusColor = 'text-red-400';
+    else if (score.overall < 80) statusColor = 'text-yellow-400';
+    statusElement.className = `text-sm ${statusColor}`;
+    statusElement.textContent = score.status;
+    
+    // Update details
+    vulnerabilityElement.textContent = score.vulnerabilities;
+    patchElement.textContent = score.patch_status;
+}
+
+// Action handlers
+async function startNewScan() {
+    const button = document.getElementById('scanButton');
+    const originalText = button.innerHTML;
+    
+    try {
+        button.disabled = true;
+        button.innerHTML = `
+            <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Scanning...</span>
+        `;
+        
+        const response = await fetch('/api/scan/start', {
+            method: 'POST',
+            headers: { 'X-API-Key': '{{ api_key }}' }
+        });
+        
+        if (!response.ok) throw new Error('Failed to start scan');
+        
+        // The scan status will be updated via WebSocket
+    } catch (error) {
+        console.error('Error starting scan:', error);
+        showNotification('Error starting scan', 'error');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+async function refreshDashboard() {
+    const button = document.getElementById('refreshButton');
+    const originalText = button.innerHTML;
+    
+    try {
+        button.disabled = true;
+        button.innerHTML = `
+            <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Refreshing...</span>
+        `;
+        
+        await Promise.all([
+            updateStats(),
+            loadRecentAlerts(),
+            updateNetworkActivity(),
+            updateSecurityScore()
+        ]);
+    } catch (error) {
+        console.error('Error refreshing dashboard:', error);
+        showNotification('Error refreshing dashboard', 'error');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+async function runSecurityScan() {
+    const button = document.getElementById('scanActionButton');
+    const originalText = button.innerHTML;
+    
+    try {
+        button.disabled = true;
+        button.innerHTML = `
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-primary-500/10 rounded-lg">
+                    <svg class="animate-spin h-5 w-5 text-primary-500" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-white">Scanning...</p>
+                    <p class="text-xs text-gray-400">Please wait</p>
+                </div>
+            </div>
+        `;
+        
+        const response = await fetch('/api/security/scan', {
+            method: 'POST',
+            headers: { 'X-API-Key': '{{ api_key }}' }
+        });
+        
+        if (!response.ok) throw new Error('Failed to start security scan');
+        
+        showNotification('Security scan started', 'success');
+    } catch (error) {
+        console.error('Error running security scan:', error);
+        showNotification('Error starting security scan', 'error');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+async function scheduleUpdate() {
+    const button = document.getElementById('scheduleButton');
+    const originalText = button.innerHTML;
+    
+    try {
+        button.disabled = true;
+        button.innerHTML = `
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-blue-500/10 rounded-lg">
+                    <svg class="animate-spin h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-white">Scheduling...</p>
+                    <p class="text-xs text-gray-400">Please wait</p>
+                </div>
+            </div>
+        `;
+        
+        const response = await fetch('/api/maintenance/schedule', {
+            method: 'POST',
+            headers: { 'X-API-Key': '{{ api_key }}' }
+        });
+        
+        if (!response.ok) throw new Error('Failed to schedule update');
+        
+        showNotification('Update scheduled successfully', 'success');
+    } catch (error) {
+        console.error('Error scheduling update:', error);
+        showNotification('Error scheduling update', 'error');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+async function generateReport() {
+    const button = document.getElementById('reportButton');
+    const originalText = button.innerHTML;
+    
+    try {
+        button.disabled = true;
+        button.innerHTML = `
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-purple-500/10 rounded-lg">
+                    <svg class="animate-spin h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-white">Generating...</p>
+                    <p class="text-xs text-gray-400">Please wait</p>
+                </div>
+            </div>
+        `;
+        
+        const response = await fetch('/api/reports/generate', {
+            method: 'POST',
+            headers: { 'X-API-Key': '{{ api_key }}' }
+        });
+        
+        if (!response.ok) throw new Error('Failed to generate report');
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `security-report-${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showNotification('Report generated successfully', 'success');
+    } catch (error) {
+        console.error('Error generating report:', error);
+        showNotification('Error generating report', 'error');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed bottom-4 right-4 p-4 rounded-lg shadow-lg ${
+        type === 'error' ? 'bg-red-500' : 
+        type === 'success' ? 'bg-green-500' : 
+        'bg-blue-500'
+    } text-white`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize WebSocket connection
+    initWebSocket();
+    
+    // Load initial data
+    refreshDashboard();
+    
+    // Set up periodic refresh
+    setInterval(refreshDashboard, 30000);
+});
+</script>
+{% endblock %} 

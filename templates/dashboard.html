@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}SecureNet - Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="fas fa-shield-alt"></i>
+        SecureNet Control Panel
+    </h1>
+    <div class="header-actions">
+        <button class="button button-primary" onclick="openSettings()">
+            <i class="fas fa-cog"></i>
+            Settings
+        </button>
+    </div>
+</div>
+
+<!-- Service Controls -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-chart-line"></i>
+            Service Status
+        </h2>
+    </div>
+    <!-- Log Ingestion Service -->
+    <div class="service-card">
+        <div class="service-header">
+            <div class="service-info">
+                <div class="service-title">
+                    <i class="fas fa-database"></i>
+                    Log Ingestion Service
+                    <span class="status-indicator" id="ingestion-status"></span>
+                </div>
+                <div class="service-stats" id="ingestion-stats">No logs ingested yet</div>
+            </div>
+            <div class="service-actions">
+                <button class="button button-success" id="start-ingestion" onclick="toggleService('ingestion', true)">
+                    <i class="fas fa-play"></i>
+                    Start
+                </button>
+                <button class="button button-danger" id="stop-ingestion" onclick="toggleService('ingestion', false)">
+                    <i class="fas fa-stop"></i>
+                    Stop
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anomaly Detection Service -->
+    <div class="service-card">
+        <div class="service-header">
+            <div class="service-info">
+                <div class="service-title">
+                    <i class="fas fa-radar"></i>
+                    Anomaly Detection Service
+                    <span class="status-indicator" id="detection-status"></span>
+                </div>
+                <div class="service-stats" id="detection-stats">No anomalies detected yet</div>
+            </div>
+            <div class="service-actions">
+                <button class="button button-success" id="start-detection" onclick="toggleService('detection', true)">
+                    <i class="fas fa-play"></i>
+                    Start
+                </button>
+                <button class="button button-danger" id="stop-detection" onclick="toggleService('detection', false)">
+                    <i class="fas fa-stop"></i>
+                    Stop
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Service -->
+    <div class="service-card">
+        <div class="service-header">
+            <div class="service-info">
+                <div class="service-title">
+                    <i class="fas fa-bell"></i>
+                    Alert Service
+                    <span class="status-indicator" id="alert-status"></span>
+                </div>
+                <div class="service-stats" id="alert-stats">No alerts sent yet</div>
+            </div>
+            <div class="service-actions">
+                <button class="button button-success" id="start-alerts" onclick="toggleService('alerts', true)">
+                    <i class="fas fa-play"></i>
+                    Start
+                </button>
+                <button class="button button-danger" id="stop-alerts" onclick="toggleService('alerts', false)">
+                    <i class="fas fa-stop"></i>
+                    Stop
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Scanner Service -->
+    <div class="service-card">
+        <div class="service-header">
+            <div class="service-info">
+                <div class="service-title">
+                    <i class="fas fa-network-wired"></i>
+                    Network Scanner Service
+                    <span class="status-indicator" id="scanner-status"></span>
+                </div>
+                <div class="service-stats" id="scanner-stats">Scanner inactive</div>
+            </div>
+            <div class="service-actions">
+                <button class="button button-success" id="start-scanner" onclick="toggleService('scanner', true)">
+                    <i class="fas fa-play"></i>
+                    Start
+                </button>
+                <button class="button button-danger" id="stop-scanner" onclick="toggleService('scanner', false)">
+                    <i class="fas fa-stop"></i>
+                    Stop
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .service-card {
+        background: var(--neutral-50);
+        border: 1px solid var(--neutral-200);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .service-card:hover {
+        box-shadow: var(--shadow);
+        transform: translateY(-1px);
+    }
+
+    .service-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .service-info {
+        flex: 1;
+    }
+
+    .service-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--neutral-800);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .service-stats {
+        font-size: 0.875rem;
+        color: var(--neutral-600);
+    }
+
+    .service-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .service-actions .button {
+        min-width: 100px;
+    }
+</style>
+{% endblock %}

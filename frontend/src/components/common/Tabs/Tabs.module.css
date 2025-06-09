@@ -1,0 +1,215 @@
+.tabsContainer {
+  display: flex;
+  width: 100%;
+}
+
+.tabsList {
+  display: flex;
+  gap: 0.25rem;
+  background-color: var(--bg-secondary);
+}
+
+.tabsListFullWidth {
+  width: 100%;
+}
+
+.tabButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tabButton:hover:not(:disabled) {
+  color: var(--text-primary);
+}
+
+.tabButton:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-color-light);
+}
+
+.tabButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tabButtonActive {
+  color: var(--primary-color);
+}
+
+.tabButtonDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tabIcon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.125em;
+}
+
+.tabLabel {
+  font-weight: 500;
+}
+
+.tabBadge {
+  margin-left: 0.5rem;
+}
+
+.tabContent {
+  flex: 1;
+  padding: 1rem;
+  background-color: var(--bg-primary);
+}
+
+.tabContentBordered {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+}
+
+.tabLoading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+/* Variant styles */
+.tabsListLine {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tabButtonLine {
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tabButtonLineActive {
+  border-bottom-color: var(--primary-color);
+}
+
+.tabsListEnclosed {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 0.25rem;
+}
+
+.tabButtonEnclosed {
+  border-radius: calc(var(--border-radius) - 0.25rem);
+}
+
+.tabButtonEnclosedActive {
+  background-color: var(--bg-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.tabButtonSoftRounded {
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+}
+
+.tabButtonSoftRoundedActive {
+  background-color: var(--primary-color-light);
+  color: var(--primary-color);
+}
+
+.tabButtonSolidRounded {
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+}
+
+.tabButtonSolidRoundedActive {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+/* Size styles */
+.tabButtonSm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.tabButtonMd {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.tabButtonLg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+}
+
+/* Position styles */
+.tabsContainerTop {
+  flex-direction: column;
+}
+
+.tabsContainerBottom {
+  flex-direction: column-reverse;
+}
+
+.tabsListBottom {
+  border-top: 1px solid var(--border-color);
+  border-bottom: none;
+}
+
+.tabsContainerLeft {
+  flex-direction: row;
+}
+
+.tabsListLeft {
+  border-right: 1px solid var(--border-color);
+  border-bottom: none;
+  flex-direction: column;
+}
+
+.tabButtonLeft {
+  border-right: 2px solid transparent;
+  border-bottom: none;
+  margin-right: -1px;
+  margin-bottom: 0;
+}
+
+.tabButtonLeftActive {
+  border-right-color: var(--primary-color);
+  border-bottom-color: transparent;
+}
+
+.tabsContainerRight {
+  flex-direction: row-reverse;
+}
+
+.tabsListRight {
+  border-left: 1px solid var(--border-color);
+  border-bottom: none;
+  flex-direction: column;
+}
+
+.tabButtonRight {
+  border-left: 2px solid transparent;
+  border-bottom: none;
+  margin-left: -1px;
+  margin-bottom: 0;
+}
+
+.tabButtonRightActive {
+  border-left-color: var(--primary-color);
+  border-bottom-color: transparent;
+}
+
+.errorContainer {
+  padding: 1rem;
+  margin: 0.5rem 0;
+  border: 1px solid var(--error-color);
+  border-radius: var(--border-radius);
+  background-color: var(--error-bg);
+  color: var(--error-color);
+  text-align: center;
+  font-size: 0.875rem;
+} 
