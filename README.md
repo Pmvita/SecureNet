@@ -1,7 +1,7 @@
 # 🔐 SecureNet
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.txt)
+[![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE.txt)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.95.1-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com/)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
 [![Security](https://img.shields.io/badge/security-enhanced-blue.svg)](SECURITY.md)
@@ -202,7 +202,9 @@ We welcome contributions! SecureNet is built with modern technologies and follow
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see [LICENSE.txt](LICENSE.txt) for details.
+This project is **proprietary software** with **all rights reserved** - see [LICENSE.txt](LICENSE.txt) for details.
+
+**⚠️ RESTRICTED USE**: This software is for **personal evaluation only**. Commercial use, redistribution, or modification is **strictly prohibited** without written permission.
 
 ---
 
