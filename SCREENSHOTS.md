@@ -147,6 +147,33 @@
 
 ---
 
+## 👤 Profile Settings
+
+### Profile Management
+![Profile](screenshots/profile-settings.png)
+*Profile management interface featuring:*
+
+#### User Management
+- **User profile creation** and management
+- **User role assignment** with access permissions
+- **Password management** with secure storage
+- **User preferences** and notification settings
+
+---
+
+## ⚙️ Preferences
+
+### Preferences Management
+![Preferences](screenshots/Preferences.png)
+*Preferences management interface featuring:*
+
+#### User Preferences
+- **User interface customization** with theme selection
+- **Notification settings** and preferences
+- **Language support** and localization
+
+---
+
 ## 🚨 Anomaly Detection
 
 ### Anomaly Analysis Interface

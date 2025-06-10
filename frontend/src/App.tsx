@@ -4,6 +4,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ToastProvider } from './components/common/ToastContainer';
 import { AuthProvider } from './features/auth/context/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { DashboardLayout } from './components/layout/DashboardLayout';
@@ -13,6 +14,9 @@ import { SecurityPage } from './features/security/pages/SecurityPage';
 import { NetworkPage } from './features/network/pages/NetworkPage';
 import { AnomaliesPage } from './features/anomalies/pages/AnomaliesPage';
 import { SettingsPage } from './features/settings/pages/SettingsPage';
+import { ProfilePage } from './features/profile/pages/ProfilePage';
+import { PreferencesPage } from './features/preferences/pages/PreferencesPage';
+import { NotificationsPage } from './features/notifications/pages/NotificationsPage';
 import { initializeApiClient } from './api/client';
 import LoadingSpinner from './components/LoadingSpinner';
 
@@ -89,9 +93,10 @@ const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <Router>
-          <AuthProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <Router>
+            <AuthProvider>
             <Routes>
               {!DEV_MODE && <Route path="/login" element={<LoginPage />} />}
               {DEV_MODE && <Route path="/login" element={<Navigate to="/" replace />} />}
@@ -114,6 +119,9 @@ const App: React.FC = () => {
                             </ProtectedRoute>
                           }
                         />
+                        <Route path="profile" element={<ProfilePage />} />
+                        <Route path="preferences" element={<PreferencesPage />} />
+                        <Route path="notifications" element={<NotificationsPage />} />
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>
                     </DashboardLayout>
@@ -125,6 +133,7 @@ const App: React.FC = () => {
         </Router>
       </ToastProvider>
       <ReactQueryDevtools initialIsOpen={false} />
+      </ThemeProvider>
     </ErrorBoundary>
   );
 };

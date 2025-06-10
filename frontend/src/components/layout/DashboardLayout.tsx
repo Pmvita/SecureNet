@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import {
   ChartBarIcon,
   ShieldCheckIcon,
@@ -18,6 +18,7 @@ import {
   SunIcon,
   MoonIcon,
 } from '@heroicons/react/24/outline';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export interface NavigationItem {
   path: string;
@@ -48,8 +49,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const { theme, actualTheme, setTheme } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
@@ -193,11 +195,19 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               <div className="flex items-center space-x-4">
                 {/* Theme Toggle */}
                 <button
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  onClick={() => {
+                    if (theme === 'dark') {
+                      setTheme('light');
+                    } else if (theme === 'light') {
+                      setTheme('system');
+                    } else {
+                      setTheme('dark');
+                    }
+                  }}
                   className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-                  title="Toggle theme"
+                  title={`Current: ${theme} theme - Click to cycle`}
                 >
-                  {theme === 'dark' ? (
+                  {actualTheme === 'dark' ? (
                     <SunIcon className="w-5 h-5" />
                   ) : (
                     <MoonIcon className="w-5 h-5" />
@@ -255,7 +265,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                         ))}
                       </div>
                       <div className="p-3 border-t border-gray-700">
-                        <button className="w-full text-sm text-blue-400 hover:text-blue-300 transition-colors">
+                        <button 
+                          onClick={() => {
+                            setNotificationsOpen(false);
+                            navigate('/notifications');
+                          }}
+                          className="w-full text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                        >
                           View all notifications
                         </button>
                       </div>
@@ -294,11 +310,23 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                         </div>
                       </div>
                       <div className="py-2">
-                        <button className="w-full flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors">
+                        <button 
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            navigate('/profile');
+                          }}
+                          className="w-full flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+                        >
                           <UserCircleIcon className="w-4 h-4 mr-3" />
                           Profile Settings
                         </button>
-                        <button className="w-full flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors">
+                        <button 
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            navigate('/preferences');
+                          }}
+                          className="w-full flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+                        >
                           <Cog6ToothIcon className="w-4 h-4 mr-3" />
                           Preferences
                         </button>
