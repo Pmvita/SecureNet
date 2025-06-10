@@ -10,6 +10,7 @@ import {
   BuildingOfficeIcon,
   DocumentTextIcon,
   CameraIcon,
+  CheckCircleIcon,
 } from '@heroicons/react/24/outline';
 
 interface UserProfile {
@@ -89,7 +90,26 @@ const mockProfile: UserProfile = {
 };
 
 export const ProfilePage: React.FC = () => {
-  const [profile, setProfile] = useState<UserProfile>(mockProfile);
+  // Check if we're in development mode
+  const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
+  
+  // Initialize profile data based on environment
+  const [profile, setProfile] = useState<UserProfile>(DEV_MODE ? mockProfile : {
+    id: '',
+    username: '',
+    email: '',
+    name: '',
+    role: 'viewer',
+    status: 'active',
+    lastLogin: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    department: '',
+    title: '',
+    phone: '',
+    permissions: [],
+    activityLog: [],
+  });
+  
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: profile.name,
@@ -98,6 +118,17 @@ export const ProfilePage: React.FC = () => {
     department: profile.department || '',
     title: profile.title || '',
   });
+
+  // TODO: In real API mode, fetch profile data from backend
+  React.useEffect(() => {
+    if (!DEV_MODE) {
+      // Here you would fetch real profile data from the API
+      // For now, we'll use a placeholder to avoid errors
+      console.log('Real API mode: Would fetch profile data from /api/profile');
+      // Example API call (uncomment when backend endpoint exists):
+      // fetchProfileData().then(setProfile);
+    }
+  }, [DEV_MODE]);
 
   const handleSave = () => {
     setProfile({ ...profile, ...editForm });

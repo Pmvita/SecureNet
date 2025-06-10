@@ -86,9 +86,23 @@ const mockNotifications: Notification[] = [
 ];
 
 export const NotificationsPage: React.FC = () => {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  // Check if we're in development mode
+  const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
+  
+  // Initialize notifications based on environment
+  const [notifications, setNotifications] = useState<Notification[]>(DEV_MODE ? mockNotifications : []);
   const [filter, setFilter] = useState<'all' | 'unread' | 'security' | 'system' | 'network' | 'user'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // TODO: In real API mode, fetch notifications from backend
+  React.useEffect(() => {
+    if (!DEV_MODE) {
+      // Here you would fetch real notifications from the API
+      console.log('Real API mode: Would fetch notifications from /api/notifications');
+      // Example API call (uncomment when backend endpoint exists):
+      // fetchNotifications().then(setNotifications);
+    }
+  }, [DEV_MODE]);
 
   const getTypeIcon = (type: string) => {
     switch (type) {

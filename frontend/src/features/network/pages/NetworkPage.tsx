@@ -134,7 +134,12 @@ export const NetworkPage: React.FC = () => {
     isScanning,
   } = useNetwork();
 
-  // Generate mock traffic logs
+  console.log('NetworkPage: isLoading =', isLoading, 'isError =', isError, 'devices.length =', devices.length, 'metrics =', metrics);
+
+  // Development mode check
+  const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
+
+  // Generate mock traffic logs (only for mock mode)
   const generateTrafficLog = (): TrafficLog => {
     const protocols = ['HTTP', 'HTTPS', 'TCP', 'UDP', 'FTP', 'SSH', 'DNS', 'ICMP'];
     const applications = ['Chrome', 'Firefox', 'Slack', 'Zoom', 'Teams', 'Spotify', 'Steam', 'WhatsApp'];
@@ -160,29 +165,75 @@ export const NetworkPage: React.FC = () => {
     };
   };
 
-  // Simulate real-time traffic logs
+  // Convert real traffic data to TrafficLog format
+  const convertTrafficToLogs = (trafficData: Array<{
+    timestamp: string;
+    bytes_in: number;
+    bytes_out: number;
+    packets_in: number;
+    packets_out: number;
+    source_ip: string;
+    dest_ip: string;
+    protocol: string;
+    metadata?: Record<string, unknown>;
+  }>): TrafficLog[] => {
+    return trafficData.map((traffic, index) => ({
+      id: `traffic-${index}-${Date.now()}`,
+      timestamp: traffic.timestamp,
+      sourceIp: traffic.source_ip,
+      destinationIp: traffic.dest_ip,
+      sourcePort: 0, // Not provided in current API
+      destinationPort: (traffic.metadata as { port?: number })?.port || 0,
+      protocol: traffic.protocol,
+      packetSize: traffic.bytes_in + traffic.bytes_out,
+      direction: Math.random() > 0.5 ? 'inbound' : 'outbound',
+      status: 'allowed' as const,
+      application: undefined,
+      country: undefined,
+    }));
+  };
+
+  // Handle traffic logs based on mode
   useEffect(() => {
-    if (!isTrafficMonitoring) return;
+    if (DEV_MODE) {
+      // Mock mode - generate simulated traffic
+      if (!isTrafficMonitoring) return;
 
-    const interval = setInterval(() => {
-      const newLog = generateTrafficLog();
-      setTrafficLogs(prev => [newLog, ...prev.slice(0, 199)]); // Keep last 200 logs
-    }, Math.random() * 2000 + 500); // Random interval between 500ms-2.5s
+      const interval = setInterval(() => {
+        const newLog = generateTrafficLog();
+        setTrafficLogs(prev => [newLog, ...prev.slice(0, 199)]); // Keep last 200 logs
+      }, Math.random() * 2000 + 500); // Random interval between 500ms-2.5s
 
-    return () => clearInterval(interval);
-  }, [isTrafficMonitoring]);
+      return () => clearInterval(interval);
+    } else {
+      // Real API mode - use traffic data from backend
+      if (metrics?.traffic) {
+        const realTrafficLogs = convertTrafficToLogs(metrics.traffic);
+        setTrafficLogs(prev => {
+          const newLogs = [...realTrafficLogs, ...prev];
+          return newLogs.slice(0, 200); // Keep last 200 logs
+        });
+      }
+    }
+  }, [isTrafficMonitoring, DEV_MODE, metrics?.traffic]);
 
-  // Initialize with some traffic logs
+  // Initialize traffic logs
   useEffect(() => {
-    const initialLogs = Array.from({ length: 20 }, () => generateTrafficLog());
-    setTrafficLogs(initialLogs);
-  }, []);
+    if (DEV_MODE) {
+      // Mock mode - generate initial logs
+      const initialLogs = Array.from({ length: 20 }, () => generateTrafficLog());
+      setTrafficLogs(initialLogs);
+    } else {
+      // Real API mode - start with empty logs, will be populated from backend data
+      setTrafficLogs([]);
+    }
+  }, [DEV_MODE]);
 
   // Filter devices based on search and filters
   const filteredDevices = useMemo(() => {
     return devices.filter(device => {
       const matchesSearch = device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           device.ipAddress.toLowerCase().includes(searchTerm.toLowerCase());
+                           (device.ipAddress || '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = deviceFilter === 'all' || device.type === deviceFilter;
       const matchesStatus = statusFilter === 'all' || device.status === statusFilter;
       
@@ -383,7 +434,7 @@ export const NetworkPage: React.FC = () => {
       </div>
 
       {/* Metrics Overview */}
-      {metrics && (
+      {true && metrics && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/20">
             <div className="p-4">

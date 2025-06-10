@@ -45,10 +45,39 @@ const mockPreferences: Preferences = {
 };
 
 export const PreferencesPage: React.FC = () => {
-  const [preferences, setPreferences] = useState<Preferences>(mockPreferences);
+  // Check if we're in development mode
+  const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
+  
+  // Initialize preferences based on environment
+  const [preferences, setPreferences] = useState<Preferences>(DEV_MODE ? mockPreferences : {
+    notifications: {
+      desktop: false,
+      email: false,
+      sounds: false,
+      security: false,
+      system: false,
+    },
+    dashboard: {
+      autoRefresh: false,
+      refreshInterval: 30,
+      compactMode: false,
+      showTooltips: true,
+    },
+  });
+  
   const [hasChanges, setHasChanges] = useState(false);
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+
+  // TODO: In real API mode, fetch preferences from backend
+  React.useEffect(() => {
+    if (!DEV_MODE) {
+      // Here you would fetch real preferences from the API
+      console.log('Real API mode: Would fetch preferences from /api/preferences');
+      // Example API call (uncomment when backend endpoint exists):
+      // fetchPreferences().then(setPreferences);
+    }
+  }, [DEV_MODE]);
 
   const updatePreference = (path: string, value: boolean | number) => {
     setPreferences(prev => {
@@ -84,7 +113,21 @@ export const PreferencesPage: React.FC = () => {
   };
 
   const handleReset = () => {
-    setPreferences(mockPreferences);
+    setPreferences(DEV_MODE ? mockPreferences : {
+      notifications: {
+        desktop: false,
+        email: false,
+        sounds: false,
+        security: false,
+        system: false,
+      },
+      dashboard: {
+        autoRefresh: false,
+        refreshInterval: 30,
+        compactMode: false,
+        showTooltips: true,
+      },
+    });
     setHasChanges(false);
   };
 

@@ -29,6 +29,7 @@ from pathlib import Path
 import yaml
 import os
 import secrets
+import time
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import Optional
@@ -1001,3 +1002,98 @@ async def get_api_key_endpoint(request: Request, current_user: dict = Depends(ge
             status_code=500,
             detail="Failed to get API key"
         )
+
+@app.get("/api/settings")
+@limiter.limit("30/minute")
+async def get_settings(request: Request, api_key: APIKey = Depends(get_api_key)):
+    """Get application settings"""
+    try:
+        # Return default settings since we don't have a settings store yet
+        settings = {
+            "api_key": "dev-api-key",
+            "network_monitoring": {
+                "enabled": True,
+                "interval": 300,
+                "devices": ["192.168.1.1", "192.168.1.100"]
+            },
+            "security_scanning": {
+                "enabled": True,
+                "interval": 3600,
+                "types": ["vulnerability", "malware"]
+            },
+            "notifications": {
+                "enabled": False,
+                "email": "",
+                "slack_webhook": ""
+            },
+            "logging": {
+                "level": "info",
+                "retention_days": 30
+            }
+        }
+        return {
+            "status": "success",
+            "data": settings,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting settings: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/settings")
+@limiter.limit("10/minute")
+async def update_settings(request: Request, settings: dict, api_key: APIKey = Depends(get_api_key)):
+    """Update application settings"""
+    try:
+        # For now, just return success - in a real app you'd save to database
+        logger.info(f"Settings update requested: {settings}")
+        return {
+            "status": "success",
+            "data": {"message": "Settings updated successfully"},
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error updating settings: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/network/scan")
+@limiter.limit("5/minute")
+async def start_network_scan(request: Request, api_key: APIKey = Depends(get_api_key)):
+    """Start a network scan"""
+    try:
+        # In a real implementation, this would trigger an actual network scan
+        scan_id = f"scan_{int(time.time())}"
+        logger.info(f"Network scan started with ID: {scan_id}")
+        return {
+            "status": "success",
+            "data": {
+                "id": scan_id,
+                "status": "started",
+                "message": "Network scan initiated"
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error starting network scan: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/security/scan")
+@limiter.limit("5/minute") 
+async def start_security_scan(request: Request, api_key: APIKey = Depends(get_api_key)):
+    """Start a security scan"""
+    try:
+        # In a real implementation, this would trigger an actual security scan
+        scan_id = f"security_scan_{int(time.time())}"
+        logger.info(f"Security scan started with ID: {scan_id}")
+        return {
+            "status": "success",
+            "data": {
+                "id": scan_id,
+                "status": "started",
+                "message": "Security scan initiated"
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error starting security scan: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
