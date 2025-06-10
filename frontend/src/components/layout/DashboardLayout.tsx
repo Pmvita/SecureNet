@@ -1,5 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import {
+  ChartBarIcon,
+  ShieldCheckIcon,
+  DocumentTextIcon,
+  GlobeAltIcon,
+  ExclamationTriangleIcon,
+  Cog6ToothIcon,
+  BellIcon,
+  UserCircleIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MagnifyingGlassIcon,
+  ChevronDownIcon,
+  ArrowRightOnRectangleIcon,
+  UserIcon,
+  SunIcon,
+  MoonIcon,
+} from '@heroicons/react/24/outline';
 
 export interface NavigationItem {
   path: string;
@@ -12,221 +30,298 @@ export interface DashboardLayoutProps {
   navigationItems: NavigationItem[];
 }
 
+// Icon mapping for modern icons
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  '📊': ChartBarIcon,
+  '📝': DocumentTextIcon,
+  '🔒': ShieldCheckIcon,
+  '🌐': GlobeAltIcon,
+  '⚠️': ExclamationTriangleIcon,
+  '⚙️': Cog6ToothIcon,
+};
+
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   children,
   navigationItems,
 }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const location = useLocation();
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+
+  // Mock notifications data
+  const notifications = [
+    { id: 1, title: 'New security alert detected', time: '2 min ago', type: 'warning', unread: true },
+    { id: 2, title: 'Network scan completed', time: '5 min ago', type: 'success', unread: true },
+    { id: 3, title: 'System update available', time: '1 hour ago', type: 'info', unread: false },
+  ];
+
+  const unreadCount = notifications.filter(n => n.unread).length;
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
-    <div className="dashboard-layout">
-      <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
-        <div className="sidebar-header">
-          <h1 className="logo">SecureNet</h1>
-          <button
-            className="collapse-button"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {sidebarCollapsed ? '→' : '←'}
-          </button>
-        </div>
-        <nav className="navigation">
-          {navigationItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+    <div className="min-h-screen bg-gray-950">
+      {/* Enhanced Sidebar */}
+      <aside className={`fixed left-0 top-0 h-full bg-gradient-to-b from-gray-900 to-gray-950 border-r border-gray-800 transition-all duration-300 z-40 ${
+        sidebarCollapsed ? 'w-16' : 'w-64'
+      }`}>
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-gray-800">
+          <div className="flex items-center justify-between">
+            {!sidebarCollapsed && (
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <ShieldCheckIcon className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-white">SecureNet</h1>
+                  <p className="text-xs text-gray-400">Security Operations</p>
+                </div>
+              </div>
+            )}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              <span className="nav-icon">{item.icon}</span>
-              {!sidebarCollapsed && <span className="nav-label">{item.label}</span>}
-            </Link>
-          ))}
-        </nav>
-      </aside>
-      <main className="main-content">
-        <header className="top-bar">
-          <div className="breadcrumb">
-            {navigationItems.find((item) => item.path === location.pathname)?.label || 'Dashboard'}
-          </div>
-          <div className="user-menu">
-            <button className="user-button">
-              <span className="user-avatar">👤</span>
-              <span className="user-name">Admin</span>
+              {sidebarCollapsed ? (
+                <ChevronRightIcon className="w-5 h-5" />
+              ) : (
+                <ChevronLeftIcon className="w-5 h-5" />
+              )}
             </button>
           </div>
+        </div>
+
+        {/* Search Bar */}
+        {!sidebarCollapsed && (
+          <div className="p-4">
+            <div className="relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          {navigationItems.map((item) => {
+            const IconComponent = iconMap[item.icon] || ChartBarIcon;
+            const isActive = location.pathname === item.path;
+            
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
+                  isActive
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                }`}
+                title={sidebarCollapsed ? item.label : undefined}
+              >
+                <IconComponent className={`flex-shrink-0 w-5 h-5 ${
+                  isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'
+                }`} />
+                {!sidebarCollapsed && (
+                  <span className="ml-3 truncate">{item.label}</span>
+                )}
+                {!sidebarCollapsed && isActive && (
+                  <div className="ml-auto w-2 h-2 bg-white rounded-full opacity-75"></div>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Sidebar Footer */}
+        {!sidebarCollapsed && (
+          <div className="p-4 border-t border-gray-800">
+            <div className="flex items-center justify-between text-xs text-gray-400">
+              <span>v2.1.0</span>
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span>Online</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </aside>
+
+      {/* Main Content */}
+      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
+        {/* Enhanced Top Bar */}
+        <header className="sticky top-0 z-30 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              {/* Breadcrumb */}
+              <div className="flex items-center space-x-2">
+                <h2 className="text-xl font-semibold text-white">
+                  {navigationItems.find((item) => item.path === location.pathname)?.label || 'Dashboard'}
+                </h2>
+                <div className="hidden sm:flex items-center text-sm text-gray-400">
+                  <span>/</span>
+                  <span className="ml-2">Security Operations Center</span>
+                </div>
+              </div>
+
+              {/* Top Bar Actions */}
+              <div className="flex items-center space-x-4">
+                {/* Theme Toggle */}
+                <button
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+                  title="Toggle theme"
+                >
+                  {theme === 'dark' ? (
+                    <SunIcon className="w-5 h-5" />
+                  ) : (
+                    <MoonIcon className="w-5 h-5" />
+                  )}
+                </button>
+
+                {/* Notifications */}
+                <div className="relative" ref={notificationsRef}>
+                  <button
+                    onClick={() => setNotificationsOpen(!notificationsOpen)}
+                    className="relative p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+                    title="Notifications"
+                  >
+                    <BellIcon className="w-5 h-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Notifications Dropdown */}
+                  {notificationsOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-80 bg-gray-800 rounded-xl border border-gray-700 shadow-2xl">
+                      <div className="p-4 border-b border-gray-700">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-white">Notifications</h3>
+                          {unreadCount > 0 && (
+                            <span className="text-sm text-blue-400">{unreadCount} new</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto">
+                        {notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className={`p-4 border-b border-gray-700 last:border-b-0 hover:bg-gray-750 transition-colors ${
+                              notification.unread ? 'bg-gray-750/50' : ''
+                            }`}
+                          >
+                            <div className="flex items-start space-x-3">
+                              <div className={`w-2 h-2 rounded-full mt-2 ${
+                                notification.type === 'warning' ? 'bg-yellow-500' :
+                                notification.type === 'success' ? 'bg-green-500' : 'bg-blue-500'
+                              }`}></div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-white">{notification.title}</p>
+                                <p className="text-xs text-gray-400 mt-1">{notification.time}</p>
+                              </div>
+                              {notification.unread && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="p-3 border-t border-gray-700">
+                        <button className="w-full text-sm text-blue-400 hover:text-blue-300 transition-colors">
+                          View all notifications
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* User Menu */}
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center space-x-3 p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+                  >
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <UserIcon className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="hidden sm:block text-left">
+                      <p className="text-sm font-medium text-white">Admin User</p>
+                      <p className="text-xs text-gray-400">Administrator</p>
+                    </div>
+                    <ChevronDownIcon className={`w-4 h-4 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* User Dropdown */}
+                  {userMenuOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-gray-800 rounded-xl border border-gray-700 shadow-2xl">
+                      <div className="p-4 border-b border-gray-700">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                            <UserIcon className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-white">Admin User</p>
+                            <p className="text-xs text-gray-400">admin@securenet.com</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="py-2">
+                        <button className="w-full flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors">
+                          <UserCircleIcon className="w-4 h-4 mr-3" />
+                          Profile Settings
+                        </button>
+                        <button className="w-full flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors">
+                          <Cog6ToothIcon className="w-4 h-4 mr-3" />
+                          Preferences
+                        </button>
+                      </div>
+                      <div className="py-2 border-t border-gray-700">
+                        <button className="w-full flex items-center px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-gray-700 transition-colors">
+                          <ArrowRightOnRectangleIcon className="w-4 h-4 mr-3" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </header>
-        <div className="content">{children}</div>
-      </main>
-      <style>{`
-        .dashboard-layout {
-          display: grid;
-          grid-template-columns: auto 1fr;
-          min-height: 100vh;
-          background: var(--bg-primary);
-        }
 
-        .sidebar {
-          width: 240px;
-          background: var(--bg-secondary);
-          border-right: 1px solid var(--border-color);
-          transition: width 0.3s ease;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .sidebar.collapsed {
-          width: 64px;
-        }
-
-        .sidebar-header {
-          padding: 1rem;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          border-bottom: 1px solid var(--border-color);
-        }
-
-        .logo {
-          font-size: 1.25rem;
-          font-weight: 600;
-          color: var(--text-primary);
-          margin: 0;
-          white-space: nowrap;
-          overflow: hidden;
-        }
-
-        .collapse-button {
-          background: none;
-          border: none;
-          color: var(--text-secondary);
-          cursor: pointer;
-          padding: 0.5rem;
-          font-size: 1rem;
-          transition: color 0.2s;
-        }
-
-        .collapse-button:hover {
-          color: var(--text-primary);
-        }
-
-        .navigation {
-          padding: 1rem 0;
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-        }
-
-        .nav-item {
-          display: flex;
-          align-items: center;
-          padding: 0.75rem 1rem;
-          color: var(--text-secondary);
-          text-decoration: none;
-          transition: all 0.2s;
-          border-radius: 0.25rem;
-          margin: 0 0.5rem;
-        }
-
-        .nav-item:hover {
-          background: var(--bg-hover);
-          color: var(--text-primary);
-        }
-
-        .nav-item.active {
-          background: var(--primary-color);
-          color: white;
-        }
-
-        .nav-icon {
-          font-size: 1.25rem;
-          min-width: 1.5rem;
-          text-align: center;
-        }
-
-        .nav-label {
-          margin-left: 0.75rem;
-          white-space: nowrap;
-          overflow: hidden;
-        }
-
-        .main-content {
-          display: flex;
-          flex-direction: column;
-          min-width: 0;
-        }
-
-        .top-bar {
-          height: 64px;
-          background: var(--bg-secondary);
-          border-bottom: 1px solid var(--border-color);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 0 1.5rem;
-        }
-
-        .breadcrumb {
-          font-size: 1.25rem;
-          font-weight: 500;
-          color: var(--text-primary);
-        }
-
-        .user-menu {
-          display: flex;
-          align-items: center;
-        }
-
-        .user-button {
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          background: none;
-          border: none;
-          padding: 0.5rem;
-          cursor: pointer;
-          color: var(--text-primary);
-          border-radius: 0.25rem;
-          transition: background-color 0.2s;
-        }
-
-        .user-button:hover {
-          background: var(--bg-hover);
-        }
-
-        .user-avatar {
-          font-size: 1.25rem;
-        }
-
-        .user-name {
-          font-size: 0.875rem;
-        }
-
-        .content {
-          flex: 1;
-          padding: 1.5rem;
-          overflow-y: auto;
-        }
-
-        @media (max-width: 768px) {
-          .sidebar {
-            position: fixed;
-            height: 100vh;
-            z-index: 1000;
-            transform: translateX(0);
-            transition: transform 0.3s ease;
-          }
-
-          .sidebar.collapsed {
-            transform: translateX(-100%);
-          }
-
-          .main-content {
-            grid-column: 1 / -1;
-          }
-        }
-      `}</style>
+        {/* Page Content */}
+        <main className="p-6">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }; 
