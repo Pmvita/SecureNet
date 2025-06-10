@@ -100,8 +100,8 @@ export const useAnomalies = (options: UseAnomaliesOptions = {}) => {
     staleTime: 30000,
   });
 
-  const anomalies = (anomaliesData?.data && typeof anomaliesData.data === "object" && anomaliesData.data.data?.items) ?? [];
-  const total = (anomaliesData?.data && typeof anomaliesData.data === "object" && anomaliesData.data.data?.total) ?? 0;
+  const anomalies = anomaliesData?.data?.items ?? [];
+  const total = anomaliesData?.data?.total ?? 0;
 
   const {
     data: metricsData,

@@ -169,19 +169,29 @@ export const useNetwork = (options: UseNetworkOptions = {}) => {
       }
 
       try {
+        console.log('Network API: Making request to /api/network');
         const response = await apiClient.get<ApiResponse<NetworkResponseData>>('/api/network');
-        if (!response.data) {
+        console.log('Network API: Response received', response);
+        
+        if (!response || !response.data) {
+          console.error('Network API: No data received from the network endpoint');
           throw new Error('No data received from the network endpoint');
         }
-        if (response.data.status !== 'success') {
+        
+        if (response.status !== 'success') {
+          console.error('Network API: Request failed with status', response.status);
           throw new Error('Network request failed');
         }
+        
+        console.log('Network API: Success, returning data');
         return response;
       } catch (error) {
+        console.error('Network API: Error caught', error);
         if (error instanceof Error) {
           throw error;
         }
         if (axios.isAxiosError(error)) {
+          console.error('Network API: Axios error', error.response?.data, error.message);
           throw new Error(error.response?.data?.message || error.message || 'Network request failed');
         }
         throw new Error('Failed to fetch network data');

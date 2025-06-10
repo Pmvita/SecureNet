@@ -47,8 +47,17 @@ export function useSecurity() {
         };
       }
 
-      const response = await apiClient.get<SecurityResponse>('/api/security');
-      return response;
+      try {
+        const response = await apiClient.get<SecurityResponse>('/api/security');
+        console.log('Security API response:', response);
+        if (!response || !response.data) {
+          throw new Error('Invalid response from security API');
+        }
+        return response;
+      } catch (error) {
+        console.error('Security API error:', error);
+        throw error;
+      }
     },
     refetchInterval: DEV_MODE ? false : 60000, // Changed from 30000 to 60000 (1 minute)
     staleTime: 30000, // Consider data fresh for 30 seconds

@@ -163,6 +163,68 @@ async def dashboard(request: Request):
     conn.close()
     return templates.TemplateResponse("dashboard.html", {"request": request, "anomalies": anomalies})
 
+# Anomalies endpoints (must come before generic service routes)
+@app.get("/api/anomalies/list")
+@limiter.limit("30/minute")
+async def get_anomalies_list(
+    request: Request,
+    page: int = 1,
+    page_size: int = 10,
+    status: Optional[str] = None,
+    severity: Optional[str] = None,
+    type: Optional[str] = None,
+    api_key: APIKey = Depends(get_api_key)
+):
+    try:
+        db = Database()
+        anomalies = await db.get_anomalies(
+            page=page,
+            page_size=page_size,
+            filters={
+                'status': status,
+                'severity': severity,
+                'type': type
+            }
+        )
+        total = await db.get_anomalies_count(filters={
+            'status': status,
+            'severity': severity,
+            'type': type
+        })
+        
+        return {
+            "status": "success",
+            "data": {
+                "items": anomalies,
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total + page_size - 1) // page_size
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting anomalies list: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/anomalies/stats")
+@limiter.limit("30/minute")
+async def get_anomalies_stats(
+    request: Request,
+    api_key: APIKey = Depends(get_api_key)
+):
+    try:
+        db = Database()
+        stats = await db.get_anomalies_stats()
+        return {
+            "status": "success",
+            "data": stats,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting anomalies stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/{service}/start")
 @limiter.limit("10/minute")
 async def start_service(request: Request, service: str, api_key: APIKey = Depends(get_api_key)):
@@ -631,21 +693,27 @@ class LoginResponse(BaseModel):
     user: UserResponse
 
 # OAuth2 scheme for token authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login", auto_error=False)
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
+async def get_current_user(token: Optional[str] = Depends(oauth2_scheme)) -> dict:
     """Get current user from JWT token."""
+    # In development mode, return a dev user (skip JWT validation)
+    if DEV_MODE:
+        return {
+            "id": 1,
+            "username": "admin",
+            "email": "admin@securenet.local",
+            "role": "admin",
+            "last_login": datetime.now().isoformat()
+        }
+    
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required"
+        )
+    
     try:
-        # In development mode, return a dev user
-        if DEV_MODE:
-            return {
-                "id": 1,
-                "username": "admin",
-                "email": "admin@securenet.local",
-                "role": "admin",
-                "last_login": datetime.now().isoformat()
-            }
-        
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
@@ -740,6 +808,44 @@ async def login(request: LoginRequest):
             status_code=500,
             detail="An unexpected error occurred during login"
         )
+
+@app.get("/api/auth/me", response_model=ApiResponse[UserResponse])
+async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+    """Get current authenticated user information."""
+    try:
+        user_response = UserResponse(
+            id=current_user["id"],
+            username=current_user["username"],
+            email=current_user["email"],
+            role=current_user["role"],
+            last_login=current_user.get("last_login")
+        )
+        
+        return ApiResponse(
+            status="success",
+            data=user_response,
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"Error getting current user info: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while retrieving user information"
+        )
+
+@app.post("/api/auth/logout", response_model=ApiResponse[Dict[str, str]])
+async def logout(current_user: dict = Depends(get_current_user)):
+    """Logout the current user."""
+    try:
+        logger.info(f"User '{current_user['username']}' logged out successfully")
+        return ApiResponse(
+            status="success",
+            data={"message": "Successfully logged out"},
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"Error during logout: {str(e)}")
+        raise HTTPException(status_code=500, detail="Logout failed")
 
 @app.get("/api/logs")
 @limiter.limit("30/minute")
@@ -863,67 +969,6 @@ async def get_network_status(
         }
     except Exception as e:
         logger.error(f"Error getting network status: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/anomalies/list")
-@limiter.limit("30/minute")
-async def get_anomalies_list(
-    request: Request,
-    page: int = 1,
-    page_size: int = 10,
-    status: Optional[str] = None,
-    severity: Optional[str] = None,
-    type: Optional[str] = None,
-    api_key: APIKey = Depends(get_api_key)
-):
-    try:
-        db = Database()
-        anomalies = await db.get_anomalies(
-            page=page,
-            page_size=page_size,
-            filters={
-                'status': status,
-                'severity': severity,
-                'type': type
-            }
-        )
-        total = await db.get_anomalies_count(filters={
-            'status': status,
-            'severity': severity,
-            'type': type
-        })
-        
-        return {
-            "status": "success",
-            "data": {
-                "items": anomalies,
-                "total": total,
-                "page": page,
-                "page_size": page_size,
-                "total_pages": (total + page_size - 1) // page_size
-            },
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        logger.error(f"Error getting anomalies list: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/anomalies/stats")
-@limiter.limit("30/minute")
-async def get_anomalies_stats(
-    request: Request,
-    api_key: APIKey = Depends(get_api_key)
-):
-    try:
-        db = Database()
-        stats = await db.get_anomalies_stats()
-        return {
-            "status": "success",
-            "data": stats,
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        logger.error(f"Error getting anomalies stats: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/get-api-key", response_model=ApiResponse[Dict[str, str]])

@@ -1436,7 +1436,7 @@ class Database:
                 await cursor.execute("SELECT id FROM users WHERE username = 'admin'")
                 admin = await cursor.fetchone()
                 if not admin:
-                    password_hash = get_password_hash("admin")
+                    password_hash = get_password_hash("admin123")
                     await cursor.execute(
                         """
                         INSERT INTO users (username, email, password_hash, role, is_active)
@@ -1579,7 +1579,7 @@ class Database:
             async with aiosqlite.connect(self.db_path) as conn:
                 conn.row_factory = aiosqlite.Row
                 cursor = await conn.execute("""
-                    SELECT id, type, target, status, progress, findings_count,
+                    SELECT id, type, target, status, findings_count,
                            start_time, end_time, metadata
                     FROM security_scans
                     ORDER BY start_time DESC
@@ -1593,6 +1593,8 @@ class Database:
                     scan = dict(row)
                     if scan.get('metadata'):
                         scan['metadata'] = json.loads(scan['metadata'])
+                    # Add progress field for frontend compatibility
+                    scan['progress'] = 100 if scan.get('status') == 'completed' else 0
                     scans.append(scan)
                 return scans
         except Exception as e:
@@ -2126,7 +2128,8 @@ class Database:
                     ORDER BY end_time DESC
                     LIMIT 1
                 """)
-                last_scan = (await cursor.fetchone())[0] if await cursor.fetchone() else None
+                last_scan_row = await cursor.fetchone()
+                last_scan = last_scan_row[0] if last_scan_row else None
 
                 # Calculate security score (placeholder implementation)
                 security_score = 100 - (critical_findings * 10)  # Simple scoring based on critical findings

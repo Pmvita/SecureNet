@@ -19,6 +19,7 @@ import {
   MoonIcon,
 } from '@heroicons/react/24/outline';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../features/auth/context/AuthContext';
 
 export interface NavigationItem {
   path: string;
@@ -50,6 +51,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { theme, actualTheme, setTheme } = useTheme();
+  const { logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -332,7 +334,17 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                         </button>
                       </div>
                       <div className="py-2 border-t border-gray-700">
-                        <button className="w-full flex items-center px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-gray-700 transition-colors">
+                        <button 
+                          onClick={async () => {
+                            setUserMenuOpen(false);
+                            try {
+                              await logout();
+                            } catch (error) {
+                              console.error('Logout failed:', error);
+                            }
+                          }}
+                          className="w-full flex items-center px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-gray-700 transition-colors"
+                        >
                           <ArrowRightOnRectangleIcon className="w-4 h-4 mr-3" />
                           Sign Out
                         </button>

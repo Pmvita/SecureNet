@@ -105,6 +105,7 @@ export function DashboardPage() {
 
   // Calculate overall security score
   const securityScore = useMemo(() => {
+    console.log('SecurityMetrics in dashboard:', securityMetrics);
     if (!securityMetrics) return 0;
     return securityMetrics.security_score || 85;
   }, [securityMetrics]);
@@ -134,6 +135,15 @@ export function DashboardPage() {
   };
 
   const isLoading = logsLoading || networkLoading || securityLoading || anomaliesLoading;
+
+  // Debug logging
+  console.log('Dashboard state:', {
+    securityMetrics,
+    securityLoading,
+    networkMetrics,
+    anomalyMetrics,
+    isLoading
+  });
 
   return (
     <div className="space-y-6 p-6">

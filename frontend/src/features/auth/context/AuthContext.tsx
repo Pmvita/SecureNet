@@ -12,6 +12,14 @@ interface User {
   last_login: string;
 }
 
+interface UserApiResponse {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+  last_login: string;
+}
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
@@ -42,7 +50,7 @@ export const useAuth = (): AuthContextType => {
   return context;
 };
 
-// Development mode bypass
+// Development mode bypass - only when explicitly enabled
 const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
 const DEV_USER: User = {
   id: '1',
@@ -80,13 +88,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check for existing session and initialize API key on mount
     const checkAuth = async () => {
       const token = localStorage.getItem('auth_token');
+      console.log('checkAuth: token exists?', !!token, 'DEV_MODE:', DEV_MODE);
+      
       if (token) {
         try {
-          const response = await apiClient.get<ApiEndpoints['GET']['/api/auth/me']['response']>('/api/auth/me');
-          setUser(response.data.user);
+          console.log('checkAuth: calling /api/auth/me');
+          const response = await apiClient.get('/api/auth/me');
+          console.log('checkAuth: response received', response);
+          
+          // The API client interceptor unwraps the response, so response.data contains the user info directly
+          const userData = response.data as UserApiResponse;
+          console.log('checkAuth: userData parsed', userData);
+          
+          setUser({
+            id: userData.id.toString(),
+            username: userData.username,
+            email: userData.email,
+            role: userData.role as 'admin' | 'user',
+            last_login: userData.last_login || new Date().toISOString(),
+          });
+          console.log('checkAuth: user set successfully');
+          
           // Initialize API key after successful auth check
-          await initializeApiClient();
+          console.log('Auth check successful, initializing API client...');
+          const apiKeyInitialized = await initializeApiClient();
+          console.log('API key initialized after auth check:', apiKeyInitialized);
         } catch (error) {
+          console.error('Auth check failed:', error);
+          console.error('Error details:', {
+            message: (error as any)?.message,
+            status: (error as any)?.response?.status,
+            data: (error as any)?.response?.data
+          });
           // Token is invalid or expired
           handleAuthError();
           showToast({
@@ -103,25 +136,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string) => {
     try {
-      // The response is now the full response with status and data
-      type LoginResponse = {
-        status: 'success' | 'error';
-        data: {
-          token: string;
-          user: User;
-        };
-        timestamp: string;
-      };
+      // Make the login request using the special login method
+      const backendResponse = await apiClient.loginRequest(username, password);
       
-      const response = await apiClient.post<LoginResponse>('/api/auth/login', { username, password });
-      if (response.data.status === 'success') {
-        const { token, user } = response.data.data;
+      if (backendResponse.status === 'success') {
+        const { token, user } = backendResponse.data;
         localStorage.setItem('auth_token', token);
-        setUser(user);
+        setUser({
+          id: user.id.toString(),
+          username: user.username,
+          email: user.email,
+          role: user.role as 'admin' | 'user',
+          last_login: user.last_login || new Date().toISOString(),
+        });
         
         // Initialize API key after successful login
+        console.log('Login successful, initializing API client...');
         const apiKeyInitialized = await initializeApiClient();
+        console.log('API key initialized:', apiKeyInitialized);
         if (!apiKeyInitialized) {
+          console.error('API key initialization failed');
           showToast({
             type: 'error',
             message: 'Failed to initialize API key. Some features may not work.',
@@ -140,6 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Login failed');
       }
     } catch (error) {
+      console.error('Login error:', error);
       showToast({
         type: 'error',
         message: 'Invalid username or password',
@@ -154,7 +189,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      handleAuthError();
+      // Clear auth state regardless of dev mode for logout
+      localStorage.removeItem('auth_token');
+      setUser(null);
+      apiClient.clearApiKey();
+      
+      // Navigate to login page
+      navigate('/login', { replace: true });
+      
       showToast({
         type: 'info',
         message: 'Successfully logged out',

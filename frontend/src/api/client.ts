@@ -51,6 +51,11 @@ export class ApiClient {
     });
 
     this.setupInterceptors();
+    
+    // Set dev API key immediately in development mode
+    if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
+      this.setApiKey('dev-api-key');
+    }
   }
 
   private setupInterceptors() {
@@ -78,10 +83,7 @@ export class ApiClient {
         if (response.config.url === '/api/auth/login') {
           return response;
         }
-        // Unwrap the backend's response for other endpoints
-        if (response.data && (typeof response.data === "object") && ("status" in response.data) && ("data" in response.data)) {
-          return { ...response, data: response.data.data };
-        }
+        // Don't unwrap the response here - let the API methods handle it
         return response;
       },
       (error) => {
@@ -93,7 +95,19 @@ export class ApiClient {
           ));
         }
         if (error.response?.status === 401 || error.response?.status === 403) {
-          // Clear both auth token and API key on auth errors
+          // In development mode, only clear on 401 (not 403) to avoid API key issues
+          if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
+            if (error.response?.status === 401) {
+              localStorage.removeItem('auth_token');
+              if (!window.location.pathname.includes('/login')) {
+                window.location.href = '/login';
+              }
+            }
+            // Don't clear API key or redirect on 403 in dev mode
+            return Promise.reject(error);
+          }
+          
+          // Clear both auth token and API key on auth errors in production
           localStorage.removeItem('auth_token');
           this.clearApiKey();
           if (!window.location.pathname.includes('/login')) {
@@ -112,13 +126,20 @@ export class ApiClient {
     }
 
     // In development mode, set a default API key and token
-    if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
+    const isDev = import.meta.env.DEV || 
+                  import.meta.env.VITE_MOCK_DATA === 'true' || 
+                  window.location.hostname === 'localhost' ||
+                  window.location.hostname === '127.0.0.1' ||
+                  window.location.port === '5173';
+    
+    if (isDev) {
       this.setApiKey('dev-api-key');
       // Set a dev token if none exists
       if (!localStorage.getItem('auth_token')) {
         localStorage.setItem('auth_token', 'dev-token');
       }
       this.isInitialized = true;
+      console.log('API client initialized in development mode with dev-api-key');
       return;
     }
 
@@ -146,21 +167,47 @@ export class ApiClient {
 
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.get<ApiResponse<T>>(url, config);
-    return response.data;
+    // Handle the backend's wrapped response format
+    if (response.data && typeof response.data === "object" && "status" in response.data && "data" in response.data) {
+      return response.data as ApiResponse<T>;
+    }
+    // Fallback for unexpected response format
+    return { status: 'success', data: response.data as T, timestamp: new Date().toISOString() };
   }
 
   async post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.post<ApiResponse<T>>(url, data, config);
-    return response.data;
+    // Handle the backend's wrapped response format
+    if (response.data && typeof response.data === "object" && "status" in response.data && "data" in response.data) {
+      return response.data as ApiResponse<T>;
+    }
+    // Fallback for unexpected response format
+    return { status: 'success', data: response.data as T, timestamp: new Date().toISOString() };
   }
 
   async put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.put<ApiResponse<T>>(url, data, config);
-    return response.data;
+    // Handle the backend's wrapped response format
+    if (response.data && typeof response.data === "object" && "status" in response.data && "data" in response.data) {
+      return response.data as ApiResponse<T>;
+    }
+    // Fallback for unexpected response format
+    return { status: 'success', data: response.data as T, timestamp: new Date().toISOString() };
   }
 
   async delete<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.delete<ApiResponse<T>>(url, config);
+    // Handle the backend's wrapped response format
+    if (response.data && typeof response.data === "object" && "status" in response.data && "data" in response.data) {
+      return response.data as ApiResponse<T>;
+    }
+    // Fallback for unexpected response format
+    return { status: 'success', data: response.data as T, timestamp: new Date().toISOString() };
+  }
+
+  async loginRequest(username: string, password: string): Promise<{ status: string; data: { token: string; user: any }; timestamp: string }> {
+    // Special method for login that returns the raw axios response
+    const response = await this.client.post('/api/auth/login', { username, password });
     return response.data;
   }
 
