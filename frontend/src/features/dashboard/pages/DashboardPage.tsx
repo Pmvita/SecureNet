@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
@@ -6,6 +6,8 @@ import { useLogs, LogEntry } from '../../logs/api/useLogs';
 import { useNetwork } from '../../network/api/useNetwork';
 import { useSecurity } from '../../security/api/useSecurity';
 import { useAnomalies } from '../../anomalies/api/useAnomalies';
+import { useSecurityAlerts } from '../hooks/useSecurityAlerts';
+import { SecurityAlertsDropdown, type SecurityAlert } from '../components/SecurityAlertsDropdown';
 import { formatDistanceToNow, format } from 'date-fns';
 import {
   ShieldCheckIcon,
@@ -26,7 +28,6 @@ import {
   SignalIcon,
   WifiIcon,
   UserGroupIcon,
-  ClockworkIcon,
 } from '@heroicons/react/24/outline';
 
 // Status indicators
@@ -64,6 +65,8 @@ const severityConfig = {
 
 export function DashboardPage() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [alertsDropdownOpen, setAlertsDropdownOpen] = useState(false);
+  const alertsButtonRef = useRef<HTMLDivElement>(null);
   
   // Fetch data from all services
   const { data: logsData, isLoading: logsLoading } = useLogs({ 
@@ -91,6 +94,14 @@ export function DashboardPage() {
     metrics: anomalyMetrics,
     isLoading: anomaliesLoading 
   } = useAnomalies();
+
+  // Security alerts functionality
+  const { 
+    alerts: securityAlerts, 
+    stats: alertStats, 
+    markAsRead, 
+    markAllAsRead 
+  } = useSecurityAlerts();
 
   // Calculate overall security score
   const securityScore = useMemo(() => {
@@ -141,13 +152,33 @@ export function DashboardPage() {
             <ArrowPathIcon className="h-4 w-4" />
             Refresh
           </Button>
-          <Button
-            variant="primary"
-            className="flex items-center gap-2"
-          >
-            <BellIcon className="h-4 w-4" />
-            Alerts
-          </Button>
+          <div className="relative" ref={alertsButtonRef}>
+            <Button
+              variant="primary"
+              onClick={() => setAlertsDropdownOpen(!alertsDropdownOpen)}
+              className="flex items-center gap-2 relative"
+            >
+              <BellIcon className="h-4 w-4" />
+              Alerts
+              {alertStats.unread > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {alertStats.unread}
+                </span>
+              )}
+            </Button>
+            
+            <SecurityAlertsDropdown
+              isOpen={alertsDropdownOpen}
+              onClose={() => setAlertsDropdownOpen(false)}
+              alerts={securityAlerts}
+              onAlertClick={(alert: SecurityAlert) => {
+                markAsRead(alert.id);
+                setAlertsDropdownOpen(false);
+              }}
+              onMarkAsRead={markAsRead}
+              onMarkAllAsRead={markAllAsRead}
+            />
+          </div>
         </div>
       </div>
 
