@@ -216,6 +216,10 @@ export class ApiClient {
     this.client.defaults.headers['X-API-Key'] = key;
   }
 
+  getApiKey(): string | null {
+    return this.apiKey;
+  }
+
   clearApiKey(): void {
     this.apiKey = null;
     delete this.client.defaults.headers['X-API-Key'];

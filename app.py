@@ -732,11 +732,29 @@ def update_db_schema():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 message TEXT NOT NULL,
-                level TEXT NOT NULL,
+                category TEXT DEFAULT 'system',
+                severity TEXT DEFAULT 'info',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                read_at TIMESTAMP
+                read_at TIMESTAMP,
+                metadata TEXT DEFAULT '{}'
             )
         """)
+        
+        # Add new columns to existing notifications table if they don't exist
+        try:
+            cursor.execute("ALTER TABLE notifications ADD COLUMN category TEXT DEFAULT 'system'")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        
+        try:
+            cursor.execute("ALTER TABLE notifications ADD COLUMN severity TEXT DEFAULT 'info'")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+            
+        try:
+            cursor.execute("ALTER TABLE notifications ADD COLUMN metadata TEXT DEFAULT '{}'")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
         
         # Add new columns to logs table if they don't exist
         try:
@@ -1143,6 +1161,20 @@ async def start_network_scan(request: Request, api_key: APIKey = Depends(get_api
         # Run the real network scan
         scan_result = await start_real_network_scan()
         
+        # Create notification for scan completion
+        await create_notification(
+            title="Network Scan Completed",
+            message=f"Network scan discovered {scan_result.get('devices_found', 0)} devices in {scan_result.get('scan_time', 0):.1f} seconds",
+            category="network",
+            severity="info",
+            metadata={
+                "scan_id": scan_result.get("scan_id", f"scan_{int(time.time())}"),
+                "devices_found": scan_result.get("devices_found", 0),
+                "scan_time": scan_result.get("scan_time", 0),
+                "network_ranges": scan_result.get("network_ranges", [])
+            }
+        )
+        
         return {
             "status": "success",
             "data": {
@@ -1262,6 +1294,39 @@ async def start_security_scan(request: Request, api_key: APIKey = Depends(get_ap
             await db.store_security_finding(finding_data)
         
         logger.info(f"Security scan {scan_id} completed: {len(findings)} findings on {len(devices)} devices")
+        
+        # Create notification for security scan completion
+        severity = "critical" if any(f['severity'] == 'high' for f in findings) else "warning" if findings else "info"
+        await create_notification(
+            title="Security Scan Completed",
+            message=f"Security scan found {len(findings)} findings on {len(devices)} devices",
+            category="security",
+            severity=severity,
+            metadata={
+                "scan_id": scan_id,
+                "devices_scanned": len(devices),
+                "findings_count": len(findings),
+                "high_severity_count": len([f for f in findings if f['severity'] == 'high']),
+                "medium_severity_count": len([f for f in findings if f['severity'] == 'medium'])
+            }
+        )
+        
+        # Create individual notifications for high-severity findings
+        for finding in findings:
+            if finding['severity'] == 'high':
+                await create_notification(
+                    title=f"High Severity Security Issue",
+                    message=finding['description'],
+                    category="security",
+                    severity="critical",
+                    metadata={
+                        "scan_id": scan_id,
+                        "device_id": finding['device_id'],
+                        "device_ip": finding['device_ip'],
+                        "finding_type": finding['type'],
+                        "recommendation": finding['recommendation']
+                    }
+                )
         
         return {
             "status": "success",
@@ -1625,3 +1690,280 @@ async def get_cve_stats(request: Request, api_key: APIKey = Depends(get_api_key)
     except Exception as e:
         logger.error(f"Error getting CVE stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to get CVE statistics")
+
+# Notifications API endpoints
+@app.get("/api/notifications")
+@limiter.limit("30/minute")
+async def get_notifications(
+    request: Request,
+    page: int = 1,
+    page_size: int = 20,
+    unread_only: bool = False,
+    category: Optional[str] = None,
+    severity: Optional[str] = None,
+    api_key: APIKey = Depends(get_api_key)
+):
+    """Get notifications with filtering and pagination."""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Build query with filters
+            where_conditions = []
+            params = []
+            
+            if unread_only:
+                where_conditions.append("read_at IS NULL")
+            
+            if category:
+                where_conditions.append("category = ?")
+                params.append(category)
+            
+            if severity:
+                where_conditions.append("severity = ?")
+                params.append(severity)
+            
+            where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+            
+            # Get total count
+            cursor.execute(f"SELECT COUNT(*) FROM notifications{where_clause}", params)
+            total_count = cursor.fetchone()[0]
+            
+            # Get notifications with pagination
+            offset = (page - 1) * page_size
+            cursor.execute(f"""
+                SELECT id, title, message, category, severity, created_at, read_at, metadata
+                FROM notifications
+                {where_clause}
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+            """, params + [page_size, offset])
+            
+            notifications = []
+            for row in cursor.fetchall():
+                notifications.append({
+                    "id": row[0],
+                    "title": row[1],
+                    "message": row[2],
+                    "category": row[3],
+                    "severity": row[4],
+                    "timestamp": row[5],
+                    "read": row[6] is not None,
+                    "read_at": row[6],
+                    "metadata": json.loads(row[7]) if row[7] else {}
+                })
+            
+            return {
+                "status": "success",
+                "data": {
+                    "notifications": notifications,
+                    "pagination": {
+                        "page": page,
+                        "page_size": page_size,
+                        "total_count": total_count,
+                        "total_pages": (total_count + page_size - 1) // page_size
+                    }
+                },
+                "timestamp": datetime.now().isoformat()
+            }
+            
+    except Exception as e:
+        logger.error(f"Error getting notifications: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting notifications: {str(e)}")
+
+@app.post("/api/notifications/{notification_id}/read")
+@limiter.limit("60/minute")
+async def mark_notification_read(
+    request: Request,
+    notification_id: int,
+    api_key: APIKey = Depends(get_api_key)
+):
+    """Mark a notification as read."""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE notifications 
+                SET read_at = CURRENT_TIMESTAMP 
+                WHERE id = ?
+            """, (notification_id,))
+            
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Notification not found")
+            
+            conn.commit()
+            
+            return {
+                "status": "success",
+                "data": {"message": "Notification marked as read"},
+                "timestamp": datetime.now().isoformat()
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error marking notification as read: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error updating notification: {str(e)}")
+
+@app.post("/api/notifications/read-all")
+@limiter.limit("10/minute")
+async def mark_all_notifications_read(
+    request: Request,
+    api_key: APIKey = Depends(get_api_key)
+):
+    """Mark all notifications as read."""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE notifications 
+                SET read_at = CURRENT_TIMESTAMP 
+                WHERE read_at IS NULL
+            """)
+            
+            updated_count = cursor.rowcount
+            conn.commit()
+            
+            return {
+                "status": "success",
+                "data": {"message": f"Marked {updated_count} notifications as read"},
+                "timestamp": datetime.now().isoformat()
+            }
+            
+    except Exception as e:
+        logger.error(f"Error marking all notifications as read: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error updating notifications: {str(e)}")
+
+@app.delete("/api/notifications/{notification_id}")
+@limiter.limit("30/minute")
+async def delete_notification(
+    request: Request,
+    notification_id: int,
+    api_key: APIKey = Depends(get_api_key)
+):
+    """Delete a notification."""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM notifications WHERE id = ?", (notification_id,))
+            
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Notification not found")
+            
+            conn.commit()
+            
+            return {
+                "status": "success",
+                "data": {"message": "Notification deleted"},
+                "timestamp": datetime.now().isoformat()
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting notification: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting notification: {str(e)}")
+
+# Enhanced notification creation function
+async def create_notification(
+    title: str,
+    message: str,
+    category: str = "system",
+    severity: str = "info",
+    metadata: dict = None
+):
+    """Create and broadcast a new notification."""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO notifications (title, message, category, severity, metadata)
+                VALUES (?, ?, ?, ?, ?)
+            """, (title, message, category, severity, json.dumps(metadata or {})))
+            
+            notification_id = cursor.lastrowid
+            conn.commit()
+            
+            # Create notification object for broadcasting
+            notification = {
+                "id": notification_id,
+                "title": title,
+                "message": message,
+                "category": category,
+                "severity": severity,
+                "timestamp": datetime.now().isoformat(),
+                "read": False,
+                "metadata": metadata or {}
+            }
+            
+            # Broadcast to WebSocket clients
+            await manager.broadcast_notification(notification)
+            
+            return notification_id
+            
+    except Exception as e:
+        logger.error(f"Error creating notification: {str(e)}")
+        return None
+
+# Test endpoint to generate sample notifications (for demonstration)
+@app.post("/api/notifications/test")
+@limiter.limit("5/minute")
+async def create_test_notifications(request: Request, api_key: APIKey = Depends(get_api_key)):
+    """Create test notifications for demonstration purposes."""
+    try:
+        test_notifications = [
+            {
+                "title": "Network Device Discovered",
+                "message": "New device detected on network: Router (192.168.1.1)",
+                "category": "network",
+                "severity": "info",
+                "metadata": {"device_ip": "192.168.1.1", "device_type": "Router"}
+            },
+            {
+                "title": "Security Alert",
+                "message": "Multiple failed login attempts detected from IP 192.168.1.50",
+                "category": "security",
+                "severity": "warning",
+                "metadata": {"source_ip": "192.168.1.50", "attempt_count": 5}
+            },
+            {
+                "title": "Critical Vulnerability Found",
+                "message": "CVE-2024-1234 detected on device 192.168.1.10 - Immediate action required",
+                "category": "security",
+                "severity": "critical",
+                "metadata": {"cve_id": "CVE-2024-1234", "device_ip": "192.168.1.10"}
+            },
+            {
+                "title": "System Update Available",
+                "message": "SecureNet v2.1.1 is available for download",
+                "category": "system",
+                "severity": "info",
+                "metadata": {"version": "v2.1.1", "update_type": "minor"}
+            },
+            {
+                "title": "Anomaly Detected",
+                "message": "Unusual traffic pattern detected on port 443 - investigating",
+                "category": "security",
+                "severity": "warning",
+                "metadata": {"port": 443, "traffic_type": "HTTPS"}
+            }
+        ]
+        
+        created_ids = []
+        for notif in test_notifications:
+            notification_id = await create_notification(**notif)
+            if notification_id:
+                created_ids.append(notification_id)
+        
+        return {
+            "status": "success",
+            "data": {
+                "message": f"Created {len(created_ids)} test notifications",
+                "notification_ids": created_ids
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating test notifications: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error creating test notifications: {str(e)}")

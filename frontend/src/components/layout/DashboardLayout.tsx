@@ -20,6 +20,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../features/auth/context/AuthContext';
+import { useRealTimeNotifications } from '../../hooks/useRealTimeNotifications';
 
 export interface NavigationItem {
   path: string;
@@ -57,14 +58,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
-  // Mock notifications data
-  const notifications = [
-    { id: 1, title: 'New security alert detected', time: '2 min ago', type: 'warning', unread: true },
-    { id: 2, title: 'Network scan completed', time: '5 min ago', type: 'success', unread: true },
-    { id: 3, title: 'System update available', time: '1 hour ago', type: 'info', unread: false },
-  ];
-
-  const unreadCount = notifications.filter(n => n.unread).length;
+  // Real-time notifications
+  const { 
+    notifications, 
+    unreadCount, 
+    isConnected, 
+    markAsRead, 
+    markAllAsRead, 
+    deleteNotification 
+  } = useRealTimeNotifications();
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -236,30 +238,49 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     <div className="absolute right-0 top-full mt-2 w-80 bg-gray-800 rounded-xl border border-gray-700 shadow-2xl">
                       <div className="p-4 border-b border-gray-700">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold text-white">Notifications</h3>
-                          {unreadCount > 0 && (
-                            <span className="text-sm text-blue-400">{unreadCount} new</span>
-                          )}
+                          <div className="flex items-center space-x-2">
+                            <h3 className="text-lg font-semibold text-white">Notifications</h3>
+                            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} 
+                                 title={isConnected ? 'Connected' : 'Disconnected'} />
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {unreadCount > 0 && (
+                              <>
+                                <button
+                                  onClick={markAllAsRead}
+                                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                                >
+                                  Mark all read
+                                </button>
+                                <span className="text-sm text-blue-400">{unreadCount} new</span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="max-h-64 overflow-y-auto">
-                        {notifications.map((notification) => (
+                        {notifications.slice(0, 5).map((notification) => (
                           <div
                             key={notification.id}
-                            className={`p-4 border-b border-gray-700 last:border-b-0 hover:bg-gray-750 transition-colors ${
-                              notification.unread ? 'bg-gray-750/50' : ''
+                            className={`p-4 border-b border-gray-700 last:border-b-0 hover:bg-gray-750 transition-colors cursor-pointer ${
+                              !notification.read ? 'bg-gray-750/50' : ''
                             }`}
+                            onClick={() => markAsRead(notification.id)}
                           >
                             <div className="flex items-start space-x-3">
                               <div className={`w-2 h-2 rounded-full mt-2 ${
-                                notification.type === 'warning' ? 'bg-yellow-500' :
-                                notification.type === 'success' ? 'bg-green-500' : 'bg-blue-500'
+                                notification.severity === 'critical' ? 'bg-red-500' :
+                                notification.severity === 'warning' ? 'bg-yellow-500' :
+                                notification.severity === 'error' ? 'bg-red-400' : 'bg-blue-500'
                               }`}></div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm text-white">{notification.title}</p>
-                                <p className="text-xs text-gray-400 mt-1">{notification.time}</p>
+                                <p className="text-xs text-gray-300 mt-1">{notification.message}</p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {new Date(notification.timestamp).toLocaleString()}
+                                </p>
                               </div>
-                              {notification.unread && (
+                              {!notification.read && (
                                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                               )}
                             </div>
