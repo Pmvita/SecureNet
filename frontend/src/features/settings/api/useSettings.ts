@@ -6,16 +6,33 @@ import type { ApiResponse, ApiEndpoints } from '../../../api/endpoints';
 const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
 
 export interface Settings {
-  api_key: string;
+  system: {
+    app_name: string;
+    theme: string;
+    auto_refresh: boolean;
+    refresh_interval: number;
+    timezone?: string;
+    language?: string;
+  };
   network_monitoring: {
     enabled: boolean;
     interval: number;
-    devices: string[];
+    timeout: number;
+    interface: string;
+    ip_ranges: string;
+    discovery_method: string;
+    max_devices: number;
+    traffic_analysis: boolean;
+    packet_capture: boolean;
+    capture_filter: string;
+    dns_monitoring: boolean;
+    port_scan_detection: boolean;
+    bandwidth_threshold: number;
   };
   security_scanning: {
     enabled: boolean;
     interval: number;
-    types: string[];
+    severity_threshold: string;
   };
   notifications: {
     enabled: boolean;
@@ -25,6 +42,7 @@ export interface Settings {
   logging: {
     level: string;
     retention_days: number;
+    audit_enabled: boolean;
   };
 }
 
@@ -43,16 +61,33 @@ export function useSettings() {
       if (DEV_MODE) {
         return {
           data: {
-            api_key: 'dev-api-key',
+            system: {
+              app_name: 'SecureNet',
+              theme: 'dark',
+              auto_refresh: true,
+              refresh_interval: 30,
+              timezone: 'UTC',
+              language: 'en'
+            },
             network_monitoring: {
               enabled: true,
               interval: 300,
-              devices: ['192.168.1.1', '192.168.1.100']
+              timeout: 30,
+              interface: 'auto',
+              ip_ranges: '192.168.1.0/24,10.0.0.0/8',
+              discovery_method: 'ping_arp',
+              max_devices: 1000,
+              traffic_analysis: false,
+              packet_capture: false,
+              capture_filter: 'tcp port 80 or tcp port 443',
+              dns_monitoring: true,
+              port_scan_detection: true,
+              bandwidth_threshold: 100
             },
             security_scanning: {
               enabled: true,
               interval: 3600,
-              types: ['vulnerability', 'malware']
+              severity_threshold: 'medium'
             },
             notifications: {
               enabled: false,
@@ -61,7 +96,8 @@ export function useSettings() {
             },
             logging: {
               level: 'info',
-              retention_days: 30
+              retention_days: 30,
+              audit_enabled: true
             }
           }
         };
@@ -82,17 +118,34 @@ export function useSettings() {
     },
   });
 
-  const settings = settingsData?.data?.data ?? {
-    api_key: '',
+  const settings = settingsData?.data ?? {
+    system: {
+      app_name: 'SecureNet',
+      theme: 'dark',
+      auto_refresh: true,
+      refresh_interval: 30,
+      timezone: 'UTC',
+      language: 'en'
+    },
     network_monitoring: {
       enabled: false,
       interval: 300,
-      devices: [],
+      timeout: 30,
+      interface: 'auto',
+      ip_ranges: '192.168.1.0/24',
+      discovery_method: 'ping_arp',
+      max_devices: 1000,
+      traffic_analysis: false,
+      packet_capture: false,
+      capture_filter: 'tcp port 80 or tcp port 443',
+      dns_monitoring: true,
+      port_scan_detection: true,
+      bandwidth_threshold: 100,
     },
     security_scanning: {
       enabled: false,
       interval: 3600,
-      types: [],
+      severity_threshold: 'medium',
     },
     notifications: {
       enabled: false,
@@ -102,6 +155,7 @@ export function useSettings() {
     logging: {
       level: 'info',
       retention_days: 30,
+      audit_enabled: true,
     },
   };
 

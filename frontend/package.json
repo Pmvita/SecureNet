@@ -1,12 +1,12 @@
 {
-  "name": "frontend",
+  "name": "SecureNet",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "VITE_MOCK_DATA=true vite",
     "dev:mock": "VITE_MOCK_DATA=true vite",
-    "dev:api": "VITE_MOCK_DATA=false vite",
+    "Enterprise": "echo \"Mock_Data=false\" && echo \"Enterprise_Mode=true\" && echo \"\" && VITE_MOCK_DATA=false vite",
     "start": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",

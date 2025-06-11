@@ -1008,29 +1008,8 @@ async def get_api_key_endpoint(request: Request, current_user: dict = Depends(ge
 async def get_settings(request: Request, api_key: APIKey = Depends(get_api_key)):
     """Get application settings"""
     try:
-        # Return default settings since we don't have a settings store yet
-        settings = {
-            "api_key": "dev-api-key",
-            "network_monitoring": {
-                "enabled": True,
-                "interval": 300,
-                "devices": ["192.168.1.1", "192.168.1.100"]
-            },
-            "security_scanning": {
-                "enabled": True,
-                "interval": 3600,
-                "types": ["vulnerability", "malware"]
-            },
-            "notifications": {
-                "enabled": False,
-                "email": "",
-                "slack_webhook": ""
-            },
-            "logging": {
-                "level": "info",
-                "retention_days": 30
-            }
-        }
+        db = Database()
+        settings = await db.get_settings()
         return {
             "status": "success",
             "data": settings,
@@ -1045,8 +1024,9 @@ async def get_settings(request: Request, api_key: APIKey = Depends(get_api_key))
 async def update_settings(request: Request, settings: dict, api_key: APIKey = Depends(get_api_key)):
     """Update application settings"""
     try:
-        # For now, just return success - in a real app you'd save to database
-        logger.info(f"Settings update requested: {settings}")
+        db = Database()
+        await db.update_settings(settings)
+        logger.info(f"Settings updated successfully: {list(settings.keys())}")
         return {
             "status": "success",
             "data": {"message": "Settings updated successfully"},

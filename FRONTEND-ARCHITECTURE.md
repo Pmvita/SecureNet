@@ -85,7 +85,7 @@ npm run dev:mock     # Explicit mock mode
 
 ### Real API Mode
 ```bash
-npm run dev:api      # VITE_MOCK_DATA=false
+npm run Enterprise      # VITE_MOCK_DATA=false
 ```
 
 **Features:**

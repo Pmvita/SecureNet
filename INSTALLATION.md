@@ -67,7 +67,7 @@ uvicorn app:app --reload
 
 # Terminal 2: Start frontend with real API
 cd frontend
-npm run dev:api
+npm run Enterprise
 ```
 
 ---
@@ -108,7 +108,7 @@ uvicorn app:app --reload
 
 # Then: Start frontend with real API calls (Terminal 2)
 cd frontend
-npm run dev:api      # Connects to real backend API
+npm run Enterprise      # Connects to real backend API
 ```
 
 **Features:**
@@ -242,7 +242,7 @@ npm update
 npm run dev
 
 # Real API mode (requires backend)
-npm run dev:api
+npm run Enterprise
 
 # Build for production
 npm run build

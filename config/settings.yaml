@@ -1,0 +1,84 @@
+# SecureNet Application Settings Configuration
+# This file contains the default settings structure and options
+
+system:
+  app_name: "SecureNet"
+  theme: "dark"  # dark, light, auto
+  auto_refresh: true
+  refresh_interval: 30  # seconds
+  timezone: "UTC"
+  language: "en"  # en, es, fr, de
+
+network_monitoring:
+  enabled: true
+  interval: 300  # seconds
+  timeout: 30  # seconds
+  interface: "auto"  # auto, eth0, wlan0, all
+  ip_ranges: "192.168.1.0/24,10.0.0.0/8"
+  discovery_method: "ping_arp"  # ping_arp, arp_only, ping_only
+  max_devices: 1000
+  traffic_analysis: false
+  packet_capture: false
+  capture_filter: "tcp port 80 or tcp port 443"
+  dns_monitoring: true
+  port_scan_detection: true
+  bandwidth_threshold: 100  # Mbps
+
+security_scanning:
+  enabled: true
+  interval: 3600  # seconds
+  severity_threshold: "medium"  # low, medium, high, critical
+
+notifications:
+  enabled: true
+  email: ""
+  slack_webhook: ""
+
+logging:
+  level: "info"  # debug, info, warning, error, critical
+  retention_days: 30
+  audit_enabled: true
+
+# Available options for dropdowns
+options:
+  themes:
+    - { value: "dark", label: "Dark Mode" }
+    - { value: "light", label: "Light Mode" }
+    - { value: "auto", label: "Auto (System)" }
+
+  languages:
+    - { value: "en", label: "English" }
+    - { value: "es", label: "Spanish" }
+    - { value: "fr", label: "French" }
+    - { value: "de", label: "German" }
+
+  timezones:
+    - { value: "UTC", label: "UTC" }
+    - { value: "America/New_York", label: "Eastern Time" }
+    - { value: "America/Chicago", label: "Central Time" }
+    - { value: "America/Denver", label: "Mountain Time" }
+    - { value: "America/Los_Angeles", label: "Pacific Time" }
+
+  network_interfaces:
+    - { value: "auto", label: "Auto-detect" }
+    - { value: "eth0", label: "Ethernet (eth0)" }
+    - { value: "wlan0", label: "WiFi (wlan0)" }
+    - { value: "all", label: "Monitor all interfaces" }
+
+  discovery_methods:
+    - { value: "ping_arp", label: "Ping + ARP" }
+    - { value: "arp_only", label: "ARP Only" }
+    - { value: "ping_only", label: "Ping Only" }
+
+  severity_levels:
+    - { value: "low", label: "Low and above" }
+    - { value: "medium", label: "Medium and above" }
+    - { value: "high", label: "High and above" }
+    - { value: "critical", label: "Critical only" }
+
+  log_levels:
+    - { value: "debug", label: "Debug" }
+    - { value: "info", label: "Info" }
+    - { value: "warning", label: "Warning" }
+    - { value: "error", label: "Error" }
+    - { value: "critical", label: "Critical" }

@@ -105,7 +105,7 @@ SecureNet/
 
 **Development Modes:**
 - **🚀 Mock Mode**: `npm run dev` (No backend required)
-- **🔗 API Mode**: `npm run dev:api` (Full backend integration)
+- **🔗 Enterprise Mode**: `npm run Enterprise` (Full backend integration)
 
 ---
 
