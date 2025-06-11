@@ -258,5 +258,5 @@ This software is proprietary and confidential. See the [LICENSE.txt](LICENSE.txt
 
 ---
 
-**SecureNet v2.1.0** - Real-Time WiFi Network Security Monitoring Platform  
-*Empowering cybersecurity through live network intelligence* 🛡️ 
+**Pierre Mvita** - [pierremvita.com](https://pierremvita.com)  
+**SecureNet AI** - [securenet.ai](https://securenet.ai)
