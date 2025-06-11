@@ -154,9 +154,9 @@ async def dashboard(request: Request):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, timestamp, source, anomaly_score, message 
+        SELECT id, timestamp, source, level, message 
         FROM logs 
-        WHERE anomaly_score IS NOT NULL 
+        WHERE level IN ('warning', 'error', 'critical')
         ORDER BY timestamp DESC 
         LIMIT 100
     """)
@@ -362,9 +362,9 @@ async def get_anomalies(request: Request, api_key: APIKey = Depends(get_api_key)
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, timestamp, source, anomaly_score, message 
+        SELECT id, timestamp, source, level, message 
         FROM logs 
-        WHERE anomaly_score IS NOT NULL 
+        WHERE level IN ('warning', 'error', 'critical')
         ORDER BY timestamp DESC 
         LIMIT 100
     """)

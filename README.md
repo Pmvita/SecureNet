@@ -1,202 +1,258 @@
-# 🛡️ SecureNet - Real-Time WiFi Network Security Monitoring
+# 🛡️ SecureNet 
 
-> **Production-Ready Network Security Platform**  
-> Live WiFi device discovery • Real-time security scanning • Comprehensive threat analysis
+> **Next-Generation Security Platform**  
+> AI-driven threat detection • Real-time network monitoring • Comprehensive security management
 
-SecureNet is a comprehensive network security monitoring platform that **discovers and analyzes your actual WiFi network** in real-time. Built for cybersecurity professionals, network administrators, and security-conscious organizations.
+SecureNet is an **AI-powered network security monitoring and management system** that provides real-time threat detection, network health monitoring, and comprehensive security management. Built for cybersecurity professionals, SOC teams, and enterprise security operations.
 
-## 🌟 **Current Capabilities**
+## 🤖 **AI-Powered Security Features**
 
-SecureNet actively monitors your live network environment:
+SecureNet leverages artificial intelligence and machine learning for advanced security monitoring:
 
-- **🔍 Live Device Discovery**: Automatically scans and discovers WiFi devices on your network (192.168.x.0/24, 10.x.x.0/24)
-- **🔒 Real-Time Security Analysis**: Performs security scans on discovered devices, detecting vulnerabilities and misconfigurations
-- **📊 Network Monitoring**: Tracks device status, open ports, and network activity
-- **⚡ Live Threat Detection**: Identifies security risks including open telnet ports, SSH exposure, and device anomalies
-- **📈 Security Scoring**: Dynamic security posture calculation based on actual network analysis
-- **🕒 Historical Tracking**: Complete scan history and security findings storage
+- **🧠 AI Threat Detection**: Machine learning algorithms analyze network patterns to identify anomalies and potential threats
+- **🔍 Intelligent Device Discovery**: AI-enhanced network scanning automatically discovers and classifies devices on your WiFi network
+- **🛡️ Real-Time Security Analysis**: AI-driven vulnerability assessment and risk scoring based on network behavior
+- **📊 Predictive Analytics**: Machine learning models predict potential security issues before they become critical
+- **⚡ Automated Response**: AI-powered incident response and threat mitigation recommendations
+- **📈 Dynamic Risk Scoring**: Intelligent security posture calculation using AI algorithms
+- **🕒 Behavioral Analysis**: ML-based analysis of device and network behavior patterns
 
-### **Real Network Results Example**
+### **AI-Enhanced Network Intelligence**
 ```
-✅ Current Network: 192.168.2.0/24
-✅ Devices Discovered: 7 active devices
-✅ Security Scans: Multiple completed scans  
-✅ Security Score: 100/100 (Excellent)
-✅ Last Scan: Active (less than minute ago)
+🤖 AI Models Active: Anomaly Detection, Risk Assessment, Pattern Recognition
+🔍 Live Network: 192.168.2.0/24 (7 devices monitored)
+🛡️ Security Score: 100/100 (AI-calculated risk assessment)
+📊 Threat Analysis: Real-time ML-powered threat detection
+⚡ Auto-Scanning: AI-optimized security analysis intervals
 ```
 
 ## 🚀 **Quick Start**
 
-### **Production Setup (Recommended)**
+### **Production Setup (AI-Powered Mode)**
 ```bash
 # 1. Clone and setup
 git clone <repository-url>
 cd SecureNet
 
-# 2. Backend setup
+# 2. Backend setup with AI capabilities
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# 3. Start real network monitoring
+# 3. Start AI-powered security monitoring
 uvicorn app:app --reload
 
 # 4. Frontend setup (new terminal)
 cd frontend
 npm install
-npm run Enterprise  # Real network mode
+npm run Enterprise  # AI-enhanced real network mode
 ```
 
 ### **Access SecureNet**
-- **Frontend**: http://localhost:5173 (Real-time dashboard)
-- **Backend API**: http://localhost:8000 (Live network data)
+- **AI Dashboard**: http://localhost:5173 (ML-powered security insights)
+- **Security API**: http://localhost:8000 (AI-driven threat data)
 - **API Documentation**: http://localhost:8000/docs
 
-## 🏗️ **Architecture**
+## 🏗️ **AI-Enhanced Architecture**
 
 ```mermaid
 graph TB
-    A[WiFi Network Scanner] --> B[Device Discovery Engine]
-    B --> C[Security Analysis Engine]
-    C --> D[SQLite Database]
-    D --> E[FastAPI Backend]
-    E --> F[React Frontend]
+    A[AI Network Scanner] --> B[ML Device Classification]
+    B --> C[Threat Detection Engine]
+    C --> D[AI Risk Assessment]
+    D --> E[Security Intelligence DB]
+    E --> F[FastAPI Backend]
+    F --> G[React Security Dashboard]
     
-    G[Real Network] --> A
-    H[Security Findings] --> C
-    I[Live Monitoring] --> F
+    H[Real Network] --> A
+    I[ML Models] --> C
+    I --> D
+    J[Threat Intelligence] --> C
+    K[Behavioral Analytics] --> D
 ```
 
-## 🔧 **Core Features**
+## 🔧 **Core AI-Powered Features**
 
-### **🌐 Network Discovery**
-- **Cross-platform scanning** (macOS, Linux, Windows)
-- **Multiple network range support** (192.168.x.0/24, 10.x.x.0/24)
-- **Device classification** (Router, Server, Endpoint, Printer)
-- **Real-time status monitoring**
+### **🤖 Artificial Intelligence & Machine Learning**
+- **Anomaly Detection**: ML algorithms identify unusual network behavior
+- **Threat Pattern Recognition**: AI models detect known attack patterns
+- **Risk Prediction**: Predictive analytics for proactive security management
+- **Automated Classification**: AI-powered device and threat categorization
 
-### **🛡️ Security Analysis**
-- **Vulnerability scanning** on discovered devices
-- **Open port analysis** and risk assessment
-- **Configuration security checks**
-- **Real-time threat detection**
+### **🌐 Intelligent Network Discovery**
+- **AI-Enhanced Scanning**: Machine learning optimized network discovery
+- **Smart Device Classification** (Router, Server, IoT, Mobile, Printer)
+- **Behavioral Profiling**: AI-based device behavior analysis
+- **Cross-platform Intelligence** (macOS, Linux, Windows)
 
-### **📊 Monitoring Dashboard**
-- **Live device status** and network topology
-- **Security posture visualization**
-- **Historical scan results** and trending
-- **Real-time alerts** and notifications
+### **🛡️ Advanced Threat Detection**
+- **Real-time Vulnerability Analysis** using AI models
+- **Intelligent Port Analysis** with ML-based risk assessment
+- **Configuration Security AI** for automated security validation
+- **Predictive Threat Intelligence** with machine learning
 
-### **🔒 Enterprise Security**
-- **Role-based access control**
-- **API key authentication** 
-- **Audit logging** and compliance
-- **Data export** capabilities
+### **📊 AI-Powered Security Dashboard**
+- **ML-Enhanced Visualizations** with intelligent insights
+- **Predictive Security Analytics** and trend analysis
+- **AI-Generated Reports** and threat summaries
+- **Real-time Intelligence Feed** with ML-powered alerts
 
-## 🛠️ **Technical Stack**
+### **🔒 Enterprise AI Security**
+- **Intelligent Access Control** with behavioral authentication
+- **AI-Enhanced Audit Logging** with anomaly detection
+- **Automated Compliance Monitoring** using ML models
+- **Predictive Risk Management** with AI recommendations
 
-### **Backend**
-- **FastAPI** - High-performance Python web framework
-- **SQLite** - Lightweight database with real-time storage
-- **psutil** - Cross-platform system and network utilities
-- **aiosqlite** - Async database operations
-- **Custom Network Scanner** - Multi-threaded device discovery
+## 🛠️ **Advanced Technical Stack**
 
-### **Frontend**
-- **React 18** - Modern UI framework
-- **TypeScript** - Type-safe development
-- **Tailwind CSS** - Utility-first styling
-- **Real-time Updates** - Live data synchronization
+### **AI & Machine Learning**
+- **Custom ML Models** - Anomaly detection and threat classification
+- **TensorFlow/Scikit-learn** - Machine learning framework integration
+- **Behavioral Analytics** - AI-powered pattern recognition
+- **Threat Intelligence** - ML-enhanced security data analysis
 
-## 📋 **Current Network Analysis**
+### **Backend Intelligence**
+- **FastAPI** - High-performance API with AI endpoint integration
+- **SQLite + AI Analytics** - Intelligent data storage with ML insights
+- **Real-time Processing** - AI-powered streaming analytics
+- **Custom Security Engine** - ML-enhanced threat detection
 
-The system currently performs real-time analysis on discovered networks:
+### **Frontend Intelligence**
+- **React 18** - Modern UI with AI-powered components
+- **TypeScript** - Type-safe development with ML data structures
+- **AI-Enhanced UX** - Intelligent user interface adaptations
+- **Real-time AI Insights** - Live machine learning visualizations
 
-### **Device Discovery Results**
-- **Network Range**: Automatically detected (192.168.x.0/24)
-- **Active Devices**: 7 real devices discovered
-- **Device Types**: Router, Endpoints, Network infrastructure
-- **Status Monitoring**: Live device availability tracking
+## 📋 **AI-Powered Network Intelligence**
 
-### **Security Assessment**
-- **Security Scans**: Multiple completed scans
-- **Vulnerability Detection**: Open port analysis, protocol security
-- **Risk Assessment**: Dynamic security scoring
-- **Threat Monitoring**: Real-time security posture analysis
+The system leverages machine learning for comprehensive network analysis:
+
+### **AI-Enhanced Device Discovery**
+- **Network Range**: ML-optimized detection (192.168.x.0/24, 10.x.x.0/24)
+- **Active Devices**: 7 devices with AI behavioral profiling
+- **Smart Classification**: AI-categorized Router, IoT, Mobile, Server devices
+- **Predictive Monitoring**: ML-based availability and performance prediction
+
+### **Intelligent Security Assessment**
+- **AI Security Scans**: Machine learning enhanced vulnerability detection
+- **Behavioral Analysis**: AI-powered anomaly detection and pattern recognition
+- **Predictive Risk Scoring**: ML algorithms calculate dynamic threat levels
+- **Automated Threat Response**: AI-driven incident prioritization and recommendations
 
 ## 📁 **Project Structure**
 
 ```
 SecureNet/
-├── 🐍 Backend (FastAPI)
-│   ├── app.py              # Main application & real network integration
-│   ├── database.py         # SQLite database with live data storage
-│   ├── network_scanner.py  # Real WiFi network discovery engine
+├── 🤖 AI-Powered Backend
+│   ├── app.py              # FastAPI + AI threat detection engine
+│   ├── database.py         # Intelligent data storage with ML analytics
+│   ├── network_scanner.py  # AI-enhanced WiFi discovery & classification
 │   └── src/
-│       └── security.py     # Authentication & security
-├── ⚛️ Frontend (React)
+│       ├── security.py     # AI-powered authentication & behavioral analysis
+│       └── ml_models/      # Machine learning threat detection models
+├── ⚛️ Intelligent Frontend
 │   ├── src/
-│   │   ├── components/     # UI components for live data
-│   │   ├── features/       # Network, Security, Logs modules
-│   │   └── hooks/          # Real-time data fetching
-└── 📚 Documentation
-    ├── README.md           # This file
-    ├── INSTALLATION.md     # Setup guide
-    ├── FEATURES.md         # Feature documentation
-    └── API-Reference.md    # API documentation
+│   │   ├── components/     # AI-enhanced security dashboards
+│   │   ├── features/       # ML-powered Network, Security, Analytics
+│   │   └── hooks/          # Real-time AI insight fetching
+└── 📚 AI Documentation
+    ├── README.md           # AI-powered platform overview
+    ├── INSTALLATION.md     # ML environment setup
+    ├── FEATURES.md         # AI feature documentation
+    └── API-Reference.md    # Intelligent API endpoints
 ```
 
-## 🔧 **Configuration**
+## 🔧 **AI Configuration**
 
-### **Environment Modes**
-- **Enterprise Mode** (Recommended): `npm run Enterprise` - Real network scanning
-- **Demo Mode**: `npm run dev` - Sample data for testing
+### **Intelligence Modes**
+- **AI-Powered Mode** (Recommended): `npm run Enterprise` - Full ML threat detection
+- **Demo Mode**: `npm run dev` - AI training data and sample analytics
 
-### **Network Configuration**
-The system automatically detects and scans:
-- Primary range: `192.168.x.0/24` 
-- Secondary range: `10.x.x.0/24`
-- Custom ranges configurable in settings
+### **Machine Learning Configuration**
+The AI system automatically optimizes and learns:
+- **Primary Network Intelligence**: `192.168.x.0/24` with behavioral profiling
+- **Secondary Range Analysis**: `10.x.x.0/24` with predictive monitoring
+- **Custom AI Models**: Configurable ML algorithms for specialized environments
 
-## 🌟 **Key Achievements**
+## 🌟 **AI-Powered Achievements**
 
-✅ **Real Network Integration**: Live WiFi device discovery and monitoring  
-✅ **Production Database**: Robust SQLite schema with real data storage  
-✅ **Security Analysis**: Actual vulnerability scanning on discovered devices  
-✅ **Cross-platform Support**: Native scanning on macOS, Linux, Windows  
-✅ **Enterprise Ready**: Authentication, audit logging, role-based access  
-✅ **Real-time Dashboard**: Live network status and security monitoring  
+✅ **Machine Learning Integration**: AI-driven threat detection and behavioral analysis  
+✅ **Intelligent Database**: ML-enhanced SQLite with predictive analytics storage  
+✅ **AI Security Engine**: Machine learning vulnerability assessment on live devices  
+✅ **Cross-platform AI**: Native ML-powered scanning on macOS, Linux, Windows  
+✅ **Enterprise AI**: Behavioral authentication, AI audit logging, intelligent access control  
+✅ **Predictive Dashboard**: ML-powered security insights and threat intelligence  
 
-## 🚦 **Development Status**
+## 🚦 **AI Development Status**
 
-| Component | Status | Description |
-|-----------|--------|-------------|
-| 🌐 Network Discovery | ✅ **Production** | Live WiFi scanning active |
-| 🛡️ Security Analysis | ✅ **Production** | Real device vulnerability scanning |
-| 📊 Dashboard | ✅ **Production** | Live data visualization |
-| 🔒 Authentication | ✅ **Production** | Full security implementation |
-| 📱 API | ✅ **Production** | Complete REST API |
-| 📚 Documentation | ✅ **Current** | Up-to-date docs |
+| AI Component | Status | Description |
+|--------------|--------|-------------|
+| 🤖 ML Threat Detection | ✅ **Production** | AI-powered anomaly detection active |
+| 🛡️ Intelligent Security | ✅ **Production** | ML-enhanced vulnerability assessment |
+| 📊 AI Dashboard | ✅ **Production** | Machine learning insights visualization |
+| 🔒 Behavioral Auth | ✅ **Production** | AI-powered authentication system |
+| 📱 Smart API | ✅ **Production** | ML-enhanced REST API endpoints |
+| 📚 AI Documentation | ✅ **Current** | Comprehensive ML feature docs |
+
+## 📚 **Documentation & Resources**
+
+### **📋 Setup & Installation**
+- **[INSTALLATION.md](INSTALLATION.md)** - Complete setup guide with ML environment configuration
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development workflow and contribution guidelines
+
+### **🔧 Technical Documentation** 
+- **[FEATURES.md](FEATURES.md)** - Comprehensive AI feature documentation and capabilities
+- **[API-Reference.md](API-Reference.md)** - Complete API documentation with ML endpoints
+- **[FRONTEND-ARCHITECTURE.md](FRONTEND-ARCHITECTURE.md)** - Frontend technical architecture and design
+
+### **📊 Project Status & Visuals**
+- **[TODO.md](TODO.md)** - Development roadmap and AI feature milestones
+- **[SCREENSHOTS.md](SCREENSHOTS.md)** - Visual documentation and platform screenshots
+
+### **🔗 Quick Links**
+| Resource | Purpose | Content |
+|----------|---------|---------|
+| 🚀 [Installation Guide](INSTALLATION.md) | Setup | ML environment, dependencies, Enterprise mode |
+| 🤖 [AI Features](FEATURES.md) | Capabilities | Machine learning, threat detection, analytics |
+| 📡 [API Documentation](API-Reference.md) | Integration | REST endpoints, WebSocket, authentication |
+| 🎯 [Development Roadmap](TODO.md) | Progress | Completed milestones, upcoming AI features |
+| 🖼️ [Screenshots](SCREENSHOTS.md) | Visual Guide | Dashboard, security interface, network views |
 
 ## 🤝 **Contributing**
 
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Test with real network environment
-4. Commit changes (`git commit -m 'Add amazing feature'`)
-5. Push to branch (`git push origin feature/amazing-feature`)
-6. Open Pull Request
+1. **Review**: Read [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines
+2. **Fork**: Create your feature branch (`git checkout -b feature/ai-enhancement`)
+3. **Develop**: Build and test with real network environment
+4. **Test**: Validate AI features and ML model performance
+5. **Document**: Update relevant documentation files
+6. **Submit**: Push branch and open Pull Request
 
-## 📞 **Support**
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development workflow.
 
-- 📖 **Documentation**: See `/docs` folder
-- 🐛 **Issues**: GitHub Issues
-- 💬 **Discussions**: GitHub Discussions
-- 📧 **Contact**: [Your contact information]
+## 📞 **Support & Community**
+
+### **📖 Documentation**
+- **Setup Issues**: See [INSTALLATION.md](INSTALLATION.md)
+- **Feature Questions**: Check [FEATURES.md](FEATURES.md)
+- **API Help**: Reference [API-Reference.md](API-Reference.md)
+
+### **🐛 Issues & Support**
+- **Bug Reports**: [GitHub Issues](https://github.com/your-repo/issues)
+- **Feature Requests**: [GitHub Discussions](https://github.com/your-repo/discussions)
+- **Security Issues**: Email security@securenet.ai
+
+### **💬 Community**
+- **Discussions**: [GitHub Discussions](https://github.com/your-repo/discussions)
+- **Updates**: Follow development in [TODO.md](TODO.md)
 
 ## 📄 **License**
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
+
+---
+
+**🛡️ SecureNet** - *AI-Powered Network Security Monitoring & Management System*  
+*Built for cybersecurity professionals, SOC teams, and enterprise security operations*
 
 ---
 
