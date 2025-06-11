@@ -1039,23 +1039,40 @@ async def update_settings(request: Request, settings: dict, api_key: APIKey = De
 @app.post("/api/network/scan")
 @limiter.limit("5/minute")
 async def start_network_scan(request: Request, api_key: APIKey = Depends(get_api_key)):
-    """Start a network scan"""
+    """Start a real network scan"""
     try:
-        # In a real implementation, this would trigger an actual network scan
-        scan_id = f"scan_{int(time.time())}"
-        logger.info(f"Network scan started with ID: {scan_id}")
+        # Import the real network scanner
+        from network_scanner import start_real_network_scan
+        
+        logger.info("Starting real network scan...")
+        
+        # Run the real network scan
+        scan_result = await start_real_network_scan()
+        
         return {
             "status": "success",
             "data": {
-                "id": scan_id,
-                "status": "started",
-                "message": "Network scan initiated"
+                "id": scan_result.get("scan_id", f"scan_{int(time.time())}"),
+                "status": scan_result.get("status", "completed"),
+                "devices_found": scan_result.get("devices_found", 0),
+                "scan_time": scan_result.get("scan_time", 0),
+                "network_ranges": scan_result.get("network_ranges", []),
+                "message": f"Real network scan completed - found {scan_result.get('devices_found', 0)} devices"
             },
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
         logger.error(f"Error starting network scan: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "status": "error",
+            "data": {
+                "id": f"scan_error_{int(time.time())}",
+                "status": "error",
+                "error": str(e),
+                "message": "Network scan failed"
+            },
+            "timestamp": datetime.now().isoformat()
+        }
 
 @app.post("/api/security/scan")
 @limiter.limit("5/minute") 

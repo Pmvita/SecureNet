@@ -1447,10 +1447,10 @@ class Database:
                     await conn.commit()
                     logger.info("Default admin user created successfully")
 
-                # Update schema and insert sample data
+                # Update schema (skip sample data for real network monitoring)
                 await self.update_db_schema()
-                await self.insert_sample_data()
-                logger.info("Database initialized successfully")
+                # await self.insert_sample_data()  # Disabled for real network scanning
+                logger.info("Database initialized successfully - ready for real network scanning")
         except Exception as e:
             logger.error(f"Error initializing database: {str(e)}")
             raise
@@ -2273,17 +2273,18 @@ class Database:
                 """)
                 active_devices = (await cursor.fetchone())[0] or 0
 
-                # Get total traffic
+                # Get total traffic from network_traffic table
                 await cursor.execute("""
                     SELECT SUM(bytes_in + bytes_out) as total
                     FROM network_traffic
-                    WHERE timestamp >= datetime('now', '-1 hour')
                 """)
                 total_traffic = (await cursor.fetchone())[0] or 0
 
                 # Get average latency (placeholder implementation)
                 average_latency = 50  # Placeholder value
 
+                await cursor.close()
+                
                 return {
                     "total_devices": total_devices,
                     "active_devices": active_devices,
