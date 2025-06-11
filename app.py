@@ -1077,3 +1077,82 @@ async def start_security_scan(request: Request, api_key: APIKey = Depends(get_ap
     except Exception as e:
         logger.error(f"Error starting security scan: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/settings/options")
+@limiter.limit("30/minute")
+async def get_settings_options(request: Request, api_key: APIKey = Depends(get_api_key)):
+    """Get available options for settings dropdowns"""
+    try:
+        options = {
+            "themes": [
+                {"value": "dark", "label": "Dark Mode"},
+                {"value": "light", "label": "Light Mode"},
+                {"value": "auto", "label": "Auto (System)"}
+            ],
+            "languages": [
+                {"value": "en", "label": "English"},
+                {"value": "es", "label": "Spanish"},
+                {"value": "fr", "label": "French"},
+                {"value": "de", "label": "German"}
+            ],
+            "timezones": [
+                {"value": "UTC", "label": "UTC"},
+                {"value": "America/New_York", "label": "Eastern Time"},
+                {"value": "America/Chicago", "label": "Central Time"},
+                {"value": "America/Denver", "label": "Mountain Time"},
+                {"value": "America/Los_Angeles", "label": "Pacific Time"}
+            ],
+            "network_interfaces": [
+                {"value": "auto", "label": "Auto-detect"},
+                {"value": "eth0", "label": "Ethernet (eth0)"},
+                {"value": "wlan0", "label": "WiFi (wlan0)"},
+                {"value": "all", "label": "Monitor all interfaces"}
+            ],
+            "discovery_methods": [
+                {"value": "ping_arp", "label": "Ping + ARP"},
+                {"value": "arp_only", "label": "ARP Only"},
+                {"value": "ping_only", "label": "Ping Only"}
+            ],
+            "severity_levels": [
+                {"value": "low", "label": "Low and above"},
+                {"value": "medium", "label": "Medium and above"},
+                {"value": "high", "label": "High and above"},
+                {"value": "critical", "label": "Critical only"}
+            ],
+            "log_levels": [
+                {"value": "debug", "label": "Debug"},
+                {"value": "info", "label": "Info"},
+                {"value": "warning", "label": "Warning"},
+                {"value": "error", "label": "Error"},
+                {"value": "critical", "label": "Critical"}
+            ]
+        }
+        return {
+            "status": "success",
+            "data": options,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting settings options: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/settings/reset")
+@limiter.limit("5/minute")
+async def reset_settings(request: Request, api_key: APIKey = Depends(get_api_key)):
+    """Reset settings to default values"""
+    try:
+        # Clear all settings from database to force reload of defaults
+        import aiosqlite
+        async with aiosqlite.connect("data/securenet.db") as conn:
+            await conn.execute("DELETE FROM settings")
+            await conn.commit()
+        
+        logger.info("Settings reset to defaults")
+        return {
+            "status": "success",
+            "data": {"message": "Settings reset to default values"},
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error resetting settings: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
