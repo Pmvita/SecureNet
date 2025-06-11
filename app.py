@@ -44,6 +44,7 @@ from src.security import (
 )
 from database import Database
 from jose import JWTError, jwt
+from cve_integration import CVEIntegration
 
 # Load environment variables
 load_dotenv()
@@ -1326,3 +1327,272 @@ async def reset_settings(request: Request, api_key: APIKey = Depends(get_api_key
     except Exception as e:
         logger.error(f"Error resetting settings: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# CVE Integration Endpoints
+@app.get("/api/cve/summary")
+@limiter.limit("30/minute")
+async def get_cve_summary(request: Request, api_key: APIKey = Depends(get_api_key)):
+    """Get CVE vulnerability summary"""
+    try:
+        cve_integration = CVEIntegration()
+        summary = cve_integration.get_vulnerability_summary()
+        
+        return {
+            "status": "success",
+            "data": summary,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting CVE summary: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get CVE summary")
+
+@app.post("/api/cve/scan")
+@limiter.limit("5/minute")
+async def start_cve_scan(request: Request, api_key: APIKey = Depends(get_api_key)):
+    """Start comprehensive CVE vulnerability scan"""
+    try:
+        cve_integration = CVEIntegration()
+        
+        # Run scan in background
+        scan_results = await cve_integration.full_vulnerability_scan()
+        
+        return {
+            "status": "success",
+            "data": scan_results,
+            "message": "CVE vulnerability scan completed",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error starting CVE scan: {e}")
+        raise HTTPException(status_code=500, detail="Failed to start CVE scan")
+
+@app.get("/api/cve/vulnerabilities")
+@limiter.limit("30/minute")
+async def get_device_vulnerabilities(
+    request: Request,
+    device_ip: Optional[str] = None,
+    severity: Optional[str] = None,
+    limit: int = 50,
+    api_key: APIKey = Depends(get_api_key)
+):
+    """Get device vulnerabilities with optional filtering"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Build query with filters
+        query = """
+            SELECT dv.*, cd.description, cd.published_date, cd.cvss_v3_vector
+            FROM device_vulnerabilities dv
+            LEFT JOIN cve_data cd ON dv.cve_id = cd.cve_id
+            WHERE 1=1
+        """
+        params = []
+        
+        if device_ip:
+            query += " AND dv.device_ip = ?"
+            params.append(device_ip)
+        
+        if severity:
+            query += " AND dv.severity = ?"
+            params.append(severity.upper())
+        
+        query += " ORDER BY dv.score DESC, dv.remediation_priority ASC LIMIT ?"
+        params.append(limit)
+        
+        cursor.execute(query, params)
+        vulnerabilities = []
+        
+        for row in cursor.fetchall():
+            vuln = dict(row)
+            # Parse JSON fields
+            if vuln.get('affected_services'):
+                vuln['affected_services'] = json.loads(vuln['affected_services'])
+            vulnerabilities.append(vuln)
+        
+        conn.close()
+        
+        return {
+            "status": "success",
+            "data": vulnerabilities,
+            "count": len(vulnerabilities),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting vulnerabilities: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get vulnerabilities")
+
+@app.get("/api/cve/search")
+@limiter.limit("20/minute")
+async def search_cves(
+    request: Request,
+    keyword: str,
+    limit: int = 20,
+    api_key: APIKey = Depends(get_api_key)
+):
+    """Search CVEs by keyword"""
+    try:
+        cve_integration = CVEIntegration()
+        
+        # Search CVEs
+        cves = await cve_integration.search_cves_by_keyword(keyword, limit)
+        
+        # Convert to dict format
+        cve_data = []
+        for cve in cves:
+            cve_dict = {
+                'cve_id': cve.cve_id,
+                'description': cve.description,
+                'cvss_v3_score': cve.cvss_v3_score,
+                'cvss_v3_severity': cve.cvss_v3_severity,
+                'published_date': cve.published_date,
+                'is_kev': cve.is_kev,
+                'cwe_ids': cve.cwe_ids
+            }
+            cve_data.append(cve_dict)
+        
+        # Store in database
+        if cves:
+            cve_integration.store_cve_data(cves)
+        
+        return {
+            "status": "success",
+            "data": cve_data,
+            "count": len(cve_data),
+            "keyword": keyword,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error searching CVEs: {e}")
+        raise HTTPException(status_code=500, detail="Failed to search CVEs")
+
+@app.get("/api/cve/recent")
+@limiter.limit("20/minute")
+async def get_recent_cves(
+    request: Request,
+    days: int = 7,
+    severity: Optional[str] = None,
+    api_key: APIKey = Depends(get_api_key)
+):
+    """Get recent CVEs from the last N days"""
+    try:
+        cve_integration = CVEIntegration()
+        
+        if severity:
+            # Search by severity
+            cves = await cve_integration.search_high_severity_cves(severity.upper())
+        else:
+            # Search recent CVEs
+            cves = await cve_integration.search_recent_cves(days)
+        
+        # Convert to dict format
+        cve_data = []
+        for cve in cves:
+            cve_dict = {
+                'cve_id': cve.cve_id,
+                'description': cve.description[:200] + "..." if len(cve.description) > 200 else cve.description,
+                'cvss_v3_score': cve.cvss_v3_score,
+                'cvss_v3_severity': cve.cvss_v3_severity,
+                'published_date': cve.published_date,
+                'is_kev': cve.is_kev,
+                'affected_products_count': len(cve.affected_products)
+            }
+            cve_data.append(cve_dict)
+        
+        # Store in database
+        if cves:
+            cve_integration.store_cve_data(cves)
+        
+        return {
+            "status": "success",
+            "data": cve_data,
+            "count": len(cve_data),
+            "days": days,
+            "severity": severity,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting recent CVEs: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get recent CVEs")
+
+@app.get("/api/cve/stats")
+@limiter.limit("30/minute")
+async def get_cve_stats(request: Request, api_key: APIKey = Depends(get_api_key)):
+    """Get CVE statistics and metrics"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get vulnerability counts by severity
+        cursor.execute("""
+            SELECT severity, COUNT(*) as count
+            FROM device_vulnerabilities
+            GROUP BY severity
+        """)
+        severity_stats = dict(cursor.fetchall())
+        
+        # Get vulnerability counts by device type
+        cursor.execute("""
+            SELECT device_type, COUNT(*) as count
+            FROM device_vulnerabilities
+            GROUP BY device_type
+        """)
+        device_type_stats = dict(cursor.fetchall())
+        
+        # Get top CVEs by frequency
+        cursor.execute("""
+            SELECT cve_id, COUNT(*) as device_count, AVG(score) as avg_score
+            FROM device_vulnerabilities
+            GROUP BY cve_id
+            ORDER BY device_count DESC
+            LIMIT 10
+        """)
+        top_cves = [
+            {
+                'cve_id': row[0],
+                'affected_devices': row[1],
+                'average_score': round(row[2], 1) if row[2] else 0
+            }
+            for row in cursor.fetchall()
+        ]
+        
+        # Get scan history
+        cursor.execute("""
+            SELECT COUNT(*) as total_scans, 
+                   MAX(timestamp) as last_scan,
+                   AVG(scan_duration) as avg_duration
+            FROM cve_scan_history
+        """)
+        scan_stats = cursor.fetchone()
+        
+        # Get total CVE count
+        cursor.execute("SELECT COUNT(*) FROM cve_data")
+        total_cves = cursor.fetchone()[0]
+        
+        # Get total vulnerability count
+        cursor.execute("SELECT COUNT(*) FROM device_vulnerabilities")
+        total_vulnerabilities = cursor.fetchone()[0]
+        
+        conn.close()
+        
+        return {
+            "status": "success",
+            "data": {
+                "severity_distribution": severity_stats,
+                "device_type_distribution": device_type_stats,
+                "top_cves": top_cves,
+                "scan_statistics": {
+                    "total_scans": scan_stats[0] if scan_stats else 0,
+                    "last_scan": scan_stats[1] if scan_stats else None,
+                    "average_duration": round(scan_stats[2], 2) if scan_stats and scan_stats[2] else 0
+                },
+                "totals": {
+                    "cves_in_database": total_cves,
+                    "total_vulnerabilities": total_vulnerabilities
+                }
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting CVE stats: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get CVE statistics")

@@ -595,6 +595,234 @@ ws.onmessage = function(event) {
 
 ---
 
+## 🔥 **CVE Integration & Vulnerability Intelligence**
+
+### **GET /api/cve/summary**
+**Get comprehensive vulnerability summary for all discovered devices**
+
+```bash
+curl -X GET "http://localhost:8000/api/cve/summary" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "severity_counts": {
+      "CRITICAL": 2,
+      "HIGH": 5,
+      "MEDIUM": 12,
+      "LOW": 8
+    },
+    "top_vulnerable_devices": [
+      {
+        "ip": "192.168.2.1",
+        "name": "cisco-router-01",
+        "count": 15
+      }
+    ],
+    "last_scan": {
+      "timestamp": "2025-01-11T18:30:00Z",
+      "devices_scanned": 7,
+      "vulnerabilities_found": 27,
+      "duration": 45.2
+    },
+    "total_vulnerabilities": 27
+  },
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+### **POST /api/cve/scan**
+**Start comprehensive CVE vulnerability scan on all discovered network devices**
+
+```bash
+curl -X POST "http://localhost:8000/api/cve/scan" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "devices_scanned": 7,
+    "vulnerabilities_found": 27,
+    "high_risk_count": 7,
+    "critical_count": 2,
+    "scan_duration": 45.2
+  },
+  "message": "CVE vulnerability scan completed",
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+### **GET /api/cve/vulnerabilities**
+**Get device vulnerabilities with optional filtering**
+
+```bash
+# Get all vulnerabilities
+curl -X GET "http://localhost:8000/api/cve/vulnerabilities" \
+  -H "X-API-Key: dev-api-key"
+
+# Filter by device IP
+curl -X GET "http://localhost:8000/api/cve/vulnerabilities?device_ip=192.168.2.1" \
+  -H "X-API-Key: dev-api-key"
+
+# Filter by severity
+curl -X GET "http://localhost:8000/api/cve/vulnerabilities?severity=CRITICAL&limit=10" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "device_ip": "192.168.2.1",
+      "device_name": "cisco-router-01",
+      "device_type": "Router",
+      "cve_id": "CVE-2024-12345",
+      "severity": "HIGH",
+      "score": 8.5,
+      "risk_level": "HIGH",
+      "remediation_priority": 2,
+      "affected_services": ["SSH", "HTTP"],
+      "detection_confidence": 0.85,
+      "description": "Remote code execution vulnerability in Cisco IOS...",
+      "published_date": "2024-01-15T10:00:00Z",
+      "cvss_v3_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+    }
+  ],
+  "count": 1,
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+### **GET /api/cve/search**
+**Search CVEs by keyword (vendor, product, technology)**
+
+```bash
+# Search for Cisco CVEs
+curl -X GET "http://localhost:8000/api/cve/search?keyword=cisco&limit=5" \
+  -H "X-API-Key: dev-api-key"
+
+# Search for Fortinet vulnerabilities
+curl -X GET "http://localhost:8000/api/cve/search?keyword=fortinet&limit=10" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "cve_id": "CVE-2024-12345",
+      "description": "Remote code execution in Cisco IOS software allows...",
+      "cvss_v3_score": 9.8,
+      "cvss_v3_severity": "CRITICAL",
+      "published_date": "2024-01-15T10:00:00Z",
+      "is_kev": true,
+      "cwe_ids": ["CWE-78", "CWE-20"]
+    }
+  ],
+  "count": 1,
+  "keyword": "cisco",
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+### **GET /api/cve/recent**
+**Get recent CVEs from the last N days**
+
+```bash
+# Get CVEs from last 7 days
+curl -X GET "http://localhost:8000/api/cve/recent?days=7" \
+  -H "X-API-Key: dev-api-key"
+
+# Get only CRITICAL CVEs from last 30 days
+curl -X GET "http://localhost:8000/api/cve/recent?days=30&severity=CRITICAL" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "cve_id": "CVE-2024-12345",
+      "description": "Critical vulnerability in network infrastructure devices...",
+      "cvss_v3_score": 9.8,
+      "cvss_v3_severity": "CRITICAL",
+      "published_date": "2024-01-15T10:00:00Z",
+      "is_kev": true,
+      "affected_products_count": 15
+    }
+  ],
+  "count": 1,
+  "days": 7,
+  "severity": null,
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+### **GET /api/cve/stats**
+**Get comprehensive CVE statistics and metrics**
+
+```bash
+curl -X GET "http://localhost:8000/api/cve/stats" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "severity_distribution": {
+      "CRITICAL": 2,
+      "HIGH": 5,
+      "MEDIUM": 12,
+      "LOW": 8
+    },
+    "device_type_distribution": {
+      "Router": 15,
+      "Firewall": 8,
+      "Endpoint": 4
+    },
+    "top_cves": [
+      {
+        "cve_id": "CVE-2024-12345",
+        "affected_devices": 3,
+        "average_score": 8.5
+      },
+      {
+        "cve_id": "CVE-2024-67890",
+        "affected_devices": 2,
+        "average_score": 7.2
+      }
+    ],
+    "scan_statistics": {
+      "total_scans": 12,
+      "last_scan": "2025-01-11T18:30:00Z",
+      "average_duration": 42.5
+    },
+    "totals": {
+      "cves_in_database": 1250,
+      "total_vulnerabilities": 27
+    }
+  },
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+---
+
 ## 🚫 **Error Handling**
 
 ### **Standard Error Responses**
