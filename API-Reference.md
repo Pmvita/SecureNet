@@ -1,319 +1,697 @@
-# 🔌 SecureNet API Reference
+# 🔌 SecureNet API Reference - Production Network Monitoring
 
-> Complete API documentation for SecureNet's **real-time network monitoring** platform
+> **Complete REST API Documentation for Real-Time WiFi Network Security**  
+> Live device discovery • Real-time security analysis • Production-ready endpoints
 
-## Table of Contents
-- [Authentication](#authentication)
-- [WebSocket Endpoints](#websocket-endpoints)
-- [REST Endpoints](#rest-endpoints)
-  - [Real Network Monitoring](#real-network-monitoring)
-  - [Live Device Discovery](#live-device-discovery)
-  - [Dashboard & Statistics](#dashboard--statistics)
-  - [Log Management](#log-management)
-  - [Security Management](#security-management)
-  - [Settings & Configuration](#settings--configuration)
-- [WebSocket Connection Examples](#websocket-connection-examples)
+This document provides comprehensive API documentation for SecureNet's production network monitoring and security analysis platform.
 
-## Authentication
+## 🌐 **Base Configuration**
 
-All API endpoints require authentication using an API key. Include the API key in the request header:
-```
-X-API-Key: your-api-key
-```
+### **API Base URLs**
+- **Production**: `http://localhost:8000`
+- **API Documentation**: `http://localhost:8000/docs` (Swagger UI)
+- **OpenAPI Schema**: `http://localhost:8000/openapi.json`
 
-Example using curl:
+### **Authentication**
 ```bash
-curl -H "X-API-Key: your-api-key" http://localhost:8000/api/network
+# Development API Key
+X-API-Key: dev-api-key
+
+# Production API Key (configurable)
+X-API-Key: your-production-api-key
 ```
 
-## WebSocket Endpoints
-
-SecureNet provides real-time updates through WebSocket connections for live network monitoring:
-
-| Endpoint | Description |
-|----------|-------------|
-| `/ws/network` | **Real-time network device discovery updates** |
-| `/ws/traffic` | **Live network traffic monitoring from actual interfaces** |
-| `/ws/notifications` | Real-time notifications for system events, alerts, and network updates |
-| `/ws/security` | Security scan updates and findings from real network analysis |
-| `/ws/logs` | Live log streaming with network device filtering capabilities |
-
-## REST Endpoints
-
-### Real Network Monitoring
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/network` | GET | **Get real network overview with actual discovered devices** |
-| `/api/network/scan` | POST | **Start live WiFi network scan** (discovers actual devices) |
-| `/api/network/devices` | GET | **Get discovered network devices with MAC addresses** |
-| `/api/network/devices/{device_id}` | GET | **Get specific device details with real network information** |
-
-#### Live Network Discovery
-The `/api/network` endpoint returns real network data:
+### **Response Format**
+All endpoints return responses in this standardized format:
 ```json
 {
-  "total_devices": 8,
-  "active_devices": 8,
-  "total_traffic": 286250,
-  "devices": [
-    {
-      "id": "device-1",
-      "name": "mynetwork",
-      "ip": "192.168.2.1",
-      "mac": "44:E9:DD:4C:7C:74",
-      "device_type": "Router",
-      "status": "online",
-      "ports": [53, 80, 139, 443]
+  "status": "success|error",
+  "data": {...},
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+---
+
+## 🔍 **Network Discovery Endpoints**
+
+### **GET /api/network**
+**Real-time network device discovery and monitoring**
+
+```bash
+curl -X GET "http://localhost:8000/api/network" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Response Example (Real Production Data):**
+```json
+{
+  "status": "success",
+  "data": {
+    "devices": [
+      {
+        "id": "device_192_168_2_1",
+        "name": "mynetwork",
+        "ip_address": "192.168.2.1",
+        "mac_address": "44:E9:DD:4C:7C:74",
+        "device_type": "Router",
+        "status": "online",
+        "last_seen": "2025-06-11T17:38:00Z",
+        "open_ports": [53, 80, 139, 443],
+        "vendor": "Network Equipment",
+        "first_discovered": "2025-06-11T16:45:12Z"
+      },
+      {
+        "id": "device_192_168_2_17",
+        "name": "device-17",
+        "ip_address": "192.168.2.17",
+        "mac_address": "F0:5C:77:75:DD:F6",
+        "device_type": "Endpoint",
+        "status": "online",
+        "last_seen": "2025-06-11T17:37:45Z",
+        "open_ports": [],
+        "vendor": "Unknown",
+        "first_discovered": "2025-06-11T16:45:15Z"
+      }
+    ],
+    "network_stats": {
+      "total_devices": 7,
+      "active_devices": 7,
+      "device_types": {
+        "Router": 1,
+        "Endpoint": 6,
+        "Server": 0,
+        "Printer": 0
+      },
+      "network_range": "192.168.2.0/24",
+      "last_scan": "2025-06-11T17:37:30Z",
+      "scan_duration": "12.5s"
     },
-    {
-      "id": "device-17",
-      "ip": "192.168.2.17",
-      "mac": "F0:5C:77:75:DD:F6",
-      "device_type": "Endpoint",
-      "status": "online"
+    "traffic_stats": {
+      "total_bytes": 286250,
+      "active_connections": 15,
+      "protocols": ["TCP", "UDP", "HTTP", "HTTPS"]
     }
-  ]
-}
-```
-
-### Live Device Discovery
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/network/scan` | POST | **Trigger real WiFi network scan** |
-| `/api/network/interfaces` | GET | **Get available network interfaces for scanning** |
-| `/api/network/ranges` | GET | **Get detected network ranges** (192.168.x.0/24, etc.) |
-| `/api/network/devices/history` | GET | **Get device discovery history** |
-
-#### Real Network Scanning
-The `/api/network/scan` endpoint initiates actual network discovery:
-```bash
-curl -X POST -H "X-API-Key: your-api-key" http://localhost:8000/api/network/scan
-```
-
-Response:
-```json
-{
-  "scan_id": "real_scan_1749675950",
-  "status": "started",
-  "network_ranges": ["192.168.2.0/24"],
-  "discovery_method": "ping_arp_port_scan"
-}
-```
-
-### Dashboard & Statistics
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/stats/overview` | GET | **Get dashboard statistics with real network data** |
-| `/api/network/traffic` | GET | **Get actual network traffic data and metrics** |
-| `/api/security/score` | GET | **Get security score based on real device analysis** |
-| `/api/reports/generate` | POST | **Generate reports with actual network discovery data** |
-
-#### Real Network Statistics
-The `/api/stats/overview` endpoint provides actual network metrics:
-```json
-{
-  "network": {
-    "total_devices": 8,
-    "active_devices": 8,
-    "router_devices": 1,
-    "endpoint_devices": 7,
-    "total_traffic_bytes": 286250,
-    "scan_timestamp": "2025-06-11T17:01:50.000Z"
   },
-  "security": {
-    "vulnerabilities_found": 0,
-    "open_ports_detected": 5,
-    "security_score": 85
-  }
+  "timestamp": "2025-06-11T17:38:00.886416"
 }
 ```
 
-### Log Management
+### **POST /api/network/scan**
+**Trigger real network discovery scan**
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/logs` | GET | **Get logs with network device filtering options** |
-| `/api/logs/network` | GET | **Get network-specific logs from device discovery** |
-| `/api/logs/devices/{device_id}` | GET | **Get logs for specific discovered device** |
-| `/api/logs/search` | GET | **Advanced log search with network device filters** |
-
-### Live Network Traffic Monitoring
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/network/traffic` | GET | **Get real network traffic data with device correlation** |
-| `/api/network/traffic/stats` | GET | **Get actual traffic statistics from network interfaces** |
-| `/api/network/connections` | GET | **Get real active network connections** |
-| `/api/network/protocols` | GET | **Get actual protocol distribution from traffic analysis** |
-
-#### Real Traffic Analysis
 ```bash
-curl -H "X-API-Key: your-api-key" "http://localhost:8000/api/network/traffic"
+curl -X POST "http://localhost:8000/api/network/scan" \
+  -H "X-API-Key: dev-api-key"
 ```
 
-Response with actual network data:
+**Response Example:**
 ```json
 {
-  "traffic_stats": {
-    "total_bytes": 286250,
-    "inbound_bytes": 143125,
-    "outbound_bytes": 143125,
-    "active_connections": 8
-  },
-  "device_traffic": [
-    {
-      "device_id": "device-1",
-      "ip": "192.168.2.1",
-      "mac": "44:E9:DD:4C:7C:74",
-      "bytes_sent": 50000,
-      "bytes_received": 45000
-    }
-  ]
-}
-```
-
-### Security Management
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/security/scans` | GET | **List security scans on real discovered devices** |
-| `/api/security/scan` | POST | **Start security scan on actual network devices** |
-| `/api/security/devices/{device_id}/scan` | POST | **Scan specific discovered device for vulnerabilities** |
-| `/api/anomalies` | GET | **Get anomalies detected from real network monitoring** |
-
-### Settings & Configuration
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/settings` | GET | **Get system settings including real network monitoring configuration** |
-| `/api/settings` | PUT | **Update settings with network scanning parameters** |
-| `/api/settings/network` | GET | **Get network monitoring specific settings** |
-| `/api/settings/network` | PUT | **Update real network scanning configuration** |
-
-#### Real Network Monitoring Configuration
-
-The `/api/settings/network` endpoint supports comprehensive real network scanning configuration:
-
-**Network Monitoring Configuration Options:**
-- `enabled` - Enable/disable real network monitoring
-- `scan_interval` - Device discovery interval in seconds (60-3600)
-- `timeout` - Network scan timeout in seconds (5-120)
-- `interface` - Network interface selection (auto, eth0, wlan0, all)
-- `network_ranges` - IP ranges to scan (CIDR notation)
-- `discovery_method` - Device discovery method (ping_arp, ping_only, arp_only)
-- `port_scanning` - Enable port scanning on discovered devices
-- `max_devices` - Maximum devices to track (10-10000)
-- `concurrent_scans` - Number of concurrent scanning threads (10-100)
-
-**Example Real Network Settings Request:**
-```json
-{
-  "network_monitoring": {
-    "enabled": true,
-    "scan_interval": 300,
-    "interface": "auto",
+  "status": "success",
+  "data": {
+    "scan_id": "network_scan_1749677880",
+    "status": "completed",
+    "devices_discovered": 7,
+    "scan_time": "12.5s",
     "network_ranges": ["192.168.2.0/24"],
-    "discovery_method": "ping_arp",
-    "port_scanning": true,
-    "max_devices": 100,
-    "concurrent_scans": 50
-  }
+    "message": "Network scan completed - 7 devices discovered"
+  },
+  "timestamp": "2025-06-11T17:38:00.886416"
 }
 ```
 
-**Response with Actual Network Interface Detection:**
+---
+
+## 🛡️ **Security Analysis Endpoints**
+
+### **GET /api/security**
+**Real-time security status and analysis**
+
+```bash
+curl -X GET "http://localhost:8000/api/security" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Response Example (Current Production Data):**
 ```json
 {
-  "status": "updated",
-  "detected_interfaces": ["en0", "en1", "lo0"],
-  "active_interface": "en0",
-  "network_ranges": ["192.168.2.0/24"],
-  "discovery_capabilities": {
-    "ping_available": true,
-    "arp_available": true,
-    "port_scan_available": true,
-    "requires_privileges": false
-  }
+  "status": "success",
+  "data": {
+    "metrics": {
+      "active_scans": 0,
+      "total_findings": 0,
+      "critical_findings": 0,
+      "security_score": 100,
+      "last_scan": "2025-06-11T17:38:00.844846",
+      "scan_status": "idle",
+      "open_ports_detected": 4,
+      "network_devices": 7,
+      "active_devices": 7,
+      "routers_detected": 1
+    },
+    "recent_scans": [
+      {
+        "id": "security_scan_1749677880",
+        "timestamp": "2025-06-11T17:38:00.844842",
+        "type": "network_security",
+        "target": "7 network devices",
+        "status": "completed",
+        "progress": 100,
+        "findings_count": 0,
+        "start_time": "2025-06-11T17:38:00.844842",
+        "end_time": "2025-06-11T17:38:00.844846",
+        "metadata": {
+          "devices_scanned": 7,
+          "findings": []
+        }
+      }
+    ],
+    "active_scans": [],
+    "recent_findings": []
+  },
+  "timestamp": "2025-06-11T17:38:26.420271"
 }
 ```
 
-## WebSocket Connection Examples
+### **POST /api/security/scan**
+**Start real security vulnerability scan**
 
-### Real-time Network Device Discovery
+```bash
+curl -X POST "http://localhost:8000/api/security/scan" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "id": "security_scan_1749677880",
+    "status": "completed",
+    "devices_scanned": 7,
+    "findings_count": 0,
+    "message": "Security scan completed on 7 real network devices"
+  },
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+**Example Response with Security Findings:**
+```json
+{
+  "status": "success",
+  "data": {
+    "id": "security_scan_1749677990",
+    "status": "completed",
+    "devices_scanned": 7,
+    "findings_count": 2,
+    "findings": [
+      {
+        "device_id": "device_192_168_2_1",
+        "device_ip": "192.168.2.1",
+        "device_name": "mynetwork",
+        "type": "open_port",
+        "severity": "medium",
+        "description": "SSH port (22) open on router mynetwork (192.168.2.1)",
+        "recommendation": "Consider disabling SSH if not needed or restrict access"
+      },
+      {
+        "device_id": "device_192_168_2_50",
+        "device_ip": "192.168.2.50",
+        "device_name": "device-50",
+        "type": "device_offline",
+        "severity": "low",
+        "description": "Device device-50 (192.168.2.50) has not been seen for over 24 hours",
+        "recommendation": "Verify device status and network connectivity"
+      }
+    ],
+    "message": "Security scan completed on 7 real network devices"
+  },
+  "timestamp": "2025-06-11T17:40:00.123456"
+}
+```
+
+---
+
+## 🔔 **Anomaly Detection Endpoints**
+
+### **GET /api/anomalies/list**
+**List detected network anomalies**
+
+```bash
+curl -X GET "http://localhost:8000/api/anomalies/list?page=1&pageSize=20" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Query Parameters:**
+- `page` (int): Page number (default: 1)
+- `pageSize` (int): Items per page (default: 20)
+- `status` (string): Filter by status (active, resolved)
+- `severity` (string): Filter by severity (low, medium, high, critical)
+- `type` (string): Filter by anomaly type
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "anomalies": [],
+    "total": 0,
+    "page": 1,
+    "pageSize": 20,
+    "totalPages": 0
+  },
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+### **GET /api/anomalies/stats**
+**Anomaly detection statistics**
+
+```bash
+curl -X GET "http://localhost:8000/api/anomalies/stats" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "total_anomalies": 0,
+    "active_anomalies": 0,
+    "resolved_anomalies": 0,
+    "severity_breakdown": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "detection_rate": "Real-time",
+    "last_analysis": "2025-06-11T17:38:00Z"
+  },
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+### **POST /api/anomalies/analyze**
+**Trigger anomaly analysis on network data**
+
+```bash
+curl -X POST "http://localhost:8000/api/anomalies/analyze" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "analysis_id": "anomaly_analysis_1749677880",
+    "devices_analyzed": 7,
+    "anomalies_detected": 0,
+    "analysis_time": "2.3s",
+    "message": "Network anomaly analysis completed"
+  },
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+---
+
+## 📊 **Logging & Monitoring Endpoints**
+
+### **GET /api/logs**
+**Retrieve system and security logs**
+
+```bash
+curl -X GET "http://localhost:8000/api/logs?page=1&pageSize=20" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Query Parameters:**
+- `page` (int): Page number
+- `pageSize` (int): Items per page (max 100)
+- `level` (string): Log level (debug, info, warning, error, critical)
+- `category` (string): Log category (system, security, network)
+- `source` (string): Log source filter
+- `start_date` (string): Start date (ISO format)
+- `end_date` (string): End date (ISO format)
+- `search` (string): Text search in log messages
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "logs": [
+      {
+        "id": 1,
+        "timestamp": "2025-06-11T17:38:00Z",
+        "level": "info",
+        "category": "security",
+        "source": "security_scanner",
+        "message": "Security scan security_scan_1749677880 completed: 0 findings on 7 devices",
+        "metadata": {
+          "scan_id": "security_scan_1749677880",
+          "devices_scanned": 7,
+          "findings_count": 0
+        }
+      },
+      {
+        "id": 2,
+        "timestamp": "2025-06-11T17:37:30Z",
+        "level": "info",
+        "category": "network",
+        "source": "network_scanner",
+        "message": "Network scan completed - discovered 7 devices",
+        "metadata": {
+          "scan_duration": "12.5s",
+          "devices_found": 7,
+          "network_range": "192.168.2.0/24"
+        }
+      }
+    ],
+    "total": 150,
+    "page": 1,
+    "pageSize": 20,
+    "totalPages": 8
+  },
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+### **GET /api/logs/stats**
+**Logging statistics and metrics**
+
+```bash
+curl -X GET "http://localhost:8000/api/logs/stats" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "total_logs": 1547,
+    "logs_today": 89,
+    "level_breakdown": {
+      "critical": 0,
+      "error": 2,
+      "warning": 15,
+      "info": 1425,
+      "debug": 105
+    },
+    "category_breakdown": {
+      "system": 890,
+      "security": 445,
+      "network": 212
+    },
+    "source_breakdown": {
+      "network_scanner": 156,
+      "security_scanner": 98,
+      "api_server": 445,
+      "database": 123,
+      "auth_system": 67
+    }
+  },
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+---
+
+## 🔐 **Authentication Endpoints**
+
+### **POST /api/auth/login**
+**User authentication and session management**
+
+```bash
+curl -X POST "http://localhost:8000/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "admin123"
+  }'
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+    "user": {
+      "id": 1,
+      "username": "admin",
+      "email": "admin@example.com",
+      "role": "Administrator",
+      "last_login": "2025-06-11T17:38:00Z"
+    }
+  },
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+### **GET /api/auth/me**
+**Get current user information**
+
+```bash
+curl -X GET "http://localhost:8000/api/auth/me" \
+  -H "Authorization: Bearer <token>"
+```
+
+### **POST /api/auth/logout**
+**User logout and session termination**
+
+```bash
+curl -X POST "http://localhost:8000/api/auth/logout" \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+## ⚙️ **Settings & Configuration Endpoints**
+
+### **GET /api/settings**
+**Retrieve system configuration**
+
+```bash
+curl -X GET "http://localhost:8000/api/settings" \
+  -H "X-API-Key: dev-api-key"
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "system": {
+      "app_name": "SecureNet",
+      "theme": "dark",
+      "auto_refresh": true,
+      "refresh_interval": 30
+    },
+    "network_monitoring": {
+      "enabled": true,
+      "interval": 300,
+      "timeout": 30,
+      "interface": "auto",
+      "ip_ranges": "192.168.1.0/24,10.0.0.0/8",
+      "discovery_method": "ping_arp",
+      "max_devices": 1000,
+      "traffic_analysis": false,
+      "packet_capture": false
+    },
+    "security_scanning": {
+      "enabled": true,
+      "interval": 3600,
+      "severity_threshold": "medium"
+    },
+    "notifications": {
+      "enabled": true,
+      "email": "",
+      "slack_webhook": ""
+    }
+  },
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+### **PUT /api/settings**
+**Update system configuration**
+
+```bash
+curl -X PUT "http://localhost:8000/api/settings" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: dev-api-key" \
+  -d '{
+    "network_monitoring": {
+      "interval": 600,
+      "ip_ranges": "192.168.1.0/24,192.168.2.0/24"
+    }
+  }'
+```
+
+---
+
+## 🔧 **System Status Endpoints**
+
+### **GET /api/health**
+**System health check**
+
+```bash
+curl -X GET "http://localhost:8000/api/health"
+```
+
+**Response Example:**
+```json
+{
+  "status": "healthy",
+  "database": "connected",
+  "network_scanner": "operational",
+  "security_engine": "active",
+  "uptime": "2h 45m 12s",
+  "version": "2.1.0",
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+### **GET /api/get-api-key**
+**Generate or retrieve API key (authenticated users only)**
+
+```bash
+curl -X GET "http://localhost:8000/api/get-api-key" \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+## 📡 **Real-Time WebSocket Endpoints**
+
+### **WebSocket /ws/logs**
+**Real-time log streaming**
 
 ```javascript
-// Real-time network device updates
-const networkWs = new WebSocket('ws://localhost:8000/ws/network');
-networkWs.onmessage = (event) => {
-    const networkData = JSON.parse(event.data);
-    console.log('New device discovered:', networkData.device);
-    console.log('Total devices:', networkData.total_devices);
-    console.log('MAC address:', networkData.device.mac);
-};
-
-// Live traffic monitoring from actual network
-const trafficWs = new WebSocket('ws://localhost:8000/ws/traffic');
-trafficWs.onmessage = (event) => {
-    const trafficData = JSON.parse(event.data);
-    console.log('Real traffic update:', trafficData);
-    console.log('Bytes transferred:', trafficData.bytes);
-    console.log('Source device:', trafficData.source_device);
+const ws = new WebSocket('ws://localhost:8000/ws/logs');
+ws.onmessage = function(event) {
+  const logEntry = JSON.parse(event.data);
+  console.log('New log:', logEntry);
 };
 ```
 
-### Python Real Network Monitoring
+### **WebSocket /ws/notifications**
+**Real-time security notifications**
 
-```python
-import websockets
-import asyncio
-import json
-
-async def monitor_real_network():
-    uri = "ws://localhost:8000/ws/network"
-    headers = {"X-API-Key": "your-api-key"}
-    
-    async with websockets.connect(uri, extra_headers=headers) as websocket:
-        while True:
-            try:
-                message = await websocket.recv()
-                network_data = json.loads(message)
-                print(f"Device discovered: {network_data['device']['ip']}")
-                print(f"MAC address: {network_data['device']['mac']}")
-                print(f"Device type: {network_data['device']['device_type']}")
-                print(f"Total devices: {network_data['total_devices']}")
-            except websockets.exceptions.ConnectionClosed:
-                print("Connection closed")
-                break
-
-# Start real network monitoring
-asyncio.run(monitor_real_network())
+```javascript
+const ws = new WebSocket('ws://localhost:8000/ws/notifications');
+ws.onmessage = function(event) {
+  const notification = JSON.parse(event.data);
+  console.log('Security alert:', notification);
+};
 ```
 
-### cURL Examples for Real Network API
+---
 
+## 🚫 **Error Handling**
+
+### **Standard Error Responses**
+```json
+{
+  "status": "error",
+  "error": {
+    "code": "INVALID_API_KEY",
+    "message": "Invalid API Key in development mode",
+    "details": "The provided API key is not valid for this environment"
+  },
+  "timestamp": "2025-06-11T17:38:00.886416"
+}
+```
+
+### **Common Error Codes**
+- `INVALID_API_KEY`: API key authentication failed
+- `INSUFFICIENT_PERMISSIONS`: User lacks required permissions
+- `RESOURCE_NOT_FOUND`: Requested resource does not exist
+- `RATE_LIMIT_EXCEEDED`: API rate limit exceeded
+- `VALIDATION_ERROR`: Request data validation failed
+- `NETWORK_SCAN_ERROR`: Network scanning operation failed
+- `DATABASE_ERROR`: Database operation failed
+
+---
+
+## 📊 **Rate Limiting**
+
+### **Current Limits**
+- **Authentication**: 10 requests/minute
+- **Network Scans**: 5 requests/minute
+- **Security Scans**: 5 requests/minute
+- **General API**: 30 requests/minute
+- **Real-time endpoints**: 60 requests/minute
+
+### **Rate Limit Headers**
+```
+X-RateLimit-Limit: 30
+X-RateLimit-Remaining: 25
+X-RateLimit-Reset: 1641123456
+```
+
+---
+
+## 🧪 **Testing & Examples**
+
+### **Complete Network Discovery Test**
 ```bash
-# Start real WiFi network scan
-curl -X POST \
-  -H "X-API-Key: your-api-key" \
-  http://localhost:8000/api/network/scan
+#!/bin/bash
+# Test complete network discovery workflow
 
-# Get discovered devices with real MAC addresses
-curl -H "X-API-Key: your-api-key" \
-  http://localhost:8000/api/network/devices
+# 1. Trigger network scan
+curl -X POST "http://localhost:8000/api/network/scan" -H "X-API-Key: dev-api-key"
 
-# Get actual network traffic statistics
-curl -H "X-API-Key: your-api-key" \
-  http://localhost:8000/api/network/traffic/stats
+# 2. Get discovered devices
+curl -X GET "http://localhost:8000/api/network" -H "X-API-Key: dev-api-key"
 
-# Get real network interface information
-curl -H "X-API-Key: your-api-key" \
-  http://localhost:8000/api/network/interfaces
+# 3. Run security analysis
+curl -X POST "http://localhost:8000/api/security/scan" -H "X-API-Key: dev-api-key"
+
+# 4. Check security status
+curl -X GET "http://localhost:8000/api/security" -H "X-API-Key: dev-api-key"
 ```
 
-## Response Formats
+### **Production Monitoring Script**
+```python
+import requests
+import time
 
-### Success Response
+api_key = "dev-api-key"
+base_url = "http://localhost:8000"
+
+def monitor_network():
+    """Monitor network status and security"""
+    
+    # Get network status
+    response = requests.get(f"{base_url}/api/network", 
+                          headers={"X-API-Key": api_key})
+    network_data = response.json()
+    
+    print(f"Devices: {network_data['data']['network_stats']['total_devices']}")
+    print(f"Active: {network_data['data']['network_stats']['active_devices']}")
+    
+    # Get security status
+    response = requests.get(f"{base_url}/api/security", 
+                          headers={"X-API-Key": api_key})
+    security_data = response.json()
+    
+    print(f"Security Score: {security_data['data']['metrics']['security_score']}")
+    print(f"Threats: {security_data['data']['metrics']['critical_findings']}")
+
+# Run monitoring
+monitor_network()
 ```
+
+---
+
+**SecureNet API v2.1.0** - Complete production-ready REST API for real-time WiFi network security monitoring 🛡️
+
+*Your network security platform is now equipped with comprehensive API access for all real-time monitoring and security analysis features.*
