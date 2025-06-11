@@ -247,7 +247,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development workflow.
 
 ## 📄 **License**
 
-This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
+Copyright (c) 2025 Pierre Mvita. All Rights Reserved.
+
+This software is proprietary and confidential. See the [LICENSE.txt](LICENSE.txt) file for complete terms and conditions.
 
 ---
 
