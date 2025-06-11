@@ -8,6 +8,7 @@ import logging
 from typing import Optional, List, Dict
 import asyncio
 import random
+import time
 
 import aiosqlite
 from src.security import get_password_hash
@@ -972,7 +973,7 @@ class Database:
             return []
 
     async def get_security_metrics(self) -> Dict:
-        """Get security metrics including asset status"""
+        """Get security metrics including real network data analysis"""
         try:
             async with aiosqlite.connect(self.db_path) as conn:
                 conn.row_factory = aiosqlite.Row  # Enable dictionary-style access
@@ -1000,23 +1001,55 @@ class Database:
                 critical_findings = (await cursor.fetchone())['count'] or 0
                 await cursor.close()
                 
-                # Calculate security score
+                # Get real network devices for security analysis
+                devices = await self.get_network_devices()
+                open_ports_count = 0
+                router_count = 0
+                active_devices = 0
+                
+                for device in devices:
+                    if device.get('device_type') == 'Router':
+                        router_count += 1
+                    if device.get('status') == 'online':
+                        active_devices += 1
+                    open_ports = device.get('open_ports', [])
+                    if open_ports:
+                        open_ports_count += len(open_ports)
+                
+                # Calculate security score based on real network data
                 cursor = await conn.execute("""
                     SELECT 
                         CASE 
                             WHEN COUNT(*) = 0 THEN 100
                             ELSE 100 - (
-                                (COUNT(CASE WHEN severity = 'critical' THEN 1 END) * 10) +
-                                (COUNT(CASE WHEN severity = 'high' THEN 1 END) * 5) +
-                                (COUNT(CASE WHEN severity = 'medium' THEN 1 END) * 2) +
+                                (COUNT(CASE WHEN severity = 'critical' THEN 1 END) * 15) +
+                                (COUNT(CASE WHEN severity = 'high' THEN 1 END) * 8) +
+                                (COUNT(CASE WHEN severity = 'medium' THEN 1 END) * 3) +
                                 (COUNT(CASE WHEN severity = 'low' THEN 1 END) * 1)
                             )
-                        END as score
+                        END as base_score
                     FROM security_findings
                     WHERE status = 'active'
                 """)
-                security_score = (await cursor.fetchone())['score'] or 100
+                base_score = (await cursor.fetchone())['base_score'] or 100
                 await cursor.close()
+                
+                # Adjust score based on real network security factors
+                security_score = base_score
+                
+                # Deduct points for excessive open ports
+                if open_ports_count > 10:
+                    security_score -= (open_ports_count - 10) * 2
+                
+                # Add points for having routers (good network structure)
+                if router_count > 0:
+                    security_score += 5
+                
+                # Deduct points if no devices are active
+                if len(devices) > 0 and active_devices == 0:
+                    security_score -= 20
+                
+                security_score = max(0, min(100, security_score))
                 
                 # Get last scan info
                 cursor = await conn.execute("""
@@ -1041,9 +1074,13 @@ class Database:
                     'active_scans': active_scans,
                     'total_findings': total_findings,
                     'critical_findings': critical_findings,
-                    'security_score': security_score,
+                    'security_score': int(security_score),
                     'last_scan': last_scan,
-                    'scan_status': scan_status
+                    'scan_status': scan_status,
+                    'open_ports_detected': open_ports_count,
+                    'network_devices': len(devices),
+                    'active_devices': active_devices,
+                    'routers_detected': router_count
                 }
         except Exception as e:
             logger.error(f"Error getting security metrics: {str(e)}")
@@ -1051,9 +1088,13 @@ class Database:
                 'active_scans': 0,
                 'total_findings': 0,
                 'critical_findings': 0,
-                'security_score': 100,
+                'security_score': 85,
                 'last_scan': None,
-                'scan_status': 'idle'
+                'scan_status': 'idle',
+                'open_ports_detected': 0,
+                'network_devices': 0,
+                'active_devices': 0,
+                'routers_detected': 0
             }
 
     async def get_recent_alerts(self, limit: int = 50) -> List[Dict]:
@@ -1579,7 +1620,7 @@ class Database:
             async with aiosqlite.connect(self.db_path) as conn:
                 conn.row_factory = aiosqlite.Row
                 cursor = await conn.execute("""
-                    SELECT id, type, target, status, findings_count,
+                    SELECT id, timestamp, type, target, status, progress, findings_count,
                            start_time, end_time, metadata
                     FROM security_scans
                     ORDER BY start_time DESC
@@ -1600,6 +1641,67 @@ class Database:
         except Exception as e:
             logger.error(f"Error getting recent scans: {str(e)}")
             return []
+
+    async def store_security_scan(self, scan_data: Dict) -> bool:
+        """Store a security scan in the database."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                now = datetime.now().isoformat()
+                await conn.execute("""
+                    INSERT INTO security_scans (id, timestamp, type, target, status, progress,
+                                               findings_count, start_time, end_time, metadata,
+                                               created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    scan_data.get('id'),
+                    scan_data.get('start_time', now),
+                    scan_data.get('type'),
+                    scan_data.get('target'),
+                    scan_data.get('status'),
+                    100.0 if scan_data.get('status') == 'completed' else 0.0,
+                    scan_data.get('findings_count', 0),
+                    scan_data.get('start_time', now),
+                    scan_data.get('end_time', now if scan_data.get('status') == 'completed' else None),
+                    json.dumps(scan_data.get('metadata', {})),
+                    now,
+                    now
+                ))
+                await conn.commit()
+                logger.info(f"Stored security scan: {scan_data.get('id')}")
+                return True
+        except Exception as e:
+            logger.error(f"Error storing security scan: {str(e)}")
+            return False
+
+    async def store_security_finding(self, finding_data: Dict) -> bool:
+        """Store a security finding in the database."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                now = datetime.now().isoformat()
+                finding_id = f"finding_{finding_data.get('scan_id')}_{int(time.time())}"
+                await conn.execute("""
+                    INSERT INTO security_findings (id, scan_id, type, severity, description,
+                                                  details, timestamp, status, remediation,
+                                                  created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    finding_id,
+                    finding_data.get('scan_id'),
+                    finding_data.get('type'),
+                    finding_data.get('severity'),
+                    finding_data.get('description'),
+                    json.dumps(finding_data.get('metadata', {})),
+                    now,
+                    finding_data.get('status', 'active'),
+                    finding_data.get('metadata', {}).get('recommendation', ''),
+                    now,
+                    now
+                ))
+                await conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error storing security finding: {str(e)}")
+            return False
 
     async def initialize_network_monitoring(self) -> None:
         """Initialize network monitoring tables and settings."""
@@ -2418,29 +2520,35 @@ class Database:
                 # Create or update security_scans table
                 await cursor.execute("""
                     CREATE TABLE IF NOT EXISTS security_scans (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        end_time TIMESTAMP,
-                        status TEXT NOT NULL,
+                        id TEXT PRIMARY KEY,
+                        timestamp TEXT NOT NULL,
                         type TEXT NOT NULL,
+                        status TEXT NOT NULL,
                         target TEXT NOT NULL,
+                        progress REAL DEFAULT 0,
                         findings_count INTEGER DEFAULT 0,
-                        metadata TEXT
+                        start_time TEXT NOT NULL,
+                        end_time TEXT,
+                        metadata TEXT,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL
                     )
                 """)
 
                 # Create or update security_findings table
                 await cursor.execute("""
                     CREATE TABLE IF NOT EXISTS security_findings (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        scan_id INTEGER NOT NULL,
-                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        id TEXT PRIMARY KEY,
+                        scan_id TEXT NOT NULL,
                         type TEXT NOT NULL,
                         severity TEXT NOT NULL,
-                        status TEXT NOT NULL,
                         description TEXT NOT NULL,
-                        source TEXT NOT NULL,
-                        metadata TEXT,
+                        details TEXT,
+                        timestamp TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        remediation TEXT,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
                         FOREIGN KEY (scan_id) REFERENCES security_scans(id)
                     )
                 """)
