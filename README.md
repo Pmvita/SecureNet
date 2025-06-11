@@ -216,6 +216,10 @@ The AI system automatically optimizes and learns:
 ### **📊 Project Status & Visuals**
 - **[TODO.md](TODO.md)** - Development roadmap and AI feature milestones
 - **[SCREENSHOTS.md](SCREENSHOTS.md)** - Visual documentation and platform screenshots
+- **[SYSTEM-STATUS.md](SYSTEM-STATUS.md)** - Comprehensive system status and operational report
+
+### **🔥 Security & CVE Integration**
+- **[CVE-INTEGRATION-SUMMARY.md](CVE-INTEGRATION-SUMMARY.md)** - Complete CVE implementation guide and NIST NVD integration
 
 ### **🔗 Quick Links**
 | Resource | Purpose | Content |
@@ -223,6 +227,8 @@ The AI system automatically optimizes and learns:
 | 🚀 [Installation Guide](INSTALLATION.md) | Setup | ML environment, dependencies, Enterprise mode |
 | 🤖 [AI Features](FEATURES.md) | Capabilities | Machine learning, threat detection, analytics |
 | 📡 [API Documentation](API-Reference.md) | Integration | REST endpoints, WebSocket, authentication |
+| 🔥 [CVE Integration](CVE-INTEGRATION-SUMMARY.md) | Security | NIST NVD API, vulnerability scanning, CISA KEV |
+| 📊 [System Status](SYSTEM-STATUS.md) | Operations | Live system health, performance metrics, testing |
 | 🎯 [Development Roadmap](TODO.md) | Progress | Completed milestones, upcoming AI features |
 | 🖼️ [Screenshots](SCREENSHOTS.md) | Visual Guide | Dashboard, security interface, network views |
 
@@ -257,7 +263,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development workflow.
 
 Copyright (c) 2025 Pierre Mvita. All Rights Reserved.
 
-This software is proprietary and confidential. See the [LICENSE.txt](LICENSE.txt) file for complete terms and conditions.
+This software is proprietary and confidential. See the **[LICENSE.txt](LICENSE.txt)** file for complete terms and conditions.
 
 ---
 
