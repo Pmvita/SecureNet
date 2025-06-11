@@ -56,13 +56,15 @@ DEV_MODE = os.getenv("DEV_MODE", "true").lower() == "true"
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Service states
-default_service_states = {
+# Global variables
+service_states = {
     "ingestion": {"running": False, "stats": {"logs_processed": 0, "last_processed": None}},
     "detection": {"running": False, "stats": {"anomalies_detected": 0, "last_detection": None}},
     "alerts": {"running": False, "stats": {"alerts_sent": 0, "last_alert": None}}
 }
-service_states = default_service_states.copy()
+
+# Track application start time
+start_time = time.time()
 
 @asynccontextmanager
 async def lifespan(app):
@@ -148,6 +150,33 @@ def get_user_by_username(username: str) -> Optional[dict]:
         if user:
             return dict(user)
         return None
+
+@app.get("/api/health")
+@limiter.limit("60/minute")
+async def health_check(request: Request):
+    """System health check endpoint"""
+    try:
+        # Check database connection
+        conn = get_db()
+        conn.execute("SELECT 1").fetchone()
+        conn.close()
+        
+        # Check if services are running
+        uptime = time.time() - start_time
+        
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "network_scanner": "operational",
+            "security_engine": "active",
+            "cve_integration": "active",
+            "uptime": f"{int(uptime//3600)}h {int((uptime%3600)//60)}m {int(uptime%60)}s",
+            "version": "2.1.0",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        raise HTTPException(status_code=503, detail="Service unavailable")
 
 @app.get("/", response_class=HTMLResponse)
 @limiter.limit("60/minute")

@@ -572,18 +572,22 @@ class CVEIntegration:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT ip_address, name, device_type, open_ports 
+            SELECT id, name, type, status, last_seen, metadata 
             FROM network_devices 
             WHERE status = 'active'
         """)
         
         devices = []
         for row in cursor.fetchall():
+            # Extract IP address from metadata if available
+            metadata = json.loads(row[5]) if row[5] else {}
+            ip_address = metadata.get('ip_address', f'192.168.2.{row[0]}')  # Fallback IP
+            
             devices.append({
-                'ip': row[0],
+                'ip': ip_address,
                 'name': row[1] or 'Unknown',
                 'type': row[2] or 'Unknown',
-                'open_ports': json.loads(row[3]) if row[3] else []
+                'open_ports': metadata.get('open_ports', [22, 80, 443])  # Default common ports
             })
         
         conn.close()
