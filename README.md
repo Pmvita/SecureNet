@@ -5,9 +5,9 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.95.1-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com/)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
 [![Security](https://img.shields.io/badge/security-enhanced-blue.svg)](SECURITY.md)
-[![Status](https://img.shields.io/badge/status-active-success.svg)]()
+[![Status](https://img.shields.io/badge/status-production-success.svg)]()
 
-> **AI-powered network security monitoring and management system** with real-time threat detection, network health monitoring, and comprehensive security management.
+> **AI-powered real-time network security monitoring and management system** with live WiFi network discovery, device monitoring, and comprehensive security management.
 
 ---
 
@@ -15,6 +15,7 @@
 
 ### Prerequisites
 - **Python 3.8+** and **Node.js 18+**
+- **Network access** for WiFi scanning and device discovery
 - **Git** for cloning the repository
 
 ### Installation (3 minutes)
@@ -22,16 +23,17 @@
 # 1. Clone repository
 git clone https://github.com/pmvita/SecureNet.git && cd SecureNet
 
-# 2. Setup backend
+# 2. Setup backend with real network monitoring
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt && python scripts/init_db.py
 
-# 3. Setup frontend & start
-cd frontend && npm install && npm run dev
+# 3. Setup frontend & start Enterprise mode
+cd frontend && npm install && npm run Enterprise
 ```
 
 **🎯 Ready!** Open `http://localhost:5173` 
 - **Username**: `admin` | **Password**: `admin123`
+- **Real Network Monitoring**: Automatically discovers your WiFi devices
 
 > For detailed installation, see **[INSTALLATION.md](INSTALLATION.md)**
 
@@ -39,20 +41,28 @@ cd frontend && npm install && npm run dev
 
 ## ✨ Key Features
 
-### 🔍 **Real-time Security Monitoring**
-- ML-based threat detection with scikit-learn
-- Live anomaly detection with interactive visualizations
-- Real-time security metrics via WebSocket
+### 🔍 **Real-time Network Discovery**
+- **Live WiFi scanning**: Discovers actual devices on your network (routers, endpoints, servers)
+- **Device fingerprinting**: MAC address detection, port scanning, and device type classification
+- **Network topology mapping**: Automatic subnet detection and range scanning
+- **Cross-platform compatibility**: Native support for macOS, Linux, and Windows
 
 ### 📊 **Professional SOC Dashboard**  
-- 6-panel security metrics with gradient design
-- Live threat monitoring with severity indicators
-- Enterprise-grade visualizations and charts
+- 6-panel security metrics with live network data
+- Real device count and traffic monitoring
+- Enterprise-grade visualizations with actual network statistics
 
 ### 🌐 **Advanced Network Management**
-- Wireshark-style traffic monitoring
-- Real-time device discovery and health monitoring
-- Cross-platform compatibility (macOS, Linux, Windows)
+- **Real device monitoring**: Live discovery of network endpoints and infrastructure
+- **Actual traffic analysis**: Real network traffic monitoring and bandwidth tracking
+- **Device health monitoring**: Connection state tracking and availability monitoring
+- **Multi-subnet support**: Automatic detection of network ranges (192.168.x.0/24, 10.x.x.0/24)
+
+### 🔍 **Intelligent Device Detection**
+- **Ping sweep scanning**: Fast discovery of responsive network devices
+- **ARP table analysis**: MAC address resolution and vendor identification
+- **Port scanning**: Service detection on discovered devices (HTTP, HTTPS, SSH, etc.)
+- **Device classification**: Automatic categorization (Router, Server, Endpoint, Printer)
 
 ### 📝 **Comprehensive Log Management**
 - ELK Stack/Splunk-style interface
@@ -68,10 +78,28 @@ cd frontend && npm install && npm run dev
 
 ---
 
+## 🌟 Real Network Monitoring in Action
+
+SecureNet discovers and monitors **your actual WiFi network**:
+
+```
+🌐 Network Discovery Results
+├── 📍 192.168.2.1   - mynetwork (Router) - MAC: 44:E9:DD:4C:7C:74
+├── 📱 192.168.2.17  - device-17 (Endpoint) - MAC: F0:5C:77:75:DD:F6  
+├── 💻 192.168.2.28  - device-28 (Endpoint) - MAC: 26:29:45:1F:E5:2B
+├── 📟 192.168.2.36  - device-36 (Endpoint) - MAC: E6:B3:48:2D:55:91
+├── 🖥️  192.168.2.50  - device-50 (Endpoint) - MAC: 4A:D6:CC:65:97:8E
+└── 📺 192.168.2.54  - device-54 (Endpoint) - Detected ports: 80, 443
+```
+
+**Live Traffic Monitoring**: Real-time bytes tracking, connection analysis, and network health metrics
+
+---
+
 ## 📸 Screenshots
 
-| Dashboard | Network Monitoring | Security Center |
-|-----------|-------------------|-----------------|
+| Real Network Dashboard | Live Device Discovery | Security Monitoring |
+|----------------------|---------------------|-------------------|
 | ![Dashboard](screenshots/dashboard.png) | ![Network](screenshots/Network-monitoring.png) | ![Security](screenshots/security.png) |
 
 > **🖼️ View all screenshots:** **[SCREENSHOTS.md](SCREENSHOTS.md)**
@@ -82,8 +110,8 @@ cd frontend && npm install && npm run dev
 
 | Document | Description |
 |----------|-------------|
-| **[🚀 INSTALLATION.md](INSTALLATION.md)** | Complete setup guide with troubleshooting |
-| **[✨ FEATURES.md](FEATURES.md)** | Detailed feature documentation |
+| **[🚀 INSTALLATION.md](INSTALLATION.md)** | Complete setup guide with network configuration |
+| **[✨ FEATURES.md](FEATURES.md)** | Real network monitoring features documentation |
 | **[📸 SCREENSHOTS.md](SCREENSHOTS.md)** | Visual guide and interface overview |
 | **[🔧 FRONTEND-ARCHITECTURE.md](FRONTEND-ARCHITECTURE.md)** | Frontend development guide |
 | **[📖 API-Reference.md](API-Reference.md)** | Complete API documentation |
@@ -97,97 +125,109 @@ cd frontend && npm install && npm run dev
 ```
 SecureNet/
 ├── 🐍 Backend (Python + FastAPI)     # Real-time API & WebSocket server
+│   ├── 🌐 Network Scanner           # WiFi device discovery & monitoring
+│   ├── 🔍 Device Detection          # Ping, ARP, port scanning
+│   └── 📊 Traffic Analysis          # Real network traffic monitoring
 ├── ⚛️ Frontend (React + TypeScript)   # Modern SOC interface
-├── 💾 Database (SQLite)              # Efficient data storage
+├── 💾 Database (SQLite)              # Live device & traffic storage
 ├── 🤖 ML Engine (scikit-learn)       # Anomaly detection
 └── 🔔 Alerting (Slack + Email)       # Notification system
 ```
 
 **Development Modes:**
-- **🚀 Mock Mode**: `npm run dev` (No backend required)
-- **🔗 Enterprise Mode**: `npm run Enterprise` (Full backend integration)
+- **🚀 Mock Mode**: `npm run dev` (Sample data for development)
+- **🌐 Enterprise Mode**: `npm run Enterprise` (Live network monitoring)
 
 ---
 
 ## 🛠️ Tech Stack
 
-### Backend
+### Backend Network Monitoring
 - **FastAPI** - High-performance async API framework
-- **SQLite** - Lightweight, efficient database
-- **WebSocket** - Real-time data streaming
-- **scikit-learn** - Machine learning for anomaly detection
+- **psutil** - Cross-platform network interface detection
+- **Ping/ARP scanning** - Native network discovery tools
+- **Socket programming** - Port scanning and device detection
+- **SQLite** - Real-time device and traffic data storage
 
 ### Frontend  
 - **React 18** + **TypeScript** - Modern UI framework
 - **Vite** - Lightning-fast development server
 - **Tailwind CSS** - Utility-first styling
-- **React Query** - Data fetching and caching
-- **Heroicons** - Professional icon system
+- **React Query** - Live data fetching and caching
+- **WebSocket** - Real-time network updates
 
 ---
 
 ## 🎯 Use Cases
 
-### 🏢 **Enterprise Security**
-- SOC dashboard for security teams
-- Real-time threat monitoring
-- Compliance reporting and audit trails
+### 🏢 **Enterprise Network Security**
+- **Real WiFi monitoring** for corporate networks
+- **Device inventory management** with automatic discovery
+- **Rogue device detection** and network access control
 
-### 🌐 **Network Operations**
-- Network device health monitoring  
-- Traffic analysis and bandwidth tracking
-- Connection state management
+### 🌐 **Home Network Management**
+- **Personal WiFi monitoring** and device tracking
+- **Bandwidth analysis** and traffic monitoring
+- **IoT device discovery** and security assessment
 
 ### 📊 **IT Operations**
-- Log aggregation and analysis
-- System performance monitoring
-- Automated alerting and notifications
+- **Network asset discovery** and inventory management
+- **Real-time connectivity monitoring** and health checks
+- **Automated device alerting** and notifications
 
 ---
 
 ## 🚦 Project Status
 
 ### ✅ **Production Ready**
-- Real-time Security Monitoring
-- Professional SOC Dashboard  
-- Advanced Network Management
-- Log Management System
+- **Real Network Discovery** - Live WiFi device scanning
+- **Device Monitoring** - Actual network endpoint tracking
+- **Traffic Analysis** - Real network traffic monitoring
+- Professional SOC Dashboard with live data
 - Enhanced Navigation System
 
 ### 🚧 **In Development**
-- Advanced Analytics Dashboard
+- Advanced Network Analytics Dashboard
 - Cloud Integration (AWS, Azure, GCP)
 - GPT-based Security Analysis
 
 ### 📋 **Planned**
-- Docker Containerization
-- Zero-trust Security Model
+- **Network Vulnerability Scanning**
+- **Advanced Device Fingerprinting**
+- **Zero-trust Security Model**
 - Mobile Application
 
 > **📋 Full roadmap:** **[TODO.md](TODO.md)**
 
 ---
 
-## 🤝 Contributing
-
-We welcome contributions! SecureNet is built with modern technologies and follows best practices.
-
-**Quick Contribution Guide:**
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-> **📖 Detailed guide:** **[CONTRIBUTING.md](CONTRIBUTING.md)**
-
----
-
 ## 🔒 Security & Compliance
 
 - **🔐 Encrypted data handling** with secure API authentication
-- **🔄 Regular security updates** and dependency management  
-- **📊 Audit logging** for all user actions and system changes
-- **🌐 Secure WebSocket** connections with proper validation
+- **🌐 Network scanning permissions** with proper privilege management
+- **📊 Audit logging** for all network scans and device discoveries
+- **🔄 Secure device data storage** with privacy considerations
+
+### Network Scanning Permissions
+SecureNet requires appropriate network permissions for device discovery:
+- **macOS**: May require administrator privileges for comprehensive scanning
+- **Linux**: Root access recommended for full network access
+- **Windows**: Administrator rights for network interface access
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! SecureNet is built with modern technologies and focuses on real network monitoring capabilities.
+
+**Quick Contribution Guide:**
+1. Fork the repository
+2. Set up real network testing environment
+3. Create a feature branch
+4. Test with actual network devices
+5. Submit a pull request
+
+> **📖 Detailed guide:** **[CONTRIBUTING.md](CONTRIBUTING.md)**
 
 ---
 
@@ -200,18 +240,4 @@ We welcome contributions! SecureNet is built with modern technologies and follow
 
 ---
 
-## 📄 License
-
-This project is **proprietary software** with **all rights reserved** - see [LICENSE.txt](LICENSE.txt) for details.
-
-**⚠️ RESTRICTED USE**: This software is for **personal evaluation only**. Commercial use, redistribution, or modification is **strictly prohibited** without written permission.
-
----
-
-<div align="center">
-
-**⭐ Star this repository if you find it useful!**
-
-Made by **[Pierre Mvita](https://github.com/pmvita)**
-
-</div> 
+**⚡ SecureNet: Real Network Monitoring Made Simple** - Transform your network visibility with live device discovery and intelligent security monitoring. 

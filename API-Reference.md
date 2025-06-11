@@ -1,12 +1,15 @@
 # 🔌 SecureNet API Reference
 
+> Complete API documentation for SecureNet's **real-time network monitoring** platform
+
 ## Table of Contents
 - [Authentication](#authentication)
 - [WebSocket Endpoints](#websocket-endpoints)
 - [REST Endpoints](#rest-endpoints)
+  - [Real Network Monitoring](#real-network-monitoring)
+  - [Live Device Discovery](#live-device-discovery)
   - [Dashboard & Statistics](#dashboard--statistics)
   - [Log Management](#log-management)
-  - [Network Management](#network-management)
   - [Security Management](#security-management)
   - [Settings & Configuration](#settings--configuration)
 - [WebSocket Connection Examples](#websocket-connection-examples)
@@ -20,230 +23,297 @@ X-API-Key: your-api-key
 
 Example using curl:
 ```bash
-curl -H "X-API-Key: your-api-key" http://localhost:8000/api/logs
+curl -H "X-API-Key: your-api-key" http://localhost:8000/api/network
 ```
 
 ## WebSocket Endpoints
 
-SecureNet provides real-time updates through WebSocket connections. All WebSocket endpoints require the same API key authentication as REST endpoints.
+SecureNet provides real-time updates through WebSocket connections for live network monitoring:
 
 | Endpoint | Description |
 |----------|-------------|
-| `/ws/notifications` | Real-time notifications for system events, alerts, and updates |
-| `/ws/security` | Security scan updates and findings in real-time |
-| `/ws/logs` | Live log streaming with filtering capabilities |
+| `/ws/network` | **Real-time network device discovery updates** |
+| `/ws/traffic` | **Live network traffic monitoring from actual interfaces** |
+| `/ws/notifications` | Real-time notifications for system events, alerts, and network updates |
+| `/ws/security` | Security scan updates and findings from real network analysis |
+| `/ws/logs` | Live log streaming with network device filtering capabilities |
 
 ## REST Endpoints
+
+### Real Network Monitoring
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/network` | GET | **Get real network overview with actual discovered devices** |
+| `/api/network/scan` | POST | **Start live WiFi network scan** (discovers actual devices) |
+| `/api/network/devices` | GET | **Get discovered network devices with MAC addresses** |
+| `/api/network/devices/{device_id}` | GET | **Get specific device details with real network information** |
+
+#### Live Network Discovery
+The `/api/network` endpoint returns real network data:
+```json
+{
+  "total_devices": 8,
+  "active_devices": 8,
+  "total_traffic": 286250,
+  "devices": [
+    {
+      "id": "device-1",
+      "name": "mynetwork",
+      "ip": "192.168.2.1",
+      "mac": "44:E9:DD:4C:7C:74",
+      "device_type": "Router",
+      "status": "online",
+      "ports": [53, 80, 139, 443]
+    },
+    {
+      "id": "device-17",
+      "ip": "192.168.2.17",
+      "mac": "F0:5C:77:75:DD:F6",
+      "device_type": "Endpoint",
+      "status": "online"
+    }
+  ]
+}
+```
+
+### Live Device Discovery
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/network/scan` | POST | **Trigger real WiFi network scan** |
+| `/api/network/interfaces` | GET | **Get available network interfaces for scanning** |
+| `/api/network/ranges` | GET | **Get detected network ranges** (192.168.x.0/24, etc.) |
+| `/api/network/devices/history` | GET | **Get device discovery history** |
+
+#### Real Network Scanning
+The `/api/network/scan` endpoint initiates actual network discovery:
+```bash
+curl -X POST -H "X-API-Key: your-api-key" http://localhost:8000/api/network/scan
+```
+
+Response:
+```json
+{
+  "scan_id": "real_scan_1749675950",
+  "status": "started",
+  "network_ranges": ["192.168.2.0/24"],
+  "discovery_method": "ping_arp_port_scan"
+}
+```
 
 ### Dashboard & Statistics
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/stats/overview` | GET | Get comprehensive dashboard statistics |
-| `/api/network/traffic` | GET | Get network traffic data and metrics |
-| `/api/security/score` | GET | Get current security score and status |
-| `/api/scan/start` | POST | Start a new network scan |
-| `/api/security/scan` | POST | Start a new security scan |
-| `/api/maintenance/schedule` | POST | Schedule system maintenance |
-| `/api/reports/generate` | POST | Generate security reports |
+| `/api/stats/overview` | GET | **Get dashboard statistics with real network data** |
+| `/api/network/traffic` | GET | **Get actual network traffic data and metrics** |
+| `/api/security/score` | GET | **Get security score based on real device analysis** |
+| `/api/reports/generate` | POST | **Generate reports with actual network discovery data** |
+
+#### Real Network Statistics
+The `/api/stats/overview` endpoint provides actual network metrics:
+```json
+{
+  "network": {
+    "total_devices": 8,
+    "active_devices": 8,
+    "router_devices": 1,
+    "endpoint_devices": 7,
+    "total_traffic_bytes": 286250,
+    "scan_timestamp": "2025-06-11T17:01:50.000Z"
+  },
+  "security": {
+    "vulnerabilities_found": 0,
+    "open_ports_detected": 5,
+    "security_score": 85
+  }
+}
+```
 
 ### Log Management
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/logs` | GET | Get logs with filtering options |
-| `/api/logs/stats` | GET | Get log statistics and metrics |
-| `/api/logs/sources` | GET | Get configured log sources |
-| `/api/logs/sources` | POST | Create a new log source |
-| `/api/logs/sources/{source_id}` | PUT | Update an existing log source |
-| `/api/logs/sources/{source_id}` | DELETE | Delete a log source |
-| `/api/logs/sources/{source_id}/toggle` | POST | Toggle log source status |
-| `/api/logs/search` | GET | Advanced log search with filters |
-| `/api/logs/aggregate` | GET | Get log aggregation data |
-| `/api/logs/export` | GET | Export logs in various formats |
-| `/api/logs/patterns` | GET | Get detected log patterns |
-| `/api/logs/trends` | GET | Get log trend analysis |
-
-### Network Management
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/network/overview` | GET | Get network overview and status |
-| `/api/network/connections` | GET | Get active network connections |
-| `/api/network/connections/{connection_id}` | GET | Get specific connection details |
-| `/api/network/connections/{connection_id}/block` | POST | Block a specific connection |
-| `/api/network/stats` | GET | Get network statistics |
-| `/api/network/protocols` | GET | Get protocol distribution data |
-| `/api/network/history` | GET | Get connection history |
-| `/api/network/devices` | GET | Get network device information |
-| `/api/network/traffic` | GET | Get live network traffic data with filtering |
-| `/api/network/traffic/stats` | GET | Get traffic statistics (total, inbound, outbound, blocked, flagged) |
-| `/api/network/traffic/start` | POST | Start live traffic monitoring |
-| `/api/network/traffic/stop` | POST | Stop live traffic monitoring |
-| `/api/network/traffic/filter` | GET | Get filtered traffic logs by protocol, status, or application |
+| `/api/logs` | GET | **Get logs with network device filtering options** |
+| `/api/logs/network` | GET | **Get network-specific logs from device discovery** |
+| `/api/logs/devices/{device_id}` | GET | **Get logs for specific discovered device** |
+| `/api/logs/search` | GET | **Advanced log search with network device filters** |
 
 ### Live Network Traffic Monitoring
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/ws/network/traffic` | WebSocket | Real-time network traffic streaming |
-| `/api/network/traffic/logs` | GET | Get paginated traffic logs with filtering options |
-| `/api/network/traffic/export` | GET | Export traffic data in various formats (CSV, JSON) |
+| `/api/network/traffic` | GET | **Get real network traffic data with device correlation** |
+| `/api/network/traffic/stats` | GET | **Get actual traffic statistics from network interfaces** |
+| `/api/network/connections` | GET | **Get real active network connections** |
+| `/api/network/protocols` | GET | **Get actual protocol distribution from traffic analysis** |
+
+#### Real Traffic Analysis
+```bash
+curl -H "X-API-Key: your-api-key" "http://localhost:8000/api/network/traffic"
+```
+
+Response with actual network data:
+```json
+{
+  "traffic_stats": {
+    "total_bytes": 286250,
+    "inbound_bytes": 143125,
+    "outbound_bytes": 143125,
+    "active_connections": 8
+  },
+  "device_traffic": [
+    {
+      "device_id": "device-1",
+      "ip": "192.168.2.1",
+      "mac": "44:E9:DD:4C:7C:74",
+      "bytes_sent": 50000,
+      "bytes_received": 45000
+    }
+  ]
+}
+```
 
 ### Security Management
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/security/scans` | GET | List all security scans |
-| `/api/security/scan` | POST | Start a new security scan |
-| `/api/security/scan/{id}` | GET | Get scan details |
-| `/api/security/scan/{id}/stop` | POST | Stop a running scan |
-| `/api/security/scan/{id}/findings` | GET | Get scan findings |
-| `/api/security/scan/{id}/findings/{finding_id}` | PUT | Update finding status |
-| `/api/anomalies` | GET | Get all detected anomalies with filtering and pagination |
-| `/api/anomalies/{anomaly_id}` | GET | Get specific anomaly details with ML insights |
-| `/api/anomalies/{anomaly_id}/resolve` | POST | Resolve an anomaly |
-| `/api/anomalies/{anomaly_id}/false-positive` | POST | Mark anomaly as false positive |
-| `/api/anomalies/stats` | GET | Get anomaly statistics and metrics |
-| `/api/anomalies/filter` | GET | Get filtered anomalies by severity, status, or type |
-| `/api/anomalies/export` | GET | Export anomaly data in various formats |
-| `/api/anomalies/analysis` | POST | Run new anomaly analysis |
+| `/api/security/scans` | GET | **List security scans on real discovered devices** |
+| `/api/security/scan` | POST | **Start security scan on actual network devices** |
+| `/api/security/devices/{device_id}/scan` | POST | **Scan specific discovered device for vulnerabilities** |
+| `/api/anomalies` | GET | **Get anomalies detected from real network monitoring** |
 
 ### Settings & Configuration
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/settings` | GET | Get current system settings including network monitoring configuration |
-| `/api/settings` | PUT | Update system settings with advanced network monitoring options |
-| `/api/settings/api-key` | POST | Regenerate API key |
+| `/api/settings` | GET | **Get system settings including real network monitoring configuration** |
+| `/api/settings` | PUT | **Update settings with network scanning parameters** |
+| `/api/settings/network` | GET | **Get network monitoring specific settings** |
+| `/api/settings/network` | PUT | **Update real network scanning configuration** |
 
-#### Advanced Network Monitoring Settings
+#### Real Network Monitoring Configuration
 
-The `/api/settings` endpoints now support comprehensive network monitoring configuration:
+The `/api/settings/network` endpoint supports comprehensive real network scanning configuration:
 
 **Network Monitoring Configuration Options:**
-- `network_monitoring.enabled` - Enable/disable network monitoring
-- `network_monitoring.interval` - Monitoring interval in seconds (60-3600)
-- `network_monitoring.timeout` - Connection timeout in seconds (5-120)
-- `network_monitoring.interface` - Network interface selection (auto, eth0, wlan0, all)
-- `network_monitoring.ip_ranges` - IP ranges to monitor (CIDR notation)
-- `network_monitoring.discovery_method` - Device discovery method (ping_arp, ping_only, arp_only, passive)
-- `network_monitoring.max_devices` - Maximum devices to track (10-10000)
-- `network_monitoring.traffic_analysis` - Enable traffic analysis
-- `network_monitoring.packet_capture` - Enable packet capture (requires privileges)
-- `network_monitoring.capture_filter` - BPF filter expression for packet capture
-- `network_monitoring.dns_monitoring` - Enable DNS query monitoring
-- `network_monitoring.port_scan_detection` - Enable port scan detection
-- `network_monitoring.bandwidth_threshold` - Bandwidth alert threshold in Mbps (1-10000)
+- `enabled` - Enable/disable real network monitoring
+- `scan_interval` - Device discovery interval in seconds (60-3600)
+- `timeout` - Network scan timeout in seconds (5-120)
+- `interface` - Network interface selection (auto, eth0, wlan0, all)
+- `network_ranges` - IP ranges to scan (CIDR notation)
+- `discovery_method` - Device discovery method (ping_arp, ping_only, arp_only)
+- `port_scanning` - Enable port scanning on discovered devices
+- `max_devices` - Maximum devices to track (10-10000)
+- `concurrent_scans` - Number of concurrent scanning threads (10-100)
 
-**Example Settings Request:**
+**Example Real Network Settings Request:**
 ```json
 {
   "network_monitoring": {
     "enabled": true,
-    "interval": 300,
+    "scan_interval": 300,
     "interface": "auto",
-    "ip_ranges": "192.168.1.0/24,10.0.0.0/8",
+    "network_ranges": ["192.168.2.0/24"],
     "discovery_method": "ping_arp",
-    "traffic_analysis": true,
-    "packet_capture": false,
-    "dns_monitoring": true,
-    "port_scan_detection": true,
-    "bandwidth_threshold": 100
+    "port_scanning": true,
+    "max_devices": 100,
+    "concurrent_scans": 50
+  }
+}
+```
+
+**Response with Actual Network Interface Detection:**
+```json
+{
+  "status": "updated",
+  "detected_interfaces": ["en0", "en1", "lo0"],
+  "active_interface": "en0",
+  "network_ranges": ["192.168.2.0/24"],
+  "discovery_capabilities": {
+    "ping_available": true,
+    "arp_available": true,
+    "port_scan_available": true,
+    "requires_privileges": false
   }
 }
 ```
 
 ## WebSocket Connection Examples
 
-### JavaScript/TypeScript
+### Real-time Network Device Discovery
 
 ```javascript
-// Log updates
-const ws = new WebSocket('ws://localhost:8000/ws/logs');
-ws.onmessage = (event) => {
-    console.log('New log:', JSON.parse(event.data));
+// Real-time network device updates
+const networkWs = new WebSocket('ws://localhost:8000/ws/network');
+networkWs.onmessage = (event) => {
+    const networkData = JSON.parse(event.data);
+    console.log('New device discovered:', networkData.device);
+    console.log('Total devices:', networkData.total_devices);
+    console.log('MAC address:', networkData.device.mac);
 };
 
-// Notifications
-const ws = new WebSocket('ws://localhost:8000/ws/notifications');
-ws.onmessage = (event) => {
-    console.log('New notification:', JSON.parse(event.data));
-};
-
-// Security updates
-const ws = new WebSocket('ws://localhost:8000/ws/security');
-ws.onmessage = (event) => {
-    console.log('Security update:', JSON.parse(event.data));
+// Live traffic monitoring from actual network
+const trafficWs = new WebSocket('ws://localhost:8000/ws/traffic');
+trafficWs.onmessage = (event) => {
+    const trafficData = JSON.parse(event.data);
+    console.log('Real traffic update:', trafficData);
+    console.log('Bytes transferred:', trafficData.bytes);
+    console.log('Source device:', trafficData.source_device);
 };
 ```
 
-### Python
+### Python Real Network Monitoring
 
 ```python
 import websockets
 import asyncio
 import json
 
-async def connect_to_logs():
-    uri = "ws://localhost:8000/ws/logs"
+async def monitor_real_network():
+    uri = "ws://localhost:8000/ws/network"
     headers = {"X-API-Key": "your-api-key"}
     
     async with websockets.connect(uri, extra_headers=headers) as websocket:
         while True:
             try:
                 message = await websocket.recv()
-                log_data = json.loads(message)
-                print(f"New log: {log_data}")
+                network_data = json.loads(message)
+                print(f"Device discovered: {network_data['device']['ip']}")
+                print(f"MAC address: {network_data['device']['mac']}")
+                print(f"Device type: {network_data['device']['device_type']}")
+                print(f"Total devices: {network_data['total_devices']}")
             except websockets.exceptions.ConnectionClosed:
                 print("Connection closed")
                 break
 
-# Run the WebSocket client
-asyncio.get_event_loop().run_until_complete(connect_to_logs())
+# Start real network monitoring
+asyncio.run(monitor_real_network())
+```
+
+### cURL Examples for Real Network API
+
+```bash
+# Start real WiFi network scan
+curl -X POST \
+  -H "X-API-Key: your-api-key" \
+  http://localhost:8000/api/network/scan
+
+# Get discovered devices with real MAC addresses
+curl -H "X-API-Key: your-api-key" \
+  http://localhost:8000/api/network/devices
+
+# Get actual network traffic statistics
+curl -H "X-API-Key: your-api-key" \
+  http://localhost:8000/api/network/traffic/stats
+
+# Get real network interface information
+curl -H "X-API-Key: your-api-key" \
+  http://localhost:8000/api/network/interfaces
 ```
 
 ## Response Formats
 
 ### Success Response
-```json
-{
-    "status": "success",
-    "data": {
-        // Response data specific to the endpoint
-    },
-    "timestamp": "2024-03-14T12:00:00Z"
-}
 ```
-
-### Error Response
-```json
-{
-    "status": "error",
-    "error": {
-        "code": "ERROR_CODE",
-        "message": "Detailed error message"
-    },
-    "timestamp": "2024-03-14T12:00:00Z"
-}
-```
-
-## Rate Limiting
-
-API endpoints are subject to rate limiting to ensure system stability. The current limits are:
-
-- REST API: 100 requests per minute per API key
-- WebSocket: 1000 messages per minute per connection
-
-Rate limit headers are included in all responses:
-```
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1615723200
-```
-
----
-
-<div align="center">
-Last updated: 2024-03-14
-</div> 

@@ -13,7 +13,7 @@
 
 ## Overview
 
-SecureNet frontend is a modern React-based Security Operations Center (SOC) interface built with TypeScript and enterprise-grade UI/UX design. The application provides professional security management capabilities with real-time monitoring, advanced data visualization, and comprehensive security analysis tools.
+SecureNet frontend is a modern React-based Security Operations Center (SOC) interface built with TypeScript and enterprise-grade UI/UX design. The application provides **real-time network monitoring** with live WiFi device discovery, actual traffic analysis, and comprehensive security management capabilities.
 
 ## Technology Stack
 
@@ -27,11 +27,11 @@ SecureNet frontend is a modern React-based Security Operations Center (SOC) inte
 - **Headless UI** - Accessible component primitives
 - **Heroicons** - Professional icon library
 - **Framer Motion** - Smooth animations and transitions
-- **Chart.js** - Data visualization and charting
-- **Vis Network** - Network topology visualization
+- **Chart.js** - Real-time data visualization and charting
+- **Vis Network** - Live network topology visualization
 
 ### Development Tools
-- **React Query** - Data fetching and state management
+- **React Query** - Real-time data fetching and state management
 - **React Router** - Client-side routing
 - **Jest & Testing Library** - Unit and integration testing
 - **ESLint & Prettier** - Code quality and formatting
@@ -45,60 +45,71 @@ frontend/
 │   ├── components/           # Reusable UI components
 │   │   └── common/          # Base components (Card, Button, Badge, etc.)
 │   ├── features/            # Feature-based modules
-│   │   ├── dashboard/       # SOC Dashboard
-│   │   ├── network/         # Network monitoring and traffic analysis
-│   │   ├── anomalies/       # Anomaly detection and investigation
+│   │   ├── dashboard/       # Real-time SOC Dashboard
+│   │   ├── network/         # Live WiFi monitoring and device discovery
+│   │   ├── anomalies/       # Real-time anomaly detection and investigation
 │   │   ├── security/        # Security scanning and management
-│   │   ├── logs/           # Log management and analysis
-│   │   └── settings/       # System configuration with advanced network monitoring
-│   ├── hooks/              # Custom React hooks
+│   │   ├── logs/           # Live log management and analysis
+│   │   └── settings/       # Real network monitoring configuration
+│   ├── hooks/              # Custom React hooks for real-time data
 │   ├── utils/              # Utility functions and helpers
-│   ├── types/              # TypeScript type definitions
+│   ├── types/              # TypeScript type definitions for network data
 │   └── styles/             # Global styles and Tailwind configuration
 ├── public/                 # Static assets
-├── __tests__/              # Test files
+├── __tests__/              # Test files for real network features
 ├── .storybook/            # Storybook configuration
 └── package.json           # Dependencies and scripts
 ```
 
 ## Development Modes
 
-### Mock Data Mode (Default)
+### Enterprise Mode (Real Network Monitoring) - **Primary Mode**
 ```bash
-npm run dev          # VITE_MOCK_DATA=true
+npm run Enterprise      # VITE_MOCK_DATA=false - Real WiFi scanning
+```
+
+**Features:**
+- **Live WiFi device discovery** - Scans your actual network (192.168.x.0/24)
+- **Real device monitoring** - MAC addresses, IP addresses, device types
+- **Actual traffic analysis** - Real network traffic and bandwidth monitoring
+- **Port scanning** - Service detection on discovered devices
+- **Device classification** - Router, Server, Endpoint, Printer identification
+- **Multi-subnet support** - Automatic network range detection
+- **Real WebSocket connections** for live updates
+- **Live log streaming** and analysis
+- **Real-time anomaly detection**
+
+**Live Discovery Results:**
+```
+🌐 Your Actual WiFi Network:
+├── 📍 192.168.2.1   - Router (mynetwork) - MAC: 44:E9:DD:4C:7C:74
+├── 📱 192.168.2.17  - Endpoint - MAC: F0:5C:77:75:DD:F6  
+├── 💻 192.168.2.28  - Endpoint - MAC: 26:29:45:1F:E5:2B
+├── 🖥️  192.168.2.50  - Endpoint - MAC: 4A:D6:CC:65:97:8E
+└── 📺 192.168.2.54  - Endpoint - Ports: 80, 443
+```
+
+**Requirements:**
+- Backend server running on `http://localhost:8000`
+- Network access for device discovery
+- Appropriate scanning permissions (see INSTALLATION.md)
+
+### Mock Data Mode (Development Only)
+```bash
+npm run dev          # VITE_MOCK_DATA=true - Sample data
 npm run dev:mock     # Explicit mock mode
 ```
 
 **Features:**
-- Complete mock data simulation for all features
-- Real-time data updates with simulated WebSocket connections
-- Live network traffic generation with realistic packet data
-- Simulated anomaly detection with ML insights
-- Mock security scans with progress monitoring
-- No backend dependencies required
-
-**Benefits:**
-- Fast development without backend setup
+- Sample network data for development
+- No real network scanning or backend dependencies
 - Consistent test data for UI development
-- Realistic data patterns for testing edge cases
-- Isolated frontend development environment
+- Fast development without network access
 
-### Real API Mode
-```bash
-npm run Enterprise      # VITE_MOCK_DATA=false
-```
-
-**Features:**
-- Live data from backend services
-- Real WebSocket connections for live updates
-- Actual network monitoring and security scans
-- Live log streaming and analysis
-- Real-time anomaly detection
-
-**Requirements:**
-- Backend server running on `http://localhost:8000`
-- Valid API authentication
-- Database connectivity
+**Use Cases:**
+- Frontend development and UI testing
+- Component development in isolation
+- Testing edge cases with predictable data
 
 ## Design System
 
@@ -144,74 +155,84 @@ text-purple-400   /* Special/Anomalies */
 </Card>
 ```
 
-### Professional Metrics Cards
+### Real Network Metrics Cards
 ```typescript
-interface MetricCardProps {
+interface NetworkMetricCardProps {
   title: string;
   value: string | number;
   icon: React.ComponentType;
   color: string;
   bgColor: string;
   subtitle?: string;
+  devices?: NetworkDevice[];  // Real device data
+  isLive?: boolean;          // Live data indicator
 }
 ```
 
-### Enhanced Tables
-All data tables follow the professional design pattern:
-- Gradient headers with icons
-- Enhanced spacing (`py-4 px-6`)
-- Hover effects and transitions
-- Color-coded status indicators
-- Expandable rows for detailed information
+### Enhanced Device Tables
+All device tables display real network data:
+- Live device discovery results
+- MAC address and vendor information
+- Real-time connection states
+- Actual traffic statistics
+- Device type classification
+- Network service detection
 
 ## State Management
 
-### React Query for Data Fetching
+### React Query for Real-time Data Fetching
 ```typescript
-// Custom hooks for each feature
-const { data: devices, isLoading, error } = useNetwork();
-const { data: anomalies, isLoading, error } = useAnomalies();
-const { data: logs, isLoading, error } = useLogs();
+// Custom hooks for real network monitoring
+const { data: devices, isLoading, error } = useNetwork();        // Real devices
+const { data: traffic, isLoading, error } = useNetworkTraffic(); // Actual traffic
+const { data: scan, isLoading, error } = useNetworkScan();       // Live scanning
 ```
 
-### Local State Management
-- **useState** for component-level state
-- **useReducer** for complex state logic
-- **useContext** for shared state across components
-- **Custom hooks** for feature-specific state logic
+### Live Network State Management
+- **useState** for component-level network state
+- **useReducer** for complex device discovery logic
+- **useContext** for shared network configuration
+- **Custom hooks** for real-time network monitoring
 
-### Mock Data Integration
+### Real vs Mock Data Integration
 ```typescript
 // Environment-based data source selection
 const useMockData = import.meta.env.VITE_MOCK_DATA === 'true';
 
-// Conditional data fetching
-const dataSource = useMockData ? mockNetworkData : fetchNetworkData;
+// Conditional data fetching - Real network monitoring by default
+const dataSource = useMockData ? mockNetworkData : fetchRealNetworkData;
 ```
 
 ## Real-time Features
 
-### Live Network Traffic Monitoring
-- Real-time packet generation every 500ms-2.5s
-- Traffic statistics with live counters
-- Protocol-based filtering and color coding
-- Geographic tracking and application categorization
+### Live WiFi Network Discovery
+- Real device scanning every 5-30 seconds
+- Actual MAC address detection and vendor lookup
+- Live device classification (Router, Server, Endpoint)
+- Multi-subnet automatic detection
+- Real-time device status monitoring
 
 ### WebSocket Integration
 ```typescript
-// Real-time data streaming
-const websocket = new WebSocket('ws://localhost:8000/ws/network/traffic');
-websocket.onmessage = (event) => {
-  const trafficData = JSON.parse(event.data);
-  updateTrafficLogs(trafficData);
-};
+// Real-time network updates
+const networkWs = useWebSocket('/ws/network');
+const trafficWs = useWebSocket('/ws/traffic');
+
+// Live device discovery notifications
+useEffect(() => {
+  networkWs.onMessage((data) => {
+    updateDeviceList(data.devices);
+    updateNetworkStats(data.stats);
+  });
+}, [networkWs]);
 ```
 
-### Live Data Updates
-- Automatic data refresh with configurable intervals
-- Play/pause controls for monitoring
-- Real-time statistics and metrics updates
-- Live status indicators with animations
+### Actual Traffic Monitoring
+- Real network packet analysis
+- Live bandwidth tracking
+- Actual protocol detection
+- Real-time traffic statistics
+- Live connection state monitoring
 
 ## Testing Strategy
 

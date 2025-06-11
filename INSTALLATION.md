@@ -1,6 +1,6 @@
 # 🚀 SecureNet Installation Guide
 
-> Complete installation and setup instructions for SecureNet security monitoring platform
+> Complete installation and setup instructions for SecureNet **real network monitoring** platform
 
 ## Prerequisites
 
@@ -8,6 +8,8 @@
 - **Python 3.8 or higher**
 - **Node.js 18 or higher**
 - **npm package manager**
+- **Network access** for WiFi device discovery
+- **psutil library** for network interface detection
 - **SQLite3** (included with Python)
 - **Virtual environment** (recommended)
 - **Git** for version control
@@ -15,7 +17,13 @@
 ### Operating System Support
 - ✅ **macOS** (native support with enhanced network monitoring)
 - ✅ **Linux** (Ubuntu, CentOS, Debian)
-- ✅ **Windows** (with WSL recommended)
+- ✅ **Windows** (with WSL recommended for network scanning)
+
+### Network Permissions
+SecureNet performs **real network scanning** and requires appropriate permissions:
+- **macOS**: Administrator privileges may be required for comprehensive scanning
+- **Linux**: Root access recommended for full network interface access
+- **Windows**: Administrator rights for network scanning capabilities
 
 ---
 
@@ -27,16 +35,16 @@ git clone https://github.com/pmvita/SecureNet.git
 cd SecureNet
 ```
 
-### 2. Backend Setup
+### 2. Backend Setup (Real Network Monitoring)
 ```bash
 # Create and activate virtual environment
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install Python dependencies
+# Install Python dependencies (includes psutil for network scanning)
 pip install -r requirements.txt
 
-# Initialize database
+# Initialize database for real device storage
 python scripts/init_db.py
 
 # Generate API key
@@ -52,30 +60,61 @@ cd ..
 
 ### 4. Start Application
 
-**Option A: Quick Development (Mock Data)**
+**Recommended: Real Network Monitoring**
 ```bash
-cd frontend
-npm run dev
-```
-Access at: `http://localhost:5173`
-
-**Option B: Full Setup (Real API)**
-```bash
-# Terminal 1: Start backend
+# Terminal 1: Start backend with real network scanner
 source venv/bin/activate
 uvicorn app:app --reload
 
-# Terminal 2: Start frontend with real API
+# Terminal 2: Start frontend with Enterprise mode (real data)
 cd frontend
 npm run Enterprise
+```
+Access at: `http://localhost:5173` - **Discovers your actual WiFi devices**
+
+**Development Mode: Mock Data (Optional)**
+```bash
+cd frontend
+npm run dev          # Uses sample data for development
 ```
 
 ---
 
 ## Development Modes
 
-### Mock Data Mode (Recommended for Development)
-Perfect for frontend development and UI testing without backend dependencies.
+### Enterprise Mode (Real Network Monitoring) - **Recommended**
+Full functionality with live WiFi network discovery and device monitoring.
+
+```bash
+# First: Start backend server (Terminal 1)
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+uvicorn app:app --reload
+
+# Then: Start frontend with real network scanning (Terminal 2)
+cd frontend
+npm run Enterprise      # VITE_MOCK_DATA=false - Real network data
+```
+
+**Features:**
+- ✅ **Live WiFi device discovery** - Scans your actual network (192.168.x.0/24)
+- ✅ **Real device monitoring** - MAC addresses, IP addresses, device types
+- ✅ **Actual traffic analysis** - Real network traffic and bandwidth monitoring
+- ✅ **Port scanning** - Service detection on discovered devices
+- ✅ **Device classification** - Router, Server, Endpoint, Printer identification
+- ✅ **Multi-subnet support** - Automatic network range detection
+
+**Live Discovery Results:**
+```
+🌐 Your WiFi Network Discovery:
+├── 📍 192.168.2.1   - Router (mynetwork) - MAC: 44:E9:DD:4C:7C:74
+├── 📱 192.168.2.17  - Endpoint - MAC: F0:5C:77:75:DD:F6  
+├── 💻 192.168.2.28  - Endpoint - MAC: 26:29:45:1F:E5:2B
+├── 🖥️  192.168.2.50  - Endpoint - MAC: 4A:D6:CC:65:97:8E
+└── 📺 192.168.2.54  - Endpoint - Ports: 80, 443
+```
+
+### Mock Data Mode (Development Only)
+For frontend development and UI testing without network scanning.
 
 ```bash
 cd frontend
@@ -85,43 +124,10 @@ npm run dev:mock     # Same as above, explicit mock mode
 ```
 
 **Features:**
-- ✅ Complete mock data simulation
-- ✅ Real-time data updates with simulated WebSocket connections
-- ✅ Live network traffic generation with realistic packet data
-- ✅ Simulated anomaly detection with ML insights
-- ✅ Mock security scans with progress monitoring
-- ✅ No backend dependencies required
-
-**Benefits:**
-- 🚀 Fast development without backend setup
-- 📊 Consistent test data for UI development
-- 🔍 Realistic data patterns for testing edge cases
-- 🏃‍♂️ Isolated frontend development environment
-
-### Real API Mode
-For full functionality testing with live backend integration.
-
-```bash
-# First: Start backend server (Terminal 1)
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-uvicorn app:app --reload
-
-# Then: Start frontend with real API calls (Terminal 2)
-cd frontend
-npm run Enterprise      # Connects to real backend API
-```
-
-**Features:**
-- ✅ Live data from backend services
-- ✅ Real WebSocket connections for live updates
-- ✅ Actual network monitoring and security scans
-- ✅ Live log streaming and analysis
-- ✅ Real-time anomaly detection
-
-**Requirements:**
-- 🔗 Backend server running on `http://localhost:8000`
-- 🔑 Valid API authentication
-- 💾 Database connectivity
+- ✅ Sample network data for development
+- ✅ No real network scanning or backend dependencies
+- ✅ Consistent test data for UI development
+- ✅ Fast development without network access
 
 ---
 
@@ -138,13 +144,20 @@ API_KEY=your-generated-api-key
 # Database Configuration
 DATABASE_URL=sqlite:///data/securenet.db
 
+# Network Monitoring Configuration
+NETWORK_INTERFACE=auto          # Auto-detect network interfaces
+MONITORING_INTERVAL=300         # Scan interval in seconds
+NETWORK_SCAN_TIMEOUT=30        # Device discovery timeout
+MAX_CONCURRENT_SCANS=50        # Parallel scanning threads
+
+# Real Network Discovery Settings
+ENABLE_PORT_SCANNING=true      # Enable service detection
+PING_TIMEOUT=1                 # Ping timeout in seconds
+ARP_CACHE_ENABLED=true        # Use ARP cache for MAC detection
+
 # Logging Configuration
 LOG_LEVEL=INFO
 LOG_FILE=logs/securenet.log
-
-# Network Monitoring
-NETWORK_INTERFACE=auto
-MONITORING_INTERVAL=300
 
 # Email Configuration (Optional)
 SMTP_SERVER=smtp.gmail.com
@@ -157,14 +170,14 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/your-webhook
 ```
 
 ### Frontend Environment
-The frontend development mode is controlled by the `VITE_MOCK_DATA` environment variable:
+The frontend mode is controlled by the `VITE_MOCK_DATA` environment variable:
 
 ```bash
-# Mock data mode (default)
-VITE_MOCK_DATA=true
-
-# Real API mode
+# Real network monitoring (Enterprise mode)
 VITE_MOCK_DATA=false
+
+# Mock data mode (Development)
+VITE_MOCK_DATA=true
 ```
 
 ---
@@ -187,37 +200,56 @@ venv\Scripts\activate
 # Upgrade pip
 pip install --upgrade pip
 
-# Install dependencies
+# Install dependencies (includes psutil for network scanning)
 pip install -r requirements.txt
 ```
 
 #### 2. Database Initialization
 ```bash
-# Initialize SQLite database
+# Initialize SQLite database for real device storage
 python scripts/init_db.py
 
 # Verify database creation
 ls -la data/securenet.db
 ```
 
-#### 3. API Key Generation
+#### 3. Network Scanner Configuration
 ```bash
-# Generate secure API key
-python scripts/generate_api_key.py
-
-# Note: Save the generated API key for frontend configuration
+# Test network scanning capabilities
+python -c "
+import psutil
+import subprocess
+print('Network interfaces:', list(psutil.net_if_addrs().keys()))
+print('Testing ping capability...')
+subprocess.run(['ping', '-c', '1', '8.8.8.8'])
+"
 ```
 
-#### 4. Start Backend Server
+### Real Network Monitoring Setup
+
+#### Network Interface Detection
+SecureNet automatically detects your network interfaces and scans appropriate ranges:
+
+```python
+# Supported network ranges:
+- 192.168.x.0/24  (Home/Office networks)
+- 10.x.x.0/24     (Corporate networks)  
+- 172.16.x.0/24   (Private networks)
+```
+
+#### Device Discovery Methods
+1. **Ping Sweep**: Fast discovery of responsive devices
+2. **ARP Table Analysis**: MAC address resolution and vendor identification
+3. **Port Scanning**: Service detection (HTTP, HTTPS, SSH, FTP, etc.)
+4. **Device Classification**: Automatic categorization based on services
+
+#### Scanning Process
 ```bash
-# Development mode with auto-reload
-uvicorn app:app --reload
+# Manual network scan trigger
+curl -X POST http://localhost:8000/api/network/scan
 
-# Production mode
-uvicorn app:app --host 0.0.0.0 --port 8000
-
-# With custom host and port
-uvicorn app:app --host 127.0.0.1 --port 8080
+# View discovered devices
+curl http://localhost:8000/api/network
 ```
 
 ### Frontend Configuration
