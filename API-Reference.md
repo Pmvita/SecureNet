@@ -12,13 +12,27 @@ This document provides comprehensive API documentation for SecureNet's productio
 - **API Documentation**: `http://localhost:8000/docs` (Swagger UI)
 - **OpenAPI Schema**: `http://localhost:8000/openapi.json`
 
-### **Authentication**
-```bash
-# Development API Key
-X-API-Key: dev-api-key
+### **Authentication & Role-Based Access Control**
 
-# Production API Key (configurable)
-X-API-Key: your-production-api-key
+SecureNet implements a 3-tier role-based access control system:
+
+#### **User Roles**
+- 🟣 **Super Admin** (`superadmin`): Full platform access, tenant management, audit logs
+- 🔵 **Platform Admin** (`platform_admin`): Organization-level admin with advanced controls
+- 🟢 **End User** (`end_user`): Standard tenant user with dashboard access
+
+#### **Authentication Methods**
+```bash
+# API Key Authentication (Organization-scoped)
+X-API-Key: sk-dev-api-key-securenet-default
+
+# JWT Authentication (User-based with role information)
+Authorization: Bearer YOUR_JWT_TOKEN
+
+# Login to get JWT token with role and session info
+curl -X POST "http://localhost:8000/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "admin123"}'
 ```
 
 ### **Response Format**
@@ -196,6 +210,314 @@ curl -X POST "http://localhost:8000/api/security/scan" \
   "timestamp": "2025-06-11T17:38:00.886416"
 }
 ```
+
+---
+
+## 👑 **Super Admin API Endpoints**
+
+*These endpoints require Super Admin role (`superadmin`) access.*
+
+### **GET /api/admin/system/stats**
+**Get system-wide statistics and health metrics**
+
+```bash
+curl -X GET "http://localhost:8000/api/admin/system/stats" \
+  -H "Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN"
+```
+
+**Response Example:**
+```json
+{
+  "total_organizations": 1,
+  "total_users": 1,
+  "active_users": 1,
+  "total_devices": 7,
+  "plan_distribution": {
+    "enterprise": 1,
+    "pro": 0,
+    "free": 0
+  },
+  "role_distribution": {
+    "superadmin": 1,
+    "platform_admin": 0,
+    "end_user": 0
+  },
+  "system_health": "operational",
+  "last_updated": "2025-06-11T20:50:33.787949"
+}
+```
+
+### **GET /api/admin/users**
+**Get all users across all organizations**
+
+```bash
+curl -X GET "http://localhost:8000/api/admin/users" \
+  -H "Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN"
+```
+
+**Response Example:**
+```json
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "email": "admin@securenet.local",
+    "role": "superadmin",
+    "is_active": true,
+    "last_login": "2025-06-11T20:45:00Z",
+    "last_logout": "2025-06-11T19:30:00Z",
+    "login_count": 5,
+    "created_at": "2025-06-11T00:49:55",
+    "organizations": ["SecureNet Default"]
+  }
+]
+```
+
+### **GET /api/admin/organizations**
+**Get all organizations with usage statistics**
+
+```bash
+curl -X GET "http://localhost:8000/api/admin/organizations" \
+  -H "Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN"
+```
+
+**Response Example:**
+```json
+[
+  {
+    "id": "6c07da44-daba-4083-b35b-5c398f24d9f4",
+    "name": "SecureNet Default",
+    "owner_email": "admin@securenet.local",
+    "plan_type": "enterprise",
+    "status": "active",
+    "device_limit": 1000,
+    "user_count": 1,
+    "current_usage": {
+      "device_count": 7,
+      "scan_count": 15,
+      "log_count": 1250
+    },
+    "created_at": "2025-06-11T20:49:59",
+    "updated_at": "2025-06-11T20:49:59"
+  }
+]
+```
+
+### **PUT /api/admin/users/role**
+**Update user role (superadmin only)**
+
+```bash
+curl -X PUT "http://localhost:8000/api/admin/users/role" \
+  -H "Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": 2,
+    "new_role": "platform_admin"
+  }'
+```
+
+**Response Example:**
+```json
+{
+  "success": true,
+  "message": "User role updated successfully"
+}
+```
+
+### **GET /api/admin/audit-logs**
+**Get system audit logs**
+
+```bash
+curl -X GET "http://localhost:8000/api/admin/audit-logs?limit=50" \
+  -H "Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN"
+```
+
+**Response Example:**
+```json
+[
+  {
+    "id": 1,
+    "timestamp": "2025-06-11T20:45:00Z",
+    "level": "info",
+    "category": "auth",
+    "source": "login_api",
+    "message": "User admin logged in",
+    "metadata": "{\"user_id\": 1, \"role\": \"superadmin\"}",
+    "organization_name": "SecureNet Default"
+  },
+  {
+    "id": 2,
+    "timestamp": "2025-06-11T20:44:00Z",
+    "level": "warning",
+    "category": "admin",
+    "source": "admin_api",
+    "message": "User role updated",
+    "metadata": "{\"admin_user_id\": 1, \"target_user_id\": 2}",
+    "organization_name": null
+  }
+]
+```
+
+### **GET /api/admin/billing/overview**
+**Get billing overview across all organizations**
+
+```bash
+curl -X GET "http://localhost:8000/api/admin/billing/overview" \
+  -H "Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN"
+```
+
+**Response Example:**
+```json
+{
+  "total_monthly_revenue": 499,
+  "revenue_by_plan": {
+    "free": 0,
+    "pro": 0,
+    "enterprise": 499
+  },
+  "total_organizations": 1,
+  "paying_customers": 1,
+  "average_revenue_per_user": 499.0,
+  "last_updated": "2025-06-11T20:50:33.787949"
+}
+```
+
+### **POST /api/admin/impersonate/{user_id}**
+**Generate impersonation token for user (superadmin only)**
+
+```bash
+curl -X POST "http://localhost:8000/api/admin/impersonate/2" \
+  -H "Authorization: Bearer YOUR_SUPERADMIN_JWT_TOKEN"
+```
+
+**Response Example:**
+```json
+{
+  "impersonation_token": "impersonate_2_1749677880.123",
+  "target_user": {
+    "id": 2,
+    "username": "user2",
+    "email": "user2@example.com",
+    "role": "end_user"
+  },
+  "expires_in": 3600,
+  "warning": "Impersonation session active"
+}
+```
+
+---
+
+## 🔐 **Authentication Endpoints**
+
+### **POST /api/auth/login**
+**User login with session tracking**
+
+```bash
+curl -X POST "http://localhost:8000/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "admin123"
+  }'
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+    "user": {
+      "id": 1,
+      "username": "admin",
+      "email": "admin@securenet.local",
+      "role": "superadmin",
+      "last_login": "2025-06-11T20:50:00Z",
+      "last_logout": "2025-06-11T19:30:00Z",
+      "login_count": 5
+    }
+  },
+  "timestamp": "2025-06-11T20:50:00.123456"
+}
+```
+
+### **GET /api/auth/me**
+**Get current user information with session data**
+
+```bash
+curl -X GET "http://localhost:8000/api/auth/me" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "id": 1,
+    "username": "admin",
+    "email": "admin@securenet.local",
+    "role": "superadmin",
+    "last_login": "2025-06-11T20:50:00Z",
+    "last_logout": "2025-06-11T19:30:00Z",
+    "login_count": 5
+  },
+  "timestamp": "2025-06-11T20:50:30.123456"
+}
+```
+
+### **GET /api/auth/whoami**
+**Get comprehensive current user information including role, organization, and session data**
+
+```bash
+curl -X GET "http://localhost:8000/api/auth/whoami" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "id": 1,
+    "username": "admin",
+    "email": "admin@secureorg.com",
+    "role": "platform_admin",
+    "last_login": "2025-06-11T21:30:00Z",
+    "last_logout": "2025-06-11T20:15:00Z",
+    "login_count": 15,
+    "org_id": "6c07da44-daba-4083-b35b-5c398f24d9f4",
+    "organization_name": "SecureOrg Default"
+  },
+  "timestamp": "2025-06-11T21:30:00Z"
+}
+```
+
+**Role Types:**
+- `superadmin`: 👑 Full platform access, tenant management, audit logs
+- `platform_admin`: 🛠 Organization-level admin with advanced controls  
+- `end_user`: 👤 Standard tenant user with dashboard access
+
+### **POST /api/auth/logout**
+**User logout with session tracking**
+
+```bash
+curl -X POST "http://localhost:8000/api/auth/logout" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "data": {
+    "message": "Successfully logged out"
+  },
+  "timestamp": "2025-06-11T20:55:00.123456"
+}
+```
+
+---
 
 **Example Response with Security Findings:**
 ```json

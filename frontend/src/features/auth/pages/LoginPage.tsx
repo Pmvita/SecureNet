@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export const LoginPage: React.FC = () => {
@@ -6,7 +7,16 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+  const location = useLocation();
+  
+  // Get the intended destination or default to dashboard
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+
+  // If already authenticated, redirect
+  if (isAuthenticated) {
+    return <Navigate to={from} replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +32,11 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+  const handleQuickLogin = (user: { username: string; password: string }) => {
+    setUsername(user.username);
+    setPassword(user.password);
+  };
+
   return (
     <div className="login-page">
       {/* Background with animated gradient */}
@@ -35,17 +50,44 @@ export const LoginPage: React.FC = () => {
         {/* Logo and Header */}
         <div className="login-header">
           <div className="logo-container">
-            <img 
-              src="/securenet-logo.png" 
-              alt="SecureNet Logo" 
-              className="logo"
-            />
+            <div className="logo">🔒</div>
           </div>
           <h1 className="brand-title">SecureNet</h1>
           <p className="brand-subtitle">AI-Powered Network Security Platform</p>
           <div className="security-badge">
             <span className="shield-icon">🛡️</span>
             <span>Enterprise Security</span>
+          </div>
+        </div>
+
+        {/* Development Credentials */}
+        <div className="dev-credentials">
+          <h3 className="dev-title">🧪 Development Credentials</h3>
+          <div className="dev-buttons">
+            <button
+              type="button"
+              onClick={() => handleQuickLogin({ username: 'ceo', password: 'superadmin123' })}
+              className="dev-button"
+            >
+              <span className="dev-role">👑 Super Admin</span>
+              <span className="dev-username">ceo</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin({ username: 'admin', password: 'platform123' })}
+              className="dev-button"
+            >
+              <span className="dev-role">🛠 Platform Admin</span>
+              <span className="dev-username">admin</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin({ username: 'user', password: 'enduser123' })}
+              className="dev-button"
+            >
+              <span className="dev-role">👤 End User</span>
+              <span className="dev-username">user</span>
+            </button>
           </div>
         </div>
 
@@ -231,7 +273,7 @@ export const LoginPage: React.FC = () => {
 
         .login-header {
           text-align: center;
-          margin-bottom: 2.5rem;
+          margin-bottom: 2rem;
         }
 
         .logo-container {
@@ -247,6 +289,11 @@ export const LoginPage: React.FC = () => {
           padding: 8px;
           background: rgba(59, 130, 246, 0.1);
           transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 2rem;
+          margin: 0 auto;
         }
 
         .logo:hover {
@@ -293,6 +340,55 @@ export const LoginPage: React.FC = () => {
 
         .shield-icon {
           font-size: 1rem;
+        }
+
+        .dev-credentials {
+          background: rgba(0, 0, 0, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 0.75rem;
+          padding: 1rem;
+          margin-bottom: 1.5rem;
+        }
+
+        .dev-title {
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 0.875rem;
+          font-weight: 600;
+          margin: 0 0 0.75rem;
+        }
+
+        .dev-buttons {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .dev-button {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0.5rem 0.75rem;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 0.5rem;
+          color: white;
+          font-size: 0.875rem;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .dev-button:hover {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .dev-role {
+          font-weight: 500;
+        }
+
+        .dev-username {
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 0.8rem;
         }
 
         .login-form {

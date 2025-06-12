@@ -41,6 +41,10 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   '🌐': GlobeAltIcon,
   '⚠️': ExclamationTriangleIcon,
   '⚙️': Cog6ToothIcon,
+  '👑': ShieldCheckIcon, // Admin Dashboard
+  '👥': UserIcon, // Users
+  '🏢': ChartBarIcon, // Organizations (using chart as building icon alternative)
+  '📋': DocumentTextIcon, // Audit Logs
 };
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
@@ -52,7 +56,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { theme, actualTheme, setTheme } = useTheme();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -312,8 +316,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                       <UserIcon className="w-4 h-4 text-white" />
                     </div>
                     <div className="hidden sm:block text-left">
-                      <p className="text-sm font-medium text-white">Admin User</p>
-                      <p className="text-xs text-gray-400">Administrator</p>
+                      <p className="text-sm font-medium text-white">{user?.username || 'User'}</p>
+                      <p className="text-xs text-gray-400">
+                        {user?.role === 'superadmin' ? '👑 Super Admin' :
+                         user?.role === 'platform_admin' ? '🛠 Platform Admin' :
+                         user?.role === 'end_user' ? '👤 End User' :
+                         user?.role === 'admin' ? 'Administrator' : 'User'}
+                      </p>
                     </div>
                     <ChevronDownIcon className={`w-4 h-4 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
@@ -327,8 +336,20 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                             <UserIcon className="w-5 h-5 text-white" />
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-white">Admin User</p>
-                            <p className="text-xs text-gray-400">admin@securenet.com</p>
+                            <p className="text-sm font-medium text-white">{user?.username || 'User'}</p>
+                            <p className="text-xs text-gray-400">{user?.email || 'user@securenet.com'}</p>
+                            <p className="text-xs text-blue-400 mt-1">
+                              {user?.role === 'superadmin' ? '👑 Super Admin' :
+                               user?.role === 'platform_admin' ? '🛠 Platform Admin' :
+                               user?.role === 'end_user' ? '👤 End User' :
+                               user?.role === 'admin' ? 'Administrator' : 'User'}
+                              {user?.organization_name && ` • ${user.organization_name}`}
+                            </p>
+                            {user?.last_login && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Last login: {new Date(user.last_login).toLocaleString()}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>

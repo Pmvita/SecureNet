@@ -53,6 +53,33 @@ npm run Enterprise  # AI-enhanced real network mode
 - **Security API**: http://localhost:8000 (AI-driven threat data)
 - **API Documentation**: http://localhost:8000/docs
 
+## 🔐 **Default Dev Logins**
+
+SecureNet comes with 3 pre-configured development users for testing role-based access:
+
+### **👑 Super Admin**
+- **Email**: `ceo@securenet.ai`
+- **Username**: `ceo`
+- **Password**: `superadmin123`
+- **Role**: `superadmin`
+- **Access**: Full platform access, tenant management, audit logs
+
+### **🛠 Platform Admin**
+- **Email**: `admin@secureorg.com`
+- **Username**: `admin`
+- **Password**: `platform123`
+- **Role**: `platform_admin`
+- **Access**: Organization-level admin with advanced controls
+
+### **👤 End User**
+- **Email**: `user@secureorg.com`
+- **Username**: `user`
+- **Password**: `enduser123`
+- **Role**: `end_user`
+- **Access**: Standard tenant user with dashboard access
+
+> **Note**: These are development credentials only. Change them before production deployment.
+
 ## 🏗️ **AI-Enhanced Architecture**
 
 ```mermaid
@@ -106,7 +133,11 @@ graph TB
 - **Real-time Intelligence Feed** with ML-powered alerts
 
 ### **🔒 Enterprise AI Security**
-- **Intelligent Access Control** with behavioral authentication
+- **3-Tier Role-Based Access Control**:
+  - 🟣 **Super Admin**: Full platform access, tenant management, audit logs
+  - 🔵 **Platform Admin**: Organization-level admin with advanced controls  
+  - 🟢 **End User**: Standard tenant user with dashboard access
+- **Session Tracking**: Login/logout timestamps with audit trails
 - **AI-Enhanced Audit Logging** with anomaly detection
 - **Automated Compliance Monitoring** using ML models
 - **Predictive Risk Management** with AI recommendations

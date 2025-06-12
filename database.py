@@ -38,6 +38,12 @@ class OrganizationStatus(Enum):
     TRIAL = "trial"
     EXPIRED = "expired"
 
+class UserRole(Enum):
+    """User role types for 3-tier RBAC system."""
+    SUPERADMIN = "superadmin"      # Full platform access, tenant management
+    PLATFORM_ADMIN = "platform_admin"  # Organization admin with advanced controls
+    END_USER = "end_user"          # Standard tenant user
+
 class Database:
     _instances = {}  # Process-specific instances
     _initialized = {}  # Process-specific initialization flags
@@ -1995,27 +2001,15 @@ class Database:
             raise
 
     async def initialize_db(self):
-        """Initialize the database and create default admin user if needed."""
+        """Initialize the database and create default users with proper roles."""
         try:
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.cursor()
                 # Ensure schema is up to date before any queries
                 await self.update_db_schema()
 
-                # Now safe to query users table
-                await cursor.execute("SELECT id FROM users WHERE username = 'admin'")
-                admin = await cursor.fetchone()
-                if not admin:
-                    password_hash = get_password_hash("admin123")
-                    await cursor.execute(
-                        """
-                        INSERT INTO users (username, email, password_hash, role, is_active)
-                        VALUES (?, ?, ?, ?, ?)
-                        """,
-                        ("admin", "admin@securenet.local", password_hash, "admin", 1)
-                    )
-                    await conn.commit()
-                    logger.info("Default admin user created successfully")
+                # Seed the 3 default development users
+                await self.seed_default_users()
 
                 # Update schema (skip sample data for real network monitoring)
                 await self.update_db_schema()
@@ -3027,9 +3021,11 @@ class Database:
                         username TEXT UNIQUE NOT NULL,
                         email TEXT UNIQUE NOT NULL,
                         password_hash TEXT NOT NULL,
-                        role TEXT NOT NULL,
+                        role TEXT NOT NULL DEFAULT 'end_user',
                         is_active BOOLEAN NOT NULL DEFAULT 1,
                         last_login TIMESTAMP,
+                        last_logout TIMESTAMP,
+                        login_count INTEGER DEFAULT 0,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
@@ -3272,6 +3268,13 @@ class Database:
                 await add_column_if_not_exists("anomalies", "evidence", "TEXT")
                 await add_column_if_not_exists("anomalies", "resolution", "TEXT")
                 await add_column_if_not_exists("anomalies", "created_at", "TIMESTAMP")
+                
+                # Add new role and session tracking columns to users table
+                await add_column_if_not_exists("users", "last_logout", "TIMESTAMP")
+                await add_column_if_not_exists("users", "login_count", "INTEGER DEFAULT 0")
+                
+                # Add missing columns to notifications table
+                await add_column_if_not_exists("notifications", "read_at", "TIMESTAMP")
 
                 # Create indexes only if the tables exist and have the required columns
                 if await column_exists("logs", "timestamp"):
@@ -3915,3 +3918,466 @@ class Database:
         except Exception as e:
             logger.error(f"Error getting scoped anomalies: {str(e)}")
             return []
+
+    # ===== ROLE-BASED ACCESS CONTROL & SESSION MANAGEMENT =====
+    
+    async def update_user_login(self, user_id: int) -> bool:
+        """Update user login timestamp and count."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute("""
+                    UPDATE users 
+                    SET last_login = ?, login_count = login_count + 1, updated_at = ?
+                    WHERE id = ?
+                """, (datetime.now().isoformat(), datetime.now().isoformat(), user_id))
+                
+                await conn.commit()
+                logger.info(f"Updated login for user {user_id}")
+                return True
+        except Exception as e:
+            logger.error(f"Error updating user login: {str(e)}")
+            return False
+
+    async def update_user_logout(self, user_id: int) -> bool:
+        """Update user logout timestamp."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute("""
+                    UPDATE users 
+                    SET last_logout = ?, updated_at = ?
+                    WHERE id = ?
+                """, (datetime.now().isoformat(), datetime.now().isoformat(), user_id))
+                
+                await conn.commit()
+                logger.info(f"Updated logout for user {user_id}")
+                return True
+        except Exception as e:
+            logger.error(f"Error updating user logout: {str(e)}")
+            return False
+
+    async def get_user_with_session_info(self, user_id: int) -> Optional[Dict]:
+        """Get user with session and role information."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT id, username, email, role, is_active, 
+                           last_login, last_logout, login_count, created_at
+                    FROM users 
+                    WHERE id = ? AND is_active = 1
+                """, (user_id,))
+                
+                row = await cursor.fetchone()
+                if row:
+                    return {
+                        'id': row[0],
+                        'username': row[1],
+                        'email': row[2],
+                        'role': row[3],
+                        'is_active': bool(row[4]),
+                        'last_login': row[5],
+                        'last_logout': row[6],
+                        'login_count': row[7] or 0,
+                        'created_at': row[8]
+                    }
+                return None
+        except Exception as e:
+            logger.error(f"Error getting user session info: {str(e)}")
+            return None
+
+    async def update_user_role(self, user_id: int, new_role: str) -> bool:
+        """Update user role (superadmin only operation)."""
+        try:
+            if new_role not in [role.value for role in UserRole]:
+                raise ValueError(f"Invalid role: {new_role}")
+                
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute("""
+                    UPDATE users 
+                    SET role = ?, updated_at = ?
+                    WHERE id = ?
+                """, (new_role, datetime.now().isoformat(), user_id))
+                
+                await conn.commit()
+                logger.info(f"Updated role for user {user_id} to {new_role}")
+                return True
+        except Exception as e:
+            logger.error(f"Error updating user role: {str(e)}")
+            return False
+
+    async def get_all_users_for_admin(self, requesting_user_role: str) -> List[Dict]:
+        """Get all users for admin interface (superadmin only)."""
+        try:
+            if requesting_user_role != UserRole.SUPERADMIN.value:
+                raise PermissionError("Only superadmin can view all users")
+                
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT u.id, u.username, u.email, u.role, u.is_active,
+                           u.last_login, u.last_logout, u.login_count, u.created_at,
+                           GROUP_CONCAT(o.name) as organizations
+                    FROM users u
+                    LEFT JOIN org_users ou ON u.id = ou.user_id
+                    LEFT JOIN organizations o ON ou.organization_id = o.id
+                    GROUP BY u.id
+                    ORDER BY u.created_at DESC
+                """)
+                
+                rows = await cursor.fetchall()
+                users = []
+                
+                for row in rows:
+                    users.append({
+                        'id': row[0],
+                        'username': row[1],
+                        'email': row[2],
+                        'role': row[3],
+                        'is_active': bool(row[4]),
+                        'last_login': row[5],
+                        'last_logout': row[6],
+                        'login_count': row[7] or 0,
+                        'created_at': row[8],
+                        'organizations': row[9].split(',') if row[9] else []
+                    })
+                
+                return users
+        except Exception as e:
+            logger.error(f"Error getting all users for admin: {str(e)}")
+            return []
+
+    async def get_organization_users(self, org_id: str, requesting_user_role: str) -> List[Dict]:
+        """Get users for a specific organization (platform_admin and above)."""
+        try:
+            if requesting_user_role not in [UserRole.SUPERADMIN.value, UserRole.PLATFORM_ADMIN.value]:
+                raise PermissionError("Insufficient permissions to view organization users")
+                
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT u.id, u.username, u.email, u.role, u.is_active,
+                           u.last_login, u.last_logout, u.login_count, ou.role as org_role
+                    FROM users u
+                    JOIN org_users ou ON u.id = ou.user_id
+                    WHERE ou.organization_id = ?
+                    ORDER BY u.created_at DESC
+                """, (org_id,))
+                
+                rows = await cursor.fetchall()
+                users = []
+                
+                for row in rows:
+                    users.append({
+                        'id': row[0],
+                        'username': row[1],
+                        'email': row[2],
+                        'role': row[3],
+                        'is_active': bool(row[4]),
+                        'last_login': row[5],
+                        'last_logout': row[6],
+                        'login_count': row[7] or 0,
+                        'org_role': row[8]
+                    })
+                
+                return users
+        except Exception as e:
+            logger.error(f"Error getting organization users: {str(e)}")
+            return []
+
+    async def create_superadmin_user(self, username: str, email: str, password_hash: str) -> int:
+        """Create a superadmin user (for initial setup)."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    INSERT INTO users (username, email, password_hash, role, is_active, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, 1, ?, ?)
+                """, (
+                    username, email, password_hash, UserRole.SUPERADMIN.value,
+                    datetime.now().isoformat(), datetime.now().isoformat()
+                ))
+                
+                user_id = cursor.lastrowid
+                await conn.commit()
+                
+                logger.info(f"Created superadmin user: {username} (ID: {user_id})")
+                return user_id
+        except Exception as e:
+            logger.error(f"Error creating superadmin user: {str(e)}")
+            raise
+
+    async def get_audit_logs(self, requesting_user_role: str, limit: int = 100) -> List[Dict]:
+        """Get audit logs for admin interface (superadmin only)."""
+        try:
+            if requesting_user_role != UserRole.SUPERADMIN.value:
+                raise PermissionError("Only superadmin can view audit logs")
+                
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT l.id, l.timestamp, l.level, l.category, l.source, l.message, 
+                           l.metadata, o.name as organization_name
+                    FROM logs l
+                    LEFT JOIN organizations o ON l.organization_id = o.id
+                    WHERE l.category IN ('auth', 'admin', 'security', 'billing')
+                    ORDER BY l.timestamp DESC
+                    LIMIT ?
+                """, (limit,))
+                
+                rows = await cursor.fetchall()
+                logs = []
+                
+                for row in rows:
+                    logs.append({
+                        'id': row[0],
+                        'timestamp': row[1],
+                        'level': row[2],
+                        'category': row[3],
+                        'source': row[4],
+                        'message': row[5],
+                        'metadata': row[6],
+                        'organization_name': row[7]
+                    })
+                
+                return logs
+        except Exception as e:
+            logger.error(f"Error getting audit logs: {str(e)}")
+            return []
+
+    async def get_all_organizations_for_admin(self, requesting_user_role: str) -> List[Dict]:
+        """Get all organizations for admin interface (superadmin only)."""
+        try:
+            if requesting_user_role != UserRole.SUPERADMIN.value:
+                raise PermissionError("Only superadmin can view all organizations")
+                
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT o.id, o.name, o.owner_email, o.plan_type, o.status,
+                           o.device_limit, o.created_at, o.updated_at,
+                           COUNT(ou.user_id) as user_count,
+                           bu.device_count, bu.scan_count, bu.log_count
+                    FROM organizations o
+                    LEFT JOIN org_users ou ON o.id = ou.organization_id
+                    LEFT JOIN billing_usage bu ON o.id = bu.organization_id 
+                        AND bu.month = ?
+                    GROUP BY o.id
+                    ORDER BY o.created_at DESC
+                """, (datetime.now().strftime('%Y-%m'),))
+                
+                rows = await cursor.fetchall()
+                organizations = []
+                
+                for row in rows:
+                    organizations.append({
+                        'id': row[0],
+                        'name': row[1],
+                        'owner_email': row[2],
+                        'plan_type': row[3],
+                        'status': row[4],
+                        'device_limit': row[5],
+                        'created_at': row[6],
+                        'updated_at': row[7],
+                        'user_count': row[8] or 0,
+                        'current_usage': {
+                            'device_count': row[9] or 0,
+                            'scan_count': row[10] or 0,
+                            'log_count': row[11] or 0
+                        }
+                    })
+                
+                return organizations
+        except Exception as e:
+            logger.error(f"Error getting all organizations for admin: {str(e)}")
+            return []
+
+    def has_permission(self, user_role: str, required_permission: str) -> bool:
+        """Check if user role has required permission."""
+        permissions = {
+            UserRole.SUPERADMIN.value: [
+                'view_all_organizations', 'manage_organizations', 'view_all_users',
+                'manage_users', 'view_audit_logs', 'manage_billing', 'system_admin'
+            ],
+            UserRole.PLATFORM_ADMIN.value: [
+                'view_organization', 'manage_organization_users', 'manage_settings',
+                'view_organization_logs', 'manage_alerts', 'view_billing'
+            ],
+            UserRole.END_USER.value: [
+                'view_dashboard', 'view_logs', 'view_network', 'view_security',
+                'view_anomalies', 'view_profile'
+            ]
+        }
+        
+        user_permissions = permissions.get(user_role, [])
+        return required_permission in user_permissions
+
+    async def seed_default_users(self) -> bool:
+        """Seed the 3 default development users with proper roles and organization setup."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.cursor()
+                
+                # Check if users already exist
+                await cursor.execute("SELECT COUNT(*) FROM users")
+                user_count = (await cursor.fetchone())[0]
+                
+                if user_count > 0:
+                    logger.info("Users already exist, skipping seeding")
+                    return True
+                
+                # Ensure default organization exists
+                default_org_id = await self.ensure_default_organization()
+                
+                # Create the 3 default users
+                users_to_create = [
+                    {
+                        'username': 'ceo',
+                        'email': 'ceo@securenet.ai',
+                        'password': 'superadmin123',
+                        'role': UserRole.SUPERADMIN.value,
+                        'org_id': None  # Superadmin not tied to specific org
+                    },
+                    {
+                        'username': 'admin',
+                        'email': 'admin@secureorg.com',
+                        'password': 'platform123',
+                        'role': UserRole.PLATFORM_ADMIN.value,
+                        'org_id': default_org_id
+                    },
+                    {
+                        'username': 'user',
+                        'email': 'user@secureorg.com',
+                        'password': 'enduser123',
+                        'role': UserRole.END_USER.value,
+                        'org_id': default_org_id
+                    }
+                ]
+                
+                created_users = []
+                for user_data in users_to_create:
+                    # Create user
+                    password_hash = get_password_hash(user_data['password'])
+                    await cursor.execute("""
+                        INSERT INTO users (
+                            username, email, password_hash, role, is_active, 
+                            created_at, updated_at, login_count
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        user_data['username'],
+                        user_data['email'],
+                        password_hash,
+                        user_data['role'],
+                        1,  # is_active
+                        datetime.now().isoformat(),
+                        datetime.now().isoformat(),
+                        0  # login_count
+                    ))
+                    
+                    # Get the created user ID
+                    user_id = cursor.lastrowid
+                    created_users.append({
+                        'id': user_id,
+                        'username': user_data['username'],
+                        'email': user_data['email'],
+                        'role': user_data['role']
+                    })
+                    
+                    # Add user to organization if specified
+                    if user_data['org_id']:
+                        await cursor.execute("""
+                            INSERT INTO org_users (organization_id, user_id, role, created_at)
+                            VALUES (?, ?, ?, ?)
+                        """, (
+                            user_data['org_id'],
+                            user_id,
+                            'admin' if user_data['role'] == UserRole.PLATFORM_ADMIN.value else 'member',
+                            datetime.now().isoformat()
+                        ))
+                
+                await conn.commit()
+                
+                # Log the creation
+                for user in created_users:
+                    logger.info(f"Created default user: {user['username']} ({user['role']}) - {user['email']}")
+                
+                # Create some sample data for org_1
+                await self._create_sample_org_data(default_org_id)
+                
+                logger.info("Successfully seeded 3 default development users")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error seeding default users: {str(e)}")
+            return False
+
+    async def _create_sample_org_data(self, org_id: str) -> None:
+        """Create sample data for the default organization."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.cursor()
+                
+                # Create sample logs
+                sample_logs = [
+                    {
+                        'level': 'info',
+                        'category': 'system',
+                        'source': 'network_scanner',
+                        'message': 'Network scan completed successfully',
+                        'organization_id': org_id
+                    },
+                    {
+                        'level': 'warning',
+                        'category': 'security',
+                        'source': 'security_engine',
+                        'message': 'Unusual network activity detected',
+                        'organization_id': org_id
+                    },
+                    {
+                        'level': 'info',
+                        'category': 'auth',
+                        'source': 'login_api',
+                        'message': 'User authentication successful',
+                        'organization_id': org_id
+                    }
+                ]
+                
+                for log in sample_logs:
+                    await cursor.execute("""
+                        INSERT INTO logs (
+                            level, category, source, message, organization_id, timestamp
+                        ) VALUES (?, ?, ?, ?, ?, ?)
+                    """, (
+                        log['level'], log['category'], log['source'], 
+                        log['message'], log['organization_id'], datetime.now().isoformat()
+                    ))
+                
+                # Create sample security scan
+                await cursor.execute("""
+                    INSERT INTO security_scans (
+                        id, type, status, findings_count, organization_id,
+                        start_time, end_time, metadata
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    str(uuid.uuid4()),
+                    'vulnerability',
+                    'completed',
+                    0,
+                    org_id,
+                    datetime.now().isoformat(),
+                    datetime.now().isoformat(),
+                    json.dumps({'scan_type': 'sample', 'devices_scanned': 7})
+                ))
+                
+                # Create sample notification
+                await cursor.execute("""
+                    INSERT INTO notifications (
+                        organization_id, title, message, category, severity, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    org_id,
+                    'Welcome to SecureNet',
+                    'Your organization has been set up successfully with sample data.',
+                    'system',
+                    'info',
+                    datetime.now().isoformat()
+                ))
+                
+                await conn.commit()
+                logger.info(f"Created sample data for organization: {org_id}")
+                
+        except Exception as e:
+            logger.error(f"Error creating sample org data: {str(e)}")

@@ -50,6 +50,7 @@ from cve_integration import CVEIntegration
 from api_billing import router as billing_router
 from api_metrics import router as metrics_router
 from api_insights import router as insights_router
+from api_admin import router as admin_router
 
 # Load environment variables
 load_dotenv()
@@ -107,6 +108,7 @@ app.add_middleware(
 app.include_router(billing_router)
 app.include_router(metrics_router)
 app.include_router(insights_router)
+app.include_router(admin_router)
 
 # Security middleware
 @app.middleware("http")
@@ -817,6 +819,8 @@ class UserResponse(BaseModel):
     email: Optional[str]
     role: str
     last_login: Optional[str]
+    last_logout: Optional[str] = None
+    login_count: int = 0
 
 class LoginResponse(BaseModel):
     token: str
@@ -889,24 +893,45 @@ async def login(request: LoginRequest):
                 detail="Invalid username or password"
             )
         
-        # Update last login time
+        # Update login tracking with new session management
         try:
-            with get_db() as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    UPDATE users
-                    SET last_login = CURRENT_TIMESTAMP
-                    WHERE username = ?
-                """, (request.username,))
-                conn.commit()
-                logger.info(f"Updated last login time for user '{request.username}'")
+            db = Database()
+            await db.update_user_login(user['id'])
+            
+            # Log the login for audit
+            await db.store_log({
+                'level': 'info',
+                'category': 'auth',
+                'source': 'login_api',
+                'message': f"User {user['username']} logged in",
+                'metadata': f'{{"user_id": {user["id"]}, "role": "{user["role"]}"}}'
+            })
+            
+            logger.info(f"Updated login tracking for user '{request.username}'")
         except Exception as e:
-            logger.error(f"Error updating last login time for user '{request.username}': {str(e)}")
-            # Continue with login even if last login update fails
+            logger.error(f"Error updating login tracking for user '{request.username}': {str(e)}")
+            # Continue with login even if login tracking update fails
         
-        # Create access token
+        # Get user's organization information (handle gracefully if none)
+        try:
+            db = Database()
+            user_orgs = await db.get_user_organizations(user['id'])
+            primary_org_id = user_orgs[0]['organization_id'] if user_orgs else None
+        except Exception as org_error:
+            logger.warning(f"Could not get organization for user {user['username']}: {str(org_error)}")
+            primary_org_id = None
+        
+        # Create access token with role and organization information
+        token_data = {
+            "sub": user["username"],
+            "user_id": user["id"],
+            "role": user["role"],
+            "org_id": primary_org_id,
+            "email": user["email"]
+        }
+        
         access_token = create_access_token(
-            data={"sub": user["username"]},
+            data=token_data,
             expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         )
         
@@ -941,15 +966,33 @@ async def login(request: LoginRequest):
 
 @app.get("/api/auth/me", response_model=ApiResponse[UserResponse])
 async def get_current_user_info(current_user: dict = Depends(get_current_user)):
-    """Get current authenticated user information."""
+    """Get current authenticated user information with session data."""
     try:
-        user_response = UserResponse(
-            id=current_user["id"],
-            username=current_user["username"],
-            email=current_user["email"],
-            role=current_user["role"],
-            last_login=current_user.get("last_login")
-        )
+        # Get updated user info with session data
+        db = Database()
+        user_with_session = await db.get_user_with_session_info(current_user['id'])
+        
+        if user_with_session:
+            user_response = UserResponse(
+                id=user_with_session["id"],
+                username=user_with_session["username"],
+                email=user_with_session["email"],
+                role=user_with_session["role"],
+                last_login=user_with_session.get("last_login"),
+                last_logout=user_with_session.get("last_logout"),
+                login_count=user_with_session.get("login_count", 0)
+            )
+        else:
+            # Fallback to current_user data
+            user_response = UserResponse(
+                id=current_user["id"],
+                username=current_user["username"],
+                email=current_user["email"],
+                role=current_user["role"],
+                last_login=current_user.get("last_login"),
+                last_logout=None,
+                login_count=0
+            )
         
         return ApiResponse(
             status="success",
@@ -963,10 +1006,80 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
             detail="An error occurred while retrieving user information"
         )
 
+@app.get("/api/auth/whoami", response_model=ApiResponse[UserResponse])
+async def whoami(current_user: dict = Depends(get_current_user)):
+    """Get comprehensive current user information including role, organization, and session data."""
+    try:
+        # Get updated user info with session data
+        db = Database()
+        user_with_session = await db.get_user_with_session_info(current_user['id'])
+        
+        # Get user's organization information (handle gracefully if none)
+        try:
+            user_orgs = await db.get_user_organizations(current_user['id'])
+            primary_org_id = user_orgs[0]['organization_id'] if user_orgs else None
+        except Exception as org_error:
+            logger.warning(f"Could not get organization for user {current_user['username']}: {str(org_error)}")
+            user_orgs = []
+            primary_org_id = None
+        
+        if user_with_session:
+            user_response = UserResponse(
+                id=user_with_session["id"],
+                username=user_with_session["username"],
+                email=user_with_session["email"],
+                role=user_with_session["role"],
+                last_login=user_with_session.get("last_login"),
+                last_logout=user_with_session.get("last_logout"),
+                login_count=user_with_session.get("login_count", 0)
+            )
+        else:
+            # Fallback to current_user data
+            user_response = UserResponse(
+                id=current_user["id"],
+                username=current_user["username"],
+                email=current_user["email"],
+                role=current_user["role"],
+                last_login=current_user.get("last_login"),
+                last_logout=None,
+                login_count=0
+            )
+        
+        # Add organization information to response data
+        response_data = user_response.dict()
+        response_data['org_id'] = primary_org_id
+        response_data['organization_name'] = user_orgs[0]['organization_name'] if user_orgs else None
+        
+        return ApiResponse(
+            status="success",
+            data=response_data,
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"Error getting whoami info: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while retrieving user information"
+        )
+
 @app.post("/api/auth/logout", response_model=ApiResponse[Dict[str, str]])
 async def logout(current_user: dict = Depends(get_current_user)):
-    """Logout the current user."""
+    """Logout the current user with session tracking."""
     try:
+        # Update logout tracking
+        db = Database()
+        user_id = current_user.get('id') or current_user.get('user_id')
+        await db.update_user_logout(user_id)
+        
+        # Log the logout for audit
+        await db.store_log({
+            'level': 'info',
+            'category': 'auth',
+            'source': 'logout_api',
+            'message': f"User {current_user['username']} logged out",
+            'metadata': f'{{"user_id": {user_id}, "role": "{current_user.get("role", "unknown")}"}}'
+        })
+        
         logger.info(f"User '{current_user['username']}' logged out successfully")
         return ApiResponse(
             status="success",

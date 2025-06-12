@@ -8,8 +8,12 @@ interface User {
   id: string;
   username: string;
   email: string;
-  role: 'admin' | 'user';
+  role: 'superadmin' | 'platform_admin' | 'end_user' | 'admin' | 'user';
   last_login: string;
+  last_logout?: string;
+  login_count?: number;
+  org_id?: string;
+  organization_name?: string;
 }
 
 interface UserApiResponse {
@@ -18,6 +22,10 @@ interface UserApiResponse {
   email: string;
   role: string;
   last_login: string;
+  last_logout?: string;
+  login_count?: number;
+  org_id?: string;
+  organization_name?: string;
 }
 
 interface AuthContextType {
@@ -92,8 +100,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (token) {
         try {
-          console.log('checkAuth: calling /api/auth/me');
-          const response = await apiClient.get('/api/auth/me');
+          console.log('checkAuth: calling /api/auth/whoami');
+          const response = await apiClient.get('/api/auth/whoami');
           console.log('checkAuth: response received', response);
           
           // The API client interceptor unwraps the response, so response.data contains the user info directly
@@ -104,8 +112,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id: userData.id.toString(),
             username: userData.username,
             email: userData.email,
-            role: userData.role as 'admin' | 'user',
+            role: userData.role as User['role'],
             last_login: userData.last_login || new Date().toISOString(),
+            last_logout: userData.last_logout,
+            login_count: userData.login_count,
+            org_id: userData.org_id,
+            organization_name: userData.organization_name,
           });
           console.log('checkAuth: user set successfully');
           
@@ -116,9 +128,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error) {
           console.error('Auth check failed:', error);
           console.error('Error details:', {
-            message: (error as any)?.message,
-            status: (error as any)?.response?.status,
-            data: (error as any)?.response?.data
+            message: (error as Error)?.message,
+            status: (error as { response?: { status?: number } })?.response?.status,
+            data: (error as { response?: { data?: unknown } })?.response?.data
           });
           // Token is invalid or expired
           handleAuthError();
@@ -146,8 +158,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: user.id.toString(),
           username: user.username,
           email: user.email,
-          role: user.role as 'admin' | 'user',
+          role: user.role as User['role'],
           last_login: user.last_login || new Date().toISOString(),
+          last_logout: user.last_logout,
+          login_count: user.login_count,
+          org_id: user.org_id,
+          organization_name: user.organization_name,
         });
         
         // Initialize API key after successful login

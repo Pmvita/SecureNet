@@ -151,11 +151,46 @@ SecureNet has evolved into a **production-ready network security monitoring plat
 - **Service Integration**: Ready for systemd, Docker, and cloud deployment
 - **Configuration Management**: Environment-based configuration and settings
 
+### **🔐 3-Tier Role-Based Access Control (RBAC)**
+
+SecureNet implements a comprehensive 3-tier role system for enterprise security management:
+
+#### **👑 Super Admin (`superadmin`)**
+- **Full Platform Access**: Complete control over the entire SecureNet platform
+- **Tenant Management**: Create, manage, and monitor all organizations
+- **Audit Logs**: Access to comprehensive platform-wide audit trails
+- **Billing Oversight**: Monitor usage and billing across all tenants
+- **User Management**: Create and manage users across all organizations
+- **System Configuration**: Platform-level settings and integrations
+
+#### **🛠 Platform Admin (`platform_admin`)**
+- **Organization-Level Admin**: Advanced controls within their assigned organization
+- **User Management**: Manage users within their organization
+- **Security Configuration**: Advanced security settings and policies
+- **Compliance Reporting**: Generate compliance reports for their organization
+- **Integration Management**: Configure SIEM, SOAR, and other integrations
+- **Advanced Analytics**: Access to detailed security analytics and insights
+
+#### **👤 End User (`end_user`)**
+- **Standard Dashboard Access**: Core security monitoring and analytics
+- **Network Monitoring**: View network devices and traffic analysis
+- **Security Alerts**: Receive and manage security notifications
+- **Log Analysis**: Access to organization-scoped security logs
+- **Profile Management**: Manage personal account settings
+- **Basic Reporting**: Generate standard security reports
+
+#### **Role-Based UI Features**
+- **Dynamic Navigation**: Sidebar adapts based on user role and permissions
+- **Contextual Access**: Features and data scoped to user's role and organization
+- **Session Tracking**: Login/logout timestamps and session management
+- **Role Indicators**: Clear role identification in user interface
+
 ### **Security & Compliance**
 - **Secure Communication**: HTTPS-ready with SSL/TLS support
 - **Data Protection**: Secure device data handling and privacy controls
 - **Network Permissions**: Proper privilege management for network scanning
 - **Firewall Integration**: Configurable network access and security controls
+- **Multi-Tenant Security**: Organization-scoped data isolation and access control
 
 ---
 

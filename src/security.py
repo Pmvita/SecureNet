@@ -42,13 +42,20 @@ def verify_api_key(api_key: str = Security(api_key_header)) -> str:
     return api_key
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Create JWT access token."""
+    """Create JWT access token with role and organization information."""
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
+    
+    # Add timestamp for token tracking
+    to_encode.update({
+        "exp": expire,
+        "iat": datetime.utcnow(),
+        "token_type": "access"
+    })
+    
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
