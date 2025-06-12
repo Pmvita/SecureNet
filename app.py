@@ -46,6 +46,11 @@ from database import Database
 from jose import JWTError, jwt
 from cve_integration import CVEIntegration
 
+# Import new API modules for multi-tenant SaaS
+from api_billing import router as billing_router
+from api_metrics import router as metrics_router
+from api_insights import router as insights_router
+
 # Load environment variables
 load_dotenv()
 
@@ -98,6 +103,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include new API routers for multi-tenant SaaS functionality
+app.include_router(billing_router)
+app.include_router(metrics_router)
+app.include_router(insights_router)
+
 # Security middleware
 @app.middleware("http")
 async def security_middleware(request: Request, call_next):
@@ -115,7 +125,7 @@ async def get_api_key(api_key: str = Security(api_key_header)):
     """Verify API key from header."""
     # In development mode, accept any API key or the development API key
     if DEV_MODE:
-        if api_key in [API_KEY, 'dev-api-key']:
+        if api_key in [API_KEY, 'dev-api-key', 'sk-dev-api-key-securenet-default']:
             return api_key
         raise HTTPException(
             status_code=403,
@@ -779,6 +789,13 @@ async def startup_event():
         # Update database schema
         await db.update_db_schema()
         logger.info("Database schema updated successfully")
+        
+        # Ensure default organization exists for backward compatibility
+        try:
+            default_org_id = await db.ensure_default_organization()
+            logger.info(f"Default organization ensured: {default_org_id}")
+        except Exception as e:
+            logger.error(f"Failed to ensure default organization: {str(e)}")
     except Exception as e:
         logger.error(f"Error during startup: {str(e)}")
         raise

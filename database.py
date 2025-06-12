@@ -5,10 +5,11 @@ import secrets
 import sqlite3
 import os
 import logging
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 import asyncio
 import random
 import time
+from enum import Enum
 
 import aiosqlite
 from src.security import get_password_hash
@@ -23,6 +24,19 @@ if not logger.handlers:
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+
+class PlanType(Enum):
+    """Subscription plan types for SaaS billing."""
+    FREE = "free"
+    PRO = "pro"
+    ENTERPRISE = "enterprise"
+
+class OrganizationStatus(Enum):
+    """Organization status types."""
+    ACTIVE = "active"
+    SUSPENDED = "suspended"
+    TRIAL = "trial"
+    EXPIRED = "expired"
 
 class Database:
     _instances = {}  # Process-specific instances
@@ -41,6 +55,335 @@ class Database:
             self.db_path = db_path
             self._ensure_db_directory()
             self._initialized[pid] = True
+
+    def _ensure_db_directory(self):
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+
+    def get_db(self):
+        return sqlite3.connect(self.db_path)
+
+    async def init_db(self):
+        async with aiosqlite.connect(self.db_path) as conn:
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS assets (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    type VARCHAR(50) NOT NULL,
+                    status VARCHAR(50) NOT NULL,
+                    ip_address VARCHAR(45),
+                    mac_address VARCHAR(17),
+                    last_seen TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS health_trends (
+                    id SERIAL PRIMARY KEY,
+                    metric_name VARCHAR(50) NOT NULL,
+                    value FLOAT NOT NULL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS alerts (
+                    id SERIAL PRIMARY KEY,
+                    type VARCHAR(50) NOT NULL,
+                    severity VARCHAR(20) NOT NULL,
+                    message TEXT NOT NULL,
+                    source VARCHAR(255),
+                    status VARCHAR(20) DEFAULT 'active',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    resolved_at TIMESTAMP
+                )
+            ''')
+            await conn.commit()
+
+    async def get_db_async(self):
+        return aiosqlite.connect(self.db_path)
+
+    def _init_db(self):
+        """Internal method to initialize database."""
+        try:
+            self._ensure_db_directory()
+            self.initialize_db()  # This will call create_tables
+            self._initialized[os.getpid()] = True
+            logger.info("Database initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing database: {str(e)}")
+            raise
+
+    @classmethod
+    def cleanup(cls):
+        """Clean up process-specific instance."""
+        process_id = os.getpid()
+        if process_id in cls._instances:
+            instance = cls._instances[process_id]
+            if hasattr(instance, '_pool') and instance._pool:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    asyncio.create_task(instance._pool.close())
+                else:
+                    loop.run_until_complete(instance._pool.close())
+            del cls._instances[process_id]
+            if process_id in cls._initialized:
+                del cls._initialized[process_id]
+
+    # ===== MULTI-TENANT ORGANIZATION MANAGEMENT =====
+    
+    async def create_organization(self, name: str, owner_email: str, plan: PlanType = PlanType.FREE) -> str:
+        """Create a new organization for multi-tenant SaaS."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                org_id = str(uuid.uuid4())
+                api_key = f"sk-{secrets.token_urlsafe(32)}"
+                
+                await conn.execute("""
+                    INSERT INTO organizations (
+                        id, name, owner_email, status, plan_type, 
+                        api_key, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    org_id, name, owner_email, OrganizationStatus.TRIAL.value,
+                    plan.value, api_key, datetime.now().isoformat(),
+                    datetime.now().isoformat()
+                ))
+                
+                await conn.commit()
+                logger.info(f"Created organization: {name} with ID: {org_id}")
+                return org_id
+        except Exception as e:
+            logger.error(f"Error creating organization: {str(e)}")
+            raise
+
+    async def get_organization_by_api_key(self, api_key: str) -> Optional[Dict]:
+        """Get organization by API key for tenant scoping."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT id, name, owner_email, status, plan_type, device_limit,
+                           created_at, updated_at
+                    FROM organizations 
+                    WHERE api_key = ? AND status != 'suspended'
+                """, (api_key,))
+                
+                row = await cursor.fetchone()
+                if row:
+                    return {
+                        'id': row[0],
+                        'name': row[1],
+                        'owner_email': row[2],
+                        'status': row[3],
+                        'plan_type': row[4],
+                        'device_limit': row[5],
+                        'created_at': row[6],
+                        'updated_at': row[7]
+                    }
+                return None
+        except Exception as e:
+            logger.error(f"Error getting organization by API key: {str(e)}")
+            return None
+
+    async def get_organization_usage(self, org_id: str) -> Dict:
+        """Get organization usage metrics for billing."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                # Count devices
+                cursor = await conn.execute("""
+                    SELECT COUNT(*) FROM network_devices WHERE organization_id = ?
+                """, (org_id,))
+                device_count = (await cursor.fetchone())[0] or 0
+                
+                # Count scans this month
+                start_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                cursor = await conn.execute("""
+                    SELECT COUNT(*) FROM security_scans 
+                    WHERE organization_id = ? AND created_at >= ?
+                """, (org_id, start_of_month.isoformat()))
+                scan_count = (await cursor.fetchone())[0] or 0
+                
+                # Count logs this month
+                cursor = await conn.execute("""
+                    SELECT COUNT(*) FROM logs 
+                    WHERE organization_id = ? AND timestamp >= ?
+                """, (org_id, start_of_month.isoformat()))
+                log_count = (await cursor.fetchone())[0] or 0
+                
+                return {
+                    'device_count': device_count,
+                    'scan_count_this_month': scan_count,
+                    'log_count_this_month': log_count,
+                    'period': start_of_month.strftime('%Y-%m')
+                }
+        except Exception as e:
+            logger.error(f"Error getting organization usage: {str(e)}")
+            return {}
+
+    async def add_user_to_organization(self, org_id: str, user_id: int, role: str = "member") -> bool:
+        """Add user to organization with role."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute("""
+                    INSERT OR REPLACE INTO org_users (organization_id, user_id, role, created_at)
+                    VALUES (?, ?, ?, ?)
+                """, (org_id, user_id, role, datetime.now().isoformat()))
+                
+                await conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error adding user to organization: {str(e)}")
+            return False
+
+    async def get_user_organizations(self, user_id: int) -> List[Dict]:
+        """Get all organizations for a user."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT o.id, o.name, o.status, o.plan_type, ou.role
+                    FROM organizations o
+                    JOIN org_users ou ON o.id = ou.organization_id
+                    WHERE ou.user_id = ?
+                """, (user_id,))
+                
+                rows = await cursor.fetchall()
+                return [{
+                    'id': row[0],
+                    'name': row[1],
+                    'status': row[2],
+                    'plan_type': row[3],
+                    'role': row[4]
+                } for row in rows]
+        except Exception as e:
+            logger.error(f"Error getting user organizations: {str(e)}")
+            return []
+
+    # ===== ENHANCED LOG SOURCE MANAGEMENT WITH ORG SCOPING =====
+    
+    def get_log_sources(self, org_id: str = None):
+        """Get all configured log sources, optionally scoped to organization."""
+        with self.get_db() as db:
+            cursor = db.cursor()
+            if org_id:
+                cursor.execute("""
+                    SELECT id, name, type, config, format, format_pattern, status,
+                           last_update, logs_per_minute, tags
+                    FROM log_sources
+                    WHERE organization_id = ? OR organization_id IS NULL
+                    ORDER BY name
+                """, (org_id,))
+            else:
+                cursor.execute("""
+                    SELECT id, name, type, config, format, format_pattern, status,
+                           last_update, logs_per_minute, tags
+                    FROM log_sources
+                    ORDER BY name
+                """)
+            sources = []
+            for row in cursor.fetchall():
+                source = {
+                    'id': row[0],
+                    'name': row[1],
+                    'type': row[2],
+                    'config': json.loads(row[3]),
+                    'format': row[4],
+                    'format_pattern': row[5],
+                    'status': row[6],
+                    'last_update': row[7],
+                    'logs_per_minute': row[8],
+                    'tags': json.loads(row[9]) if row[9] else []
+                }
+                sources.append(source)
+            return sources
+
+    def get_log_source(self, source_id, org_id: str = None):
+        """Get a specific log source by ID, optionally scoped to organization."""
+        with self.get_db() as db:
+            cursor = db.cursor()
+            if org_id:
+                cursor.execute("""
+                    SELECT id, name, type, config, format, format_pattern, status,
+                           last_update, logs_per_minute, tags
+                    FROM log_sources
+                    WHERE id = ? AND (organization_id = ? OR organization_id IS NULL)
+                """, (source_id, org_id))
+            else:
+                cursor.execute("""
+                    SELECT id, name, type, config, format, format_pattern, status,
+                           last_update, logs_per_minute, tags
+                    FROM log_sources
+                    WHERE id = ?
+                """, (source_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return {
+                'id': row[0],
+                'name': row[1],
+                'type': row[2],
+                'config': json.loads(row[3]),
+                'format': row[4],
+                'format_pattern': row[5],
+                'status': row[6],
+                'last_update': row[7],
+                'logs_per_minute': row[8],
+                'tags': json.loads(row[9]) if row[9] else []
+            }
+
+    def create_log_source(self, source, org_id: str = None):
+        """Create a new log source, optionally scoped to organization."""
+        with self.get_db() as db:
+            cursor = db.cursor()
+            source_id = str(uuid.uuid4())
+            cursor.execute("""
+                INSERT INTO log_sources (
+                    id, name, type, config, format, format_pattern,
+                    status, last_update, logs_per_minute, tags, organization_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                source_id,
+                source['name'],
+                source['type'],
+                json.dumps(source['config']),
+                source['format'],
+                source.get('format_pattern'),
+                'inactive',
+                datetime.utcnow().isoformat(),
+                0,
+                json.dumps(source.get('tags', [])),
+                org_id
+            ))
+            db.commit()
+            return source_id
+
+    def update_log_source(self, source_id, source, org_id: str = None):
+        """Update an existing log source, optionally scoped to organization."""
+        with self.get_db() as db:
+            cursor = db.cursor()
+            if org_id:
+                cursor.execute("""
+                    UPDATE log_sources 
+                    SET name = ?, type = ?, config = ?, format = ?, 
+                        format_pattern = ?, tags = ?, last_update = ?
+                    WHERE id = ? AND (organization_id = ? OR organization_id IS NULL)
+                """, (
+                    source['name'], source['type'], json.dumps(source['config']),
+                    source['format'], source.get('format_pattern'),
+                    json.dumps(source.get('tags', [])), datetime.utcnow().isoformat(),
+                    source_id, org_id
+                ))
+            else:
+                cursor.execute("""
+                    UPDATE log_sources 
+                    SET name = ?, type = ?, config = ?, format = ?, 
+                        format_pattern = ?, tags = ?, last_update = ?
+                    WHERE id = ?
+                """, (
+                    source['name'], source['type'], json.dumps(source['config']),
+                    source['format'], source.get('format_pattern'),
+                    json.dumps(source.get('tags', [])), datetime.utcnow().isoformat(),
+                    source_id
+                ))
+            db.commit()
 
     def _ensure_db_directory(self):
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
@@ -754,12 +1097,62 @@ class Database:
             return False
 
     def create_tables(self):
-        """Create all necessary database tables."""
+        """Create all necessary database tables with multi-tenant support."""
         try:
             with self.get_db() as db:
                 cursor = db.cursor()
 
-                # Create log_sources table
+                # Create organizations table for multi-tenancy
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS organizations (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        owner_email TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'trial',
+                        plan_type TEXT NOT NULL DEFAULT 'free',
+                        device_limit INTEGER DEFAULT 10,
+                        api_key TEXT UNIQUE NOT NULL,
+                        trial_ends_at TEXT,
+                        billing_email TEXT,
+                        stripe_customer_id TEXT,
+                        stripe_subscription_id TEXT,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL
+                    )
+                """)
+
+                # Create org_users table for organization membership
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS org_users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        organization_id TEXT NOT NULL,
+                        user_id INTEGER NOT NULL,
+                        role TEXT NOT NULL DEFAULT 'member',
+                        created_at TEXT NOT NULL,
+                        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+                        FOREIGN KEY (user_id) REFERENCES users(id),
+                        UNIQUE(organization_id, user_id)
+                    )
+                """)
+
+                # Create billing_usage table for usage tracking
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS billing_usage (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        organization_id TEXT NOT NULL,
+                        month TEXT NOT NULL,
+                        device_count INTEGER DEFAULT 0,
+                        scan_count INTEGER DEFAULT 0,
+                        log_count INTEGER DEFAULT 0,
+                        api_requests INTEGER DEFAULT 0,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+                        UNIQUE(organization_id, month)
+                    )
+                """)
+
+                # Create log_sources table with organization scoping
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS log_sources (
                         id TEXT PRIMARY KEY,
@@ -767,14 +1160,21 @@ class Database:
                         type TEXT NOT NULL,
                         status TEXT NOT NULL,
                         config TEXT,
+                        format TEXT,
+                        format_pattern TEXT,
                         last_seen TEXT,
+                        last_update TEXT,
                         logs_count INTEGER DEFAULT 0,
+                        logs_per_minute INTEGER DEFAULT 0,
+                        tags TEXT,
+                        organization_id TEXT,
                         created_at TEXT NOT NULL,
-                        updated_at TEXT NOT NULL
+                        updated_at TEXT NOT NULL,
+                        FOREIGN KEY (organization_id) REFERENCES organizations(id)
                     )
                 """)
 
-                # Create logs table
+                # Create logs table with organization scoping
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS logs (
                         id TEXT PRIMARY KEY,
@@ -783,12 +1183,15 @@ class Database:
                         message TEXT NOT NULL,
                         timestamp TEXT NOT NULL,
                         category TEXT DEFAULT 'system',
+                        source TEXT DEFAULT 'system',
                         metadata TEXT,
-                        FOREIGN KEY (source_id) REFERENCES log_sources(id)
+                        organization_id TEXT,
+                        FOREIGN KEY (source_id) REFERENCES log_sources(id),
+                        FOREIGN KEY (organization_id) REFERENCES organizations(id)
                     )
                 """)
 
-                # Create network_devices table
+                # Create network_devices table with organization scoping
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS network_devices (
                         id TEXT PRIMARY KEY,
@@ -799,12 +1202,14 @@ class Database:
                         status TEXT NOT NULL,
                         last_seen TEXT,
                         metadata TEXT,
+                        organization_id TEXT,
                         created_at TEXT NOT NULL,
-                        updated_at TEXT NOT NULL
+                        updated_at TEXT NOT NULL,
+                        FOREIGN KEY (organization_id) REFERENCES organizations(id)
                     )
                 """)
 
-                # Create network_connections table
+                # Create network_connections table with organization scoping
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS network_connections (
                         id TEXT PRIMARY KEY,
@@ -815,14 +1220,16 @@ class Database:
                         port INTEGER,
                         last_seen TEXT,
                         metadata TEXT,
+                        organization_id TEXT,
                         created_at TEXT NOT NULL,
                         updated_at TEXT NOT NULL,
                         FOREIGN KEY (source_device_id) REFERENCES network_devices(id),
-                        FOREIGN KEY (target_device_id) REFERENCES network_devices(id)
+                        FOREIGN KEY (target_device_id) REFERENCES network_devices(id),
+                        FOREIGN KEY (organization_id) REFERENCES organizations(id)
                     )
                 """)
 
-                # Create network_traffic table
+                # Create network_traffic table with organization scoping
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS network_traffic (
                         id TEXT PRIMARY KEY,
@@ -833,12 +1240,14 @@ class Database:
                         bytes_received INTEGER DEFAULT 0,
                         timestamp TEXT NOT NULL,
                         metadata TEXT,
+                        organization_id TEXT,
                         FOREIGN KEY (source_device_id) REFERENCES network_devices(id),
-                        FOREIGN KEY (target_device_id) REFERENCES network_devices(id)
+                        FOREIGN KEY (target_device_id) REFERENCES network_devices(id),
+                        FOREIGN KEY (organization_id) REFERENCES organizations(id)
                     )
                 """)
 
-                # Create anomalies table
+                # Create anomalies table with organization scoping
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS anomalies (
                         id TEXT PRIMARY KEY,
@@ -851,8 +1260,10 @@ class Database:
                         evidence TEXT,
                         resolution TEXT,
                         metadata TEXT,
+                        organization_id TEXT,
                         created_at TEXT NOT NULL,
-                        updated_at TEXT NOT NULL
+                        updated_at TEXT NOT NULL,
+                        FOREIGN KEY (organization_id) REFERENCES organizations(id)
                     )
                 """)
 
@@ -884,7 +1295,7 @@ class Database:
                     )
                 """)
 
-                # Create security_scans table
+                # Create security_scans table with organization scoping
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS security_scans (
                         id TEXT PRIMARY KEY,
@@ -897,12 +1308,14 @@ class Database:
                         start_time TEXT NOT NULL,
                         end_time TEXT,
                         metadata TEXT,
+                        organization_id TEXT,
                         created_at TEXT NOT NULL,
-                        updated_at TEXT NOT NULL
+                        updated_at TEXT NOT NULL,
+                        FOREIGN KEY (organization_id) REFERENCES organizations(id)
                     )
                 """)
 
-                # Create security_findings table
+                # Create security_findings table with organization scoping
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS security_findings (
                         id TEXT PRIMARY KEY,
@@ -914,25 +1327,141 @@ class Database:
                         timestamp TEXT NOT NULL,
                         status TEXT NOT NULL,
                         remediation TEXT,
+                        organization_id TEXT,
                         created_at TEXT NOT NULL,
                         updated_at TEXT NOT NULL,
-                        FOREIGN KEY (scan_id) REFERENCES security_scans(id)
+                        FOREIGN KEY (scan_id) REFERENCES security_scans(id),
+                        FOREIGN KEY (organization_id) REFERENCES organizations(id)
                     )
                 """)
 
-                # Create indexes for new tables
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_network_metrics_source_device ON network_metrics(source_device_id)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_network_metrics_target_device ON network_metrics(target_device_id)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_network_metrics_type ON network_metrics(metric_type)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_network_metrics_timestamp ON network_metrics(timestamp)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_security_scans_status ON security_scans(status)")
+                # Create ML models table for AI/ML pipeline
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS ml_models (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        version TEXT NOT NULL,
+                        file_path TEXT NOT NULL,
+                        organization_id TEXT,
+                        training_data_path TEXT,
+                        accuracy REAL,
+                        status TEXT NOT NULL DEFAULT 'trained',
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        FOREIGN KEY (organization_id) REFERENCES organizations(id)
+                    )
+                """)
+
+                # Create ML training sessions table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS ml_training_sessions (
+                        id TEXT PRIMARY KEY,
+                        model_id TEXT NOT NULL,
+                        data_size INTEGER NOT NULL,
+                        accuracy REAL,
+                        training_time REAL,
+                        status TEXT NOT NULL,
+                        organization_id TEXT,
+                        created_at TEXT NOT NULL,
+                        completed_at TEXT,
+                        FOREIGN KEY (model_id) REFERENCES ml_models(id),
+                        FOREIGN KEY (organization_id) REFERENCES organizations(id)
+                    )
+                """)
+
+                # Create notifications table with organization scoping
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS notifications (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT NOT NULL,
+                        message TEXT NOT NULL,
+                        category TEXT NOT NULL DEFAULT 'system',
+                        severity TEXT NOT NULL DEFAULT 'info',
+                        read BOOLEAN NOT NULL DEFAULT 0,
+                        organization_id TEXT,
+                        user_id INTEGER,
+                        metadata TEXT,
+                        created_at TEXT NOT NULL,
+                        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+                        FOREIGN KEY (user_id) REFERENCES users(id)
+                    )
+                """)
+
+                # Create CVE data tables with organization scoping
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS cve_data (
+                        cve_id TEXT PRIMARY KEY,
+                        description TEXT,
+                        cvss_v3_score REAL,
+                        cvss_v3_severity TEXT,
+                        cvss_v3_vector TEXT,
+                        published_date TEXT,
+                        last_modified TEXT,
+                        cwe_ids TEXT,
+                        affected_products TEXT,
+                        reference_urls TEXT,
+                        exploitability_score REAL,
+                        impact_score REAL,
+                        is_kev BOOLEAN DEFAULT 0,
+                        created_at TEXT NOT NULL
+                    )
+                """)
+
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS device_vulnerabilities (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        device_ip TEXT NOT NULL,
+                        device_name TEXT,
+                        device_type TEXT,
+                        cve_id TEXT NOT NULL,
+                        severity TEXT NOT NULL,
+                        score REAL,
+                        risk_level TEXT,
+                        remediation_priority INTEGER,
+                        affected_services TEXT,
+                        detection_confidence REAL,
+                        organization_id TEXT,
+                        created_at TEXT NOT NULL,
+                        FOREIGN KEY (cve_id) REFERENCES cve_data(cve_id),
+                        FOREIGN KEY (organization_id) REFERENCES organizations(id)
+                    )
+                """)
+
+                # Create comprehensive indexes for multi-tenant queries
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_organizations_api_key ON organizations(api_key)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_organizations_status ON organizations(status)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_org_users_org_id ON org_users(organization_id)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_org_users_user_id ON org_users(user_id)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_billing_usage_org_month ON billing_usage(organization_id, month)")
+                
+                # Existing indexes with organization scoping
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_logs_org_timestamp ON logs(organization_id, timestamp)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_logs_source_id ON logs(source_id)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_network_devices_org_status ON network_devices(organization_id, status)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_network_devices_last_seen ON network_devices(last_seen)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_network_connections_org_status ON network_connections(organization_id, status)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_network_traffic_org_timestamp ON network_traffic(organization_id, timestamp)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_anomalies_org_timestamp ON anomalies(organization_id, timestamp)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_anomalies_severity ON anomalies(severity)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_anomalies_status ON anomalies(status)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_security_scans_org_status ON security_scans(organization_id, status)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_security_scans_timestamp ON security_scans(timestamp)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_security_findings_scan_id ON security_findings(scan_id)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_security_findings_org_scan ON security_findings(organization_id, scan_id)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_security_findings_severity ON security_findings(severity)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_security_findings_status ON security_findings(status)")
+                
+                # ML and notification indexes
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_ml_models_org_type ON ml_models(organization_id, type)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_ml_training_org_model ON ml_training_sessions(organization_id, model_id)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_notifications_org_read ON notifications(organization_id, read)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_device_vulnerabilities_org_severity ON device_vulnerabilities(organization_id, severity)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_cve_data_severity ON cve_data(cvss_v3_severity)")
 
             db.commit()
-            logger.info("Database schema initialized successfully")
+            logger.info("Multi-tenant database schema initialized successfully")
         except Exception as e:
             logger.error(f"Error initializing database schema: {str(e)}")
             raise
@@ -2472,6 +3001,8 @@ class Database:
         """Update database schema."""
         try:
             async with aiosqlite.connect(self.db_path) as conn:
+                # Enable foreign key support
+                await conn.execute("PRAGMA foreign_keys = ON")
                 cursor = await conn.cursor()
 
                 # Helper function to check if a column exists
@@ -2595,6 +3126,123 @@ class Database:
                     )
                 """)
 
+                # ===== MULTI-TENANT SAAS TABLES =====
+                
+                # Create organizations table
+                await cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS organizations (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        owner_email TEXT NOT NULL,
+                        plan_type TEXT NOT NULL DEFAULT 'free',
+                        status TEXT NOT NULL DEFAULT 'active',
+                        api_key TEXT UNIQUE NOT NULL,
+                        device_limit INTEGER NOT NULL DEFAULT 5,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+
+                # Create org_users table
+                await cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS org_users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        organization_id TEXT NOT NULL,
+                        user_id INTEGER NOT NULL,
+                        role TEXT NOT NULL DEFAULT 'member',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(organization_id, user_id)
+                    )
+                """)
+
+                # Create billing_usage table
+                await cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS billing_usage (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        organization_id TEXT NOT NULL,
+                        month TEXT NOT NULL,
+                        device_count INTEGER DEFAULT 0,
+                        scan_count INTEGER DEFAULT 0,
+                        log_count INTEGER DEFAULT 0,
+                        api_requests INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(organization_id, month)
+                    )
+                """)
+
+                # Create ml_models table
+                await cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS ml_models (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT,
+                        name TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        accuracy REAL,
+                        status TEXT NOT NULL DEFAULT 'training',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+
+                # Create ml_training_sessions table
+                await cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS ml_training_sessions (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT,
+                        model_id TEXT NOT NULL,
+                        data_size INTEGER NOT NULL,
+                        accuracy REAL,
+                        training_time REAL,
+                        status TEXT NOT NULL DEFAULT 'running',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        completed_at TIMESTAMP
+                    )
+                """)
+
+                # Create notifications table
+                await cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS notifications (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        organization_id TEXT,
+                        user_id INTEGER,
+                        title TEXT NOT NULL,
+                        message TEXT NOT NULL,
+                        category TEXT NOT NULL DEFAULT 'system',
+                        severity TEXT NOT NULL DEFAULT 'info',
+                        read BOOLEAN NOT NULL DEFAULT 0,
+                        metadata TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+
+                # Create cve_data table
+                await cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS cve_data (
+                        id TEXT PRIMARY KEY,
+                        description TEXT NOT NULL,
+                        severity TEXT NOT NULL,
+                        score REAL,
+                        published_date TEXT,
+                        modified_date TEXT,
+                        reference_urls TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+
+                # Create device_vulnerabilities table
+                await cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS device_vulnerabilities (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        organization_id TEXT,
+                        device_id INTEGER,
+                        cve_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'open',
+                        detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        resolved_at TIMESTAMP
+                    )
+                """)
+
                 # Add any missing columns to existing tables
                 await add_column_if_not_exists("logs", "source", "TEXT NOT NULL DEFAULT 'system'")
                 await add_column_if_not_exists("logs", "metadata", "TEXT")
@@ -2605,6 +3253,25 @@ class Database:
                 await add_column_if_not_exists("network_traffic", "metadata", "TEXT")
                 await add_column_if_not_exists("anomalies", "source", "TEXT NOT NULL DEFAULT 'system'")
                 await add_column_if_not_exists("anomalies", "metadata", "TEXT")
+
+                # Add organization_id columns for multi-tenancy
+                await add_column_if_not_exists("logs", "organization_id", "TEXT")
+                await add_column_if_not_exists("network_devices", "organization_id", "TEXT")
+                await add_column_if_not_exists("network_traffic", "organization_id", "TEXT")
+                await add_column_if_not_exists("anomalies", "organization_id", "TEXT")
+                await add_column_if_not_exists("security_scans", "organization_id", "TEXT")
+                await add_column_if_not_exists("security_findings", "organization_id", "TEXT")
+                
+                # Add missing columns to network_devices
+                await add_column_if_not_exists("network_devices", "ip_address", "TEXT")
+                await add_column_if_not_exists("network_devices", "mac_address", "TEXT")
+                await add_column_if_not_exists("network_devices", "created_at", "TIMESTAMP")
+                await add_column_if_not_exists("network_devices", "updated_at", "TIMESTAMP")
+                
+                # Add missing columns to anomalies
+                await add_column_if_not_exists("anomalies", "evidence", "TEXT")
+                await add_column_if_not_exists("anomalies", "resolution", "TEXT")
+                await add_column_if_not_exists("anomalies", "created_at", "TIMESTAMP")
 
                 # Create indexes only if the tables exist and have the required columns
                 if await column_exists("logs", "timestamp"):
@@ -2646,6 +3313,36 @@ class Database:
                     await cursor.execute("CREATE INDEX IF NOT EXISTS idx_anomalies_status ON anomalies(status)")
                 if await column_exists("anomalies", "type"):
                     await cursor.execute("CREATE INDEX IF NOT EXISTS idx_anomalies_type ON anomalies(type)")
+
+                # Create indexes for multi-tenant tables (only if tables exist)
+                try:
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_organizations_api_key ON organizations(api_key)")
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_organizations_owner_email ON organizations(owner_email)")
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_org_users_org_id ON org_users(organization_id)")
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_org_users_user_id ON org_users(user_id)")
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_billing_usage_org_id ON billing_usage(organization_id)")
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_billing_usage_month ON billing_usage(month)")
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_ml_models_org_id ON ml_models(organization_id)")
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_ml_training_sessions_org_id ON ml_training_sessions(organization_id)")
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_notifications_org_id ON notifications(organization_id)")
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)")
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_device_vulnerabilities_org_id ON device_vulnerabilities(organization_id)")
+                except sqlite3.OperationalError as e:
+                    logger.warning(f"Could not create some indexes: {str(e)}")
+                
+                # Create indexes for organization_id columns in existing tables
+                if await column_exists("logs", "organization_id"):
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_logs_org_id ON logs(organization_id)")
+                if await column_exists("network_devices", "organization_id"):
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_devices_org_id ON network_devices(organization_id)")
+                if await column_exists("network_traffic", "organization_id"):
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_traffic_org_id ON network_traffic(organization_id)")
+                if await column_exists("anomalies", "organization_id"):
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_anomalies_org_id ON anomalies(organization_id)")
+                if await column_exists("security_scans", "organization_id"):
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_scans_org_id ON security_scans(organization_id)")
+                if await column_exists("security_findings", "organization_id"):
+                    await cursor.execute("CREATE INDEX IF NOT EXISTS idx_findings_org_id ON security_findings(organization_id)")
 
                 await conn.commit()
                 logger.info("Database schema updated successfully")
@@ -2739,3 +3436,482 @@ class Database:
         except Exception as e:
             logger.error(f"Error inserting sample data: {str(e)}")
             raise
+
+    # ===== AI/ML PIPELINE MANAGEMENT =====
+    
+    async def create_ml_model(self, name: str, model_type: str, org_id: str = None) -> str:
+        """Create a new ML model for anomaly detection."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                model_id = str(uuid.uuid4())
+                version = "1.0.0"
+                file_path = f"models/{model_id}_{model_type}.pkl"
+                
+                await conn.execute("""
+                    INSERT INTO ml_models (
+                        id, name, type, version, file_path, organization_id,
+                        status, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    model_id, name, model_type, version, file_path, org_id,
+                    'training', datetime.now().isoformat(), datetime.now().isoformat()
+                ))
+                
+                await conn.commit()
+                logger.info(f"Created ML model: {name} with ID: {model_id}")
+                return model_id
+        except Exception as e:
+            logger.error(f"Error creating ML model: {str(e)}")
+            raise
+
+    async def start_ml_training_session(self, model_id: str, data_size: int, org_id: str = None) -> str:
+        """Start a new ML training session."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                session_id = str(uuid.uuid4())
+                
+                await conn.execute("""
+                    INSERT INTO ml_training_sessions (
+                        id, model_id, data_size, status, organization_id, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    session_id, model_id, data_size, 'running', org_id,
+                    datetime.now().isoformat()
+                ))
+                
+                await conn.commit()
+                logger.info(f"Started ML training session: {session_id}")
+                return session_id
+        except Exception as e:
+            logger.error(f"Error starting ML training session: {str(e)}")
+            raise
+
+    async def complete_ml_training_session(self, session_id: str, accuracy: float, training_time: float) -> bool:
+        """Complete an ML training session with results."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute("""
+                    UPDATE ml_training_sessions 
+                    SET accuracy = ?, training_time = ?, status = 'completed',
+                        completed_at = ?
+                    WHERE id = ?
+                """, (accuracy, training_time, datetime.now().isoformat(), session_id))
+                
+                await conn.commit()
+                logger.info(f"Completed ML training session: {session_id}")
+                return True
+        except Exception as e:
+            logger.error(f"Error completing ML training session: {str(e)}")
+            return False
+
+    async def get_ml_models(self, org_id: str = None) -> List[Dict]:
+        """Get ML models for organization."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                if org_id:
+                    cursor = await conn.execute("""
+                        SELECT id, name, type, version, file_path, accuracy, status,
+                               created_at, updated_at
+                        FROM ml_models
+                        WHERE organization_id = ? OR organization_id IS NULL
+                        ORDER BY created_at DESC
+                    """, (org_id,))
+                else:
+                    cursor = await conn.execute("""
+                        SELECT id, name, type, version, file_path, accuracy, status,
+                               created_at, updated_at
+                        FROM ml_models
+                        ORDER BY created_at DESC
+                    """)
+                
+                rows = await cursor.fetchall()
+                return [{
+                    'id': row[0],
+                    'name': row[1],
+                    'type': row[2],
+                    'version': row[3],
+                    'file_path': row[4],
+                    'accuracy': row[5],
+                    'status': row[6],
+                    'created_at': row[7],
+                    'updated_at': row[8]
+                } for row in rows]
+        except Exception as e:
+            logger.error(f"Error getting ML models: {str(e)}")
+            return []
+
+    # ===== BILLING & USAGE TRACKING =====
+    
+    async def track_billing_usage(self, org_id: str, usage_type: str, count: int = 1) -> bool:
+        """Track usage for billing purposes."""
+        try:
+            current_month = datetime.now().strftime('%Y-%m')
+            
+            async with aiosqlite.connect(self.db_path) as conn:
+                # Get or create billing record for this month
+                cursor = await conn.execute("""
+                    SELECT device_count, scan_count, log_count, api_requests
+                    FROM billing_usage
+                    WHERE organization_id = ? AND month = ?
+                """, (org_id, current_month))
+                
+                row = await cursor.fetchone()
+                if row:
+                    # Update existing record
+                    current_device_count, current_scan_count, current_log_count, current_api_requests = row
+                    
+                    if usage_type == 'device':
+                        current_device_count = max(current_device_count, count)  # Track max devices
+                    elif usage_type == 'scan':
+                        current_scan_count += count
+                    elif usage_type == 'log':
+                        current_log_count += count
+                    elif usage_type == 'api':
+                        current_api_requests += count
+                    
+                    await conn.execute("""
+                        UPDATE billing_usage 
+                        SET device_count = ?, scan_count = ?, log_count = ?, 
+                            api_requests = ?, updated_at = ?
+                        WHERE organization_id = ? AND month = ?
+                    """, (
+                        current_device_count, current_scan_count, current_log_count,
+                        current_api_requests, datetime.now().isoformat(),
+                        org_id, current_month
+                    ))
+                else:
+                    # Create new record
+                    device_count = count if usage_type == 'device' else 0
+                    scan_count = count if usage_type == 'scan' else 0
+                    log_count = count if usage_type == 'log' else 0
+                    api_requests = count if usage_type == 'api' else 0
+                    
+                    await conn.execute("""
+                        INSERT INTO billing_usage (
+                            organization_id, month, device_count, scan_count,
+                            log_count, api_requests, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        org_id, current_month, device_count, scan_count,
+                        log_count, api_requests, datetime.now().isoformat(),
+                        datetime.now().isoformat()
+                    ))
+                
+                await conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error tracking billing usage: {str(e)}")
+            return False
+
+    async def get_billing_usage(self, org_id: str, months: int = 12) -> List[Dict]:
+        """Get billing usage history for organization."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT month, device_count, scan_count, log_count, api_requests
+                    FROM billing_usage
+                    WHERE organization_id = ?
+                    ORDER BY month DESC
+                    LIMIT ?
+                """, (org_id, months))
+                
+                rows = await cursor.fetchall()
+                return [{
+                    'month': row[0],
+                    'device_count': row[1],
+                    'scan_count': row[2],
+                    'log_count': row[3],
+                    'api_requests': row[4]
+                } for row in rows]
+        except Exception as e:
+            logger.error(f"Error getting billing usage: {str(e)}")
+            return []
+
+    async def update_organization_plan(self, org_id: str, plan_type: str, device_limit: int = None) -> bool:
+        """Update organization subscription plan."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                if device_limit is not None:
+                    await conn.execute("""
+                        UPDATE organizations 
+                        SET plan_type = ?, device_limit = ?, updated_at = ?
+                        WHERE id = ?
+                    """, (plan_type, device_limit, datetime.now().isoformat(), org_id))
+                else:
+                    await conn.execute("""
+                        UPDATE organizations 
+                        SET plan_type = ?, updated_at = ?
+                        WHERE id = ?
+                    """, (plan_type, datetime.now().isoformat(), org_id))
+                
+                await conn.commit()
+                logger.info(f"Updated organization plan: {org_id} to {plan_type}")
+                return True
+        except Exception as e:
+            logger.error(f"Error updating organization plan: {str(e)}")
+            return False
+
+    async def check_organization_limits(self, org_id: str) -> Dict:
+        """Check if organization is within subscription limits."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                # Get organization info
+                cursor = await conn.execute("""
+                    SELECT plan_type, device_limit, status
+                    FROM organizations
+                    WHERE id = ?
+                """, (org_id,))
+                
+                org_row = await cursor.fetchone()
+                if not org_row:
+                    return {'within_limits': False, 'reason': 'Organization not found'}
+                
+                plan_type, device_limit, status = org_row
+                
+                if status == 'suspended':
+                    return {'within_limits': False, 'reason': 'Organization suspended'}
+                
+                # Get current device count
+                cursor = await conn.execute("""
+                    SELECT COUNT(*) FROM network_devices WHERE organization_id = ?
+                """, (org_id,))
+                current_devices = (await cursor.fetchone())[0]
+                
+                # Check device limit
+                if current_devices >= device_limit:
+                    return {
+                        'within_limits': False,
+                        'reason': f'Device limit reached ({current_devices}/{device_limit})',
+                        'current_devices': current_devices,
+                        'device_limit': device_limit
+                    }
+                
+                return {
+                    'within_limits': True,
+                    'plan_type': plan_type,
+                    'current_devices': current_devices,
+                    'device_limit': device_limit
+                }
+        except Exception as e:
+            logger.error(f"Error checking organization limits: {str(e)}")
+            return {'within_limits': False, 'reason': 'Database error'}
+
+    # ===== ENHANCED NOTIFICATION SYSTEM =====
+    
+    async def create_notification(self, title: str, message: str, category: str = "system",
+                                severity: str = "info", org_id: str = None, user_id: int = None) -> int:
+        """Create a new notification with organization scoping."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    INSERT INTO notifications (
+                        title, message, category, severity, organization_id,
+                        user_id, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    title, message, category, severity, org_id, user_id,
+                    datetime.now().isoformat()
+                ))
+                
+                # Get the inserted row ID
+                cursor = await conn.execute("SELECT last_insert_rowid()")
+                notification_id = (await cursor.fetchone())[0]
+                await conn.commit()
+                return notification_id
+        except Exception as e:
+            logger.error(f"Error creating notification: {str(e)}")
+            return None
+
+    async def get_notifications(self, org_id: str = None, user_id: int = None,
+                              unread_only: bool = False, limit: int = 50) -> List[Dict]:
+        """Get notifications with organization/user scoping."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                query = """
+                    SELECT id, title, message, category, severity, read,
+                           created_at, metadata
+                    FROM notifications
+                    WHERE 1=1
+                """
+                params = []
+                
+                if org_id:
+                    query += " AND organization_id = ?"
+                    params.append(org_id)
+                
+                if user_id:
+                    query += " AND (user_id = ? OR user_id IS NULL)"
+                    params.append(user_id)
+                
+                if unread_only:
+                    query += " AND read = 0"
+                
+                query += " ORDER BY created_at DESC LIMIT ?"
+                params.append(limit)
+                
+                cursor = await conn.execute(query, params)
+                rows = await cursor.fetchall()
+                
+                return [{
+                    'id': row[0],
+                    'title': row[1],
+                    'message': row[2],
+                    'category': row[3],
+                    'severity': row[4],
+                    'read': bool(row[5]),
+                    'created_at': row[6],
+                    'metadata': json.loads(row[7]) if row[7] else {}
+                } for row in rows]
+        except Exception as e:
+            logger.error(f"Error getting notifications: {str(e)}")
+            return []
+
+    async def mark_notification_read(self, notification_id: int, org_id: str = None) -> bool:
+        """Mark notification as read with organization scoping."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                if org_id:
+                    cursor = await conn.execute("""
+                        UPDATE notifications SET read = 1
+                        WHERE id = ? AND organization_id = ?
+                    """, (notification_id, org_id))
+                else:
+                    cursor = await conn.execute("""
+                        UPDATE notifications SET read = 1 WHERE id = ?
+                    """, (notification_id,))
+                
+                await conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error marking notification read: {str(e)}")
+            return False
+
+    # ===== DEFAULT ORGANIZATION SETUP =====
+    
+    async def ensure_default_organization(self) -> str:
+        """Ensure a default organization exists for backward compatibility."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT id FROM organizations WHERE owner_email = 'admin@securenet.local'
+                """)
+                
+                org = await cursor.fetchone()
+                if org:
+                    return org[0]
+                
+                # Create default organization with dev API key
+                org_id = str(uuid.uuid4())
+                await conn.execute("""
+                    INSERT INTO organizations (
+                        id, name, owner_email, status, plan_type, 
+                        api_key, device_limit, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    org_id, "SecureNet Default", "admin@securenet.local", 
+                    OrganizationStatus.ACTIVE.value, PlanType.ENTERPRISE.value,
+                    "sk-dev-api-key-securenet-default", 1000, datetime.now().isoformat(),
+                    datetime.now().isoformat()
+                ))
+                await conn.commit()
+                
+                # Update device limits for enterprise plan
+                await self.update_organization_plan(org_id, "enterprise", 1000)
+                
+                logger.info(f"Created default organization: {org_id}")
+                return org_id
+        except Exception as e:
+            logger.error(f"Error ensuring default organization: {str(e)}")
+            raise
+
+    # ===== ORGANIZATION SCOPED DATA ACCESS =====
+    
+    async def get_network_devices_scoped(self, org_id: str) -> List[Dict]:
+        """Get network devices scoped to organization."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT id, name, type, ip_address, mac_address, status,
+                           last_seen, metadata, created_at, updated_at
+                    FROM network_devices
+                    WHERE organization_id = ? OR organization_id IS NULL
+                    ORDER BY last_seen DESC
+                """, (org_id,))
+                
+                rows = await cursor.fetchall()
+                return [{
+                    'id': row[0],
+                    'name': row[1],
+                    'type': row[2],
+                    'ip_address': row[3],
+                    'mac_address': row[4],
+                    'status': row[5],
+                    'last_seen': row[6],
+                    'metadata': json.loads(row[7]) if row[7] else {},
+                    'created_at': row[8],
+                    'updated_at': row[9]
+                } for row in rows]
+        except Exception as e:
+            logger.error(f"Error getting scoped network devices: {str(e)}")
+            return []
+
+    async def get_security_scans_scoped(self, org_id: str, limit: int = 50) -> List[Dict]:
+        """Get security scans scoped to organization."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT id, timestamp, type, status, target, progress,
+                           findings_count, start_time, end_time, created_at
+                    FROM security_scans
+                    WHERE organization_id = ? OR organization_id IS NULL
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                """, (org_id, limit))
+                
+                rows = await cursor.fetchall()
+                return [{
+                    'id': row[0],
+                    'timestamp': row[1],
+                    'type': row[2],
+                    'status': row[3],
+                    'target': row[4],
+                    'progress': row[5],
+                    'findings_count': row[6],
+                    'start_time': row[7],
+                    'end_time': row[8],
+                    'created_at': row[9]
+                } for row in rows]
+        except Exception as e:
+            logger.error(f"Error getting scoped security scans: {str(e)}")
+            return []
+
+    async def get_anomalies_scoped(self, org_id: str, page: int = 1, page_size: int = 20) -> List[Dict]:
+        """Get anomalies scoped to organization."""
+        try:
+            offset = (page - 1) * page_size
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT id, timestamp, type, severity, status, source,
+                           description, evidence, resolution, created_at
+                    FROM anomalies
+                    WHERE organization_id = ? OR organization_id IS NULL
+                    ORDER BY timestamp DESC
+                    LIMIT ? OFFSET ?
+                """, (org_id, page_size, offset))
+                
+                rows = await cursor.fetchall()
+                return [{
+                    'id': row[0],
+                    'timestamp': row[1],
+                    'type': row[2],
+                    'severity': row[3],
+                    'status': row[4],
+                    'source': row[5],
+                    'description': row[6],
+                    'evidence': row[7],
+                    'resolution': row[8],
+                    'created_at': row[9]
+                } for row in rows]
+        except Exception as e:
+            logger.error(f"Error getting scoped anomalies: {str(e)}")
+            return []
