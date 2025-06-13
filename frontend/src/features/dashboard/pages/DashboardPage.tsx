@@ -15,6 +15,7 @@ import {
   ServerIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
+  CheckIcon,
   ClockIcon,
   ChartBarIcon,
   EyeIcon,
@@ -347,121 +348,225 @@ export function DashboardPage() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Recent Security Alerts */}
+        {/* Security Alerts */}
         <div className="xl:col-span-1">
-          <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
-            <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
+          <Card className="bg-gradient-to-br from-red-950/20 to-gray-900/50 border-red-900/30 hover:border-red-800/50 transition-all duration-300">
+            <div className="p-6 border-b border-red-900/30 bg-gradient-to-r from-red-950/30 to-gray-800/50">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                  <ShieldExclamationIcon className="h-6 w-6 text-red-400" />
-                  Security Alerts
-                </h2>
-                <Badge variant="error" className="text-xs">
-                  {activeAnomalies.length} Active
-                </Badge>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-red-500/20 border border-red-500/30">
+                    <ShieldExclamationIcon className="h-5 w-5 text-red-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Security Alerts</h2>
+                    <p className="text-xs text-red-200/70">Real-time threat monitoring</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {activeAnomalies.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-red-300 font-medium">ACTIVE</span>
+                    </div>
+                  )}
+                  <Badge 
+                    variant={activeAnomalies.length > 0 ? "error" : "success"} 
+                    className="text-xs font-semibold px-3 py-1"
+                  >
+                    {activeAnomalies.length} {activeAnomalies.length === 1 ? 'Alert' : 'Alerts'}
+                  </Badge>
+                </div>
               </div>
             </div>
-            <div className="p-6 bg-gray-900/30">
+            <div className="p-6 bg-gray-900/20">
               {activeAnomalies.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircleIcon className="h-12 w-12 text-green-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-white mb-2">No Active Alerts</h3>
-                  <p className="text-gray-400 text-sm">Your security posture is strong</p>
+                <div className="text-center py-12">
+                  <div className="relative">
+                    <CheckCircleIcon className="h-16 w-16 text-green-400 mx-auto mb-4 drop-shadow-lg" />
+                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                      <CheckIcon className="h-3 w-3 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">All Clear</h3>
+                  <p className="text-gray-400 text-sm max-w-xs mx-auto">No active security threats detected. Your systems are secure.</p>
+                  <div className="mt-4 flex items-center justify-center gap-2 text-xs text-green-400">
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                    <span>Security posture: Strong</span>
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {activeAnomalies.map((anomaly) => (
+                <div className="space-y-4">
+                  {activeAnomalies.map((anomaly, index) => (
                     <div
                       key={anomaly.id}
-                      className={`p-3 rounded-lg border transition-colors hover:border-gray-600 ${
-                        severityConfig[anomaly.severity as keyof typeof severityConfig]?.bgColor || 
-                        'bg-gray-800/50 border-gray-700'
+                      className={`group relative overflow-hidden rounded-xl border transition-all duration-300 hover:shadow-lg ${
+                        anomaly.severity === 'critical' 
+                          ? 'bg-gradient-to-r from-red-500/10 to-red-600/5 border-red-500/30 hover:border-red-400/50 hover:shadow-red-500/20' 
+                          : anomaly.severity === 'high'
+                          ? 'bg-gradient-to-r from-orange-500/10 to-orange-600/5 border-orange-500/30 hover:border-orange-400/50 hover:shadow-orange-500/20'
+                          : 'bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 border-yellow-500/30 hover:border-yellow-400/50 hover:shadow-yellow-500/20'
                       }`}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge 
-                              variant={severityConfig[anomaly.severity as keyof typeof severityConfig]?.variant || 'default'}
-                              className="text-xs"
-                            >
-                              {anomaly.severity}
-                            </Badge>
-                            <span className="text-xs text-gray-400 font-mono">{anomaly.type}</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="relative p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className={`flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                anomaly.severity === 'critical' 
+                                  ? 'bg-red-500/20 text-red-300 border border-red-500/30' 
+                                  : anomaly.severity === 'high'
+                                  ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                                  : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                              }`}>
+                                <div className={`w-1.5 h-1.5 rounded-full ${
+                                  anomaly.severity === 'critical' ? 'bg-red-400' : 
+                                  anomaly.severity === 'high' ? 'bg-orange-400' : 'bg-yellow-400'
+                                }`} />
+                                {anomaly.severity.toUpperCase()}
+                              </div>
+                              <div className="px-2 py-1 bg-gray-700/50 rounded-md">
+                                <span className="text-xs text-gray-300 font-mono">{anomaly.type}</span>
+                              </div>
+                            </div>
+                            <h4 className="text-sm font-medium text-white mb-2 leading-relaxed">
+                              {anomaly.description}
+                            </h4>
+                            <div className="flex items-center gap-4 text-xs text-gray-400">
+                              <div className="flex items-center gap-1.5">
+                                <ClockIcon className="h-3.5 w-3.5" />
+                                <span>{formatDistanceToNow(new Date(anomaly.timestamp))} ago</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-1 h-1 bg-gray-500 rounded-full" />
+                                <span>ID: {anomaly.id.toString().slice(-6)}</span>
+                              </div>
+                            </div>
                           </div>
-                          <h4 className="text-sm font-medium text-white mb-1">
-                            {anomaly.description}
-                          </h4>
-                          <div className="flex items-center gap-2 text-xs text-gray-400">
-                            <ClockIcon className="h-3 w-3" />
-                            {formatDistanceToNow(new Date(anomaly.timestamp))} ago
+                          <div className="flex items-center gap-2 ml-4">
+                            <button className="p-2 rounded-lg bg-gray-700/50 hover:bg-gray-600/50 transition-colors group/btn">
+                              <EyeIcon className="h-4 w-4 text-gray-400 group-hover/btn:text-white transition-colors" />
+                            </button>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm">
-                          <EyeIcon className="h-4 w-4" />
-                        </Button>
                       </div>
                     </div>
                   ))}
+                  <div className="mt-4 pt-4 border-t border-gray-700/50">
+                    <button className="w-full text-xs text-gray-400 hover:text-white transition-colors py-2 rounded-lg hover:bg-gray-800/50">
+                      View All Security Alerts →
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
           </Card>
         </div>
 
-        {/* Recent Logs */}
+        {/* Critical Logs */}
         <div className="xl:col-span-1">
-          <Card className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-600">
-            <div className="p-6 border-b border-gray-600 bg-gradient-to-r from-gray-800/80 to-gray-700/80">
+          <Card className="bg-gradient-to-br from-orange-950/20 to-gray-900/50 border-orange-900/30 hover:border-orange-800/50 transition-all duration-300">
+            <div className="p-6 border-b border-orange-900/30 bg-gradient-to-r from-orange-950/30 to-gray-800/50">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                  <DocumentTextIcon className="h-6 w-6 text-orange-400" />
-                  Critical Logs
-                </h2>
-                <Badge variant="error" className="text-xs">
-                  {criticalLogs.length} Critical
-                </Badge>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-orange-500/20 border border-orange-500/30">
+                    <DocumentTextIcon className="h-5 w-5 text-orange-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Critical Logs</h2>
+                    <p className="text-xs text-orange-200/70">System error monitoring</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {criticalLogs.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-orange-300 font-medium">CRITICAL</span>
+                    </div>
+                  )}
+                  <Badge 
+                    variant={criticalLogs.length > 0 ? "error" : "success"} 
+                    className="text-xs font-semibold px-3 py-1"
+                  >
+                    {criticalLogs.length} {criticalLogs.length === 1 ? 'Log' : 'Logs'}
+                  </Badge>
+                </div>
               </div>
             </div>
-            <div className="p-6 bg-gray-900/30">
+            <div className="p-6 bg-gray-900/20">
               {criticalLogs.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircleIcon className="h-12 w-12 text-green-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-white mb-2">No Critical Logs</h3>
-                  <p className="text-gray-400 text-sm">System is running smoothly</p>
+                <div className="text-center py-12">
+                  <div className="relative">
+                    <CheckCircleIcon className="h-16 w-16 text-green-400 mx-auto mb-4 drop-shadow-lg" />
+                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                      <CheckIcon className="h-3 w-3 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">All Systems Normal</h3>
+                  <p className="text-gray-400 text-sm max-w-xs mx-auto">No critical errors detected. All services are operating within normal parameters.</p>
+                  <div className="mt-4 flex items-center justify-center gap-2 text-xs text-green-400">
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                    <span>System health: Excellent</span>
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {criticalLogs.map((log) => (
+                <div className="space-y-4">
+                  {criticalLogs.map((log: LogEntry, index: number) => (
                     <div
                       key={log.id}
-                      className="p-3 bg-gray-800/50 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors"
+                      className={`group relative overflow-hidden rounded-xl border transition-all duration-300 hover:shadow-lg ${
+                        log.level === 'critical' 
+                          ? 'bg-gradient-to-r from-red-500/10 to-red-600/5 border-red-500/30 hover:border-red-400/50 hover:shadow-red-500/20' 
+                          : 'bg-gradient-to-r from-orange-500/10 to-orange-600/5 border-orange-500/30 hover:border-orange-400/50 hover:shadow-orange-500/20'
+                      }`}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge 
-                              variant={log.level === 'critical' ? 'error' : 'warning'}
-                              className="text-xs"
-                            >
-                              {log.level}
-                            </Badge>
-                            <span className="text-xs text-gray-400">{log.source}</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="relative p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className={`flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                log.level === 'critical' 
+                                  ? 'bg-red-500/20 text-red-300 border border-red-500/30' 
+                                  : 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                              }`}>
+                                <div className={`w-1.5 h-1.5 rounded-full ${
+                                  log.level === 'critical' ? 'bg-red-400' : 'bg-orange-400'
+                                }`} />
+                                {log.level.toUpperCase()}
+                              </div>
+                              <div className="px-2 py-1 bg-gray-700/50 rounded-md">
+                                <span className="text-xs text-gray-300 font-mono">{log.source}</span>
+                              </div>
+                            </div>
+                            <p className="text-sm font-medium text-white mb-2 leading-relaxed line-clamp-2">
+                              {log.message}
+                            </p>
+                            <div className="flex items-center gap-4 text-xs text-gray-400">
+                              <div className="flex items-center gap-1.5">
+                                <ClockIcon className="h-3.5 w-3.5" />
+                                <span>{formatDistanceToNow(new Date(log.timestamp))} ago</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-1 h-1 bg-gray-500 rounded-full" />
+                                <span>ID: {log.id.toString().slice(-6)}</span>
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-sm text-white mb-1 line-clamp-2">
-                            {log.message}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-gray-400">
-                            <ClockIcon className="h-3 w-3" />
-                            {formatDistanceToNow(new Date(log.timestamp))} ago
+                          <div className="flex items-center gap-2 ml-4">
+                            <button className="p-2 rounded-lg bg-gray-700/50 hover:bg-gray-600/50 transition-colors group/btn">
+                              <EyeIcon className="h-4 w-4 text-gray-400 group-hover/btn:text-white transition-colors" />
+                            </button>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm">
-                          <EyeIcon className="h-4 w-4" />
-                        </Button>
                       </div>
                     </div>
                   ))}
+                  <div className="mt-4 pt-4 border-t border-gray-700/50">
+                    <button className="w-full text-xs text-gray-400 hover:text-white transition-colors py-2 rounded-lg hover:bg-gray-800/50">
+                      View All System Logs →
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -547,24 +652,86 @@ export function DashboardPage() {
 
               {/* Quick Actions */}
               <div className="mt-6 pt-4 border-t border-gray-700">
-                <h3 className="text-sm font-medium text-white mb-3">Quick Actions</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="secondary" size="sm" className="text-xs">
-                    <ShieldCheckIcon className="h-3 w-3 mr-1" />
-                    Security Scan
-                  </Button>
-                  <Button variant="secondary" size="sm" className="text-xs">
-                    <GlobeAltIcon className="h-3 w-3 mr-1" />
-                    Network Scan
-                  </Button>
-                  <Button variant="secondary" size="sm" className="text-xs">
-                    <DocumentTextIcon className="h-3 w-3 mr-1" />
-                    Export Logs
-                  </Button>
-                  <Button variant="secondary" size="sm" className="text-xs">
-                    <ChartBarIcon className="h-3 w-3 mr-1" />
-                    View Reports
-                  </Button>
+                <h3 className="text-sm font-medium text-white mb-4 flex items-center gap-2">
+                  <FireIcon className="h-4 w-4 text-orange-400" />
+                  Quick Actions
+                </h3>
+                <div className="space-y-3">
+                  {/* Security Scan */}
+                  <button className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-red-500/10 to-red-600/10 border border-red-500/20 hover:border-red-400/40 transition-all duration-200 hover:shadow-lg hover:shadow-red-500/10">
+                    <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    <div className="relative p-3 flex items-center gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center group-hover:bg-red-500/30 transition-colors">
+                        <ShieldCheckIcon className="h-4 w-4 text-red-400" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="text-sm font-medium text-white group-hover:text-red-100 transition-colors">Security Scan</div>
+                        <div className="text-xs text-gray-400 group-hover:text-red-200/70 transition-colors">Run comprehensive security analysis</div>
+                      </div>
+                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center">
+                          <ArrowPathIcon className="h-3 w-3 text-red-400" />
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Network Scan */}
+                  <button className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-blue-500/10 to-blue-600/10 border border-blue-500/20 hover:border-blue-400/40 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/10">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    <div className="relative p-3 flex items-center gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">
+                        <GlobeAltIcon className="h-4 w-4 text-blue-400" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="text-sm font-medium text-white group-hover:text-blue-100 transition-colors">Network Scan</div>
+                        <div className="text-xs text-gray-400 group-hover:text-blue-200/70 transition-colors">Discover network devices and topology</div>
+                      </div>
+                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
+                          <WifiIcon className="h-3 w-3 text-blue-400" />
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Export Logs */}
+                  <button className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-green-500/10 to-green-600/10 border border-green-500/20 hover:border-green-400/40 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/10">
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    <div className="relative p-3 flex items-center gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center group-hover:bg-green-500/30 transition-colors">
+                        <DocumentTextIcon className="h-4 w-4 text-green-400" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="text-sm font-medium text-white group-hover:text-green-100 transition-colors">Export Logs</div>
+                        <div className="text-xs text-gray-400 group-hover:text-green-200/70 transition-colors">Download system logs and reports</div>
+                      </div>
+                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
+                          <ArrowPathIcon className="h-3 w-3 text-green-400 rotate-45" />
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* View Reports */}
+                  <button className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-purple-500/10 to-purple-600/10 border border-purple-500/20 hover:border-purple-400/40 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/10">
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    <div className="relative p-3 flex items-center gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center group-hover:bg-purple-500/30 transition-colors">
+                        <ChartBarIcon className="h-4 w-4 text-purple-400" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="text-sm font-medium text-white group-hover:text-purple-100 transition-colors">View Reports</div>
+                        <div className="text-xs text-gray-400 group-hover:text-purple-200/70 transition-colors">Access analytics and insights</div>
+                      </div>
+                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
+                          <EyeIcon className="h-3 w-3 text-purple-400" />
+                        </div>
+                      </div>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>
