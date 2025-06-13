@@ -1,7 +1,7 @@
 # 🚀 SecureNet Installation Guide
 
 > **Production-Ready Network Security Platform Setup**  
-> Complete guide for installing SecureNet with real WiFi network monitoring
+> Complete guide for installing SecureNet with dual deployment options: Original and Enhanced versions
 
 ## 📋 **System Requirements**
 
@@ -61,14 +61,30 @@ python -c "import fastapi, aiosqlite, psutil; print('✅ Backend dependencies in
 echo "✅ Database ready for real network data"
 ```
 
-### **Step 4: Start Backend Services**
+### **Step 4: Choose Your SecureNet Version**
+
+#### **Option A: Original SecureNet (Recommended for Production)**
 ```bash
-# Start the SecureNet backend with real network monitoring
-uvicorn app:app --reload
+# Start the stable, production-ready version
+python app.py
 
 # You should see:
 # INFO: Database initialized successfully - ready for real network scanning
 # INFO: Uvicorn running on http://127.0.0.1:8000
+```
+
+#### **Option B: Enhanced SecureNet (Advanced Features)**
+```bash
+# Start Redis for enhanced features
+redis-server --daemonize yes
+
+# Start the enhanced version with monitoring, ML tracking, and background tasks
+python app_enhanced.py
+
+# Optional: Start background workers in new terminal
+rq worker --url redis://localhost:6379/0
+
+# You should see enhanced startup logs with monitoring and ML services
 ```
 
 ### **Step 5: Frontend Installation**

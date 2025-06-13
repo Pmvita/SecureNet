@@ -103,6 +103,7 @@
 ### **Prerequisites**
 - Python 3.8+ with pip
 - Node.js 16+ with npm
+- Redis (for enhanced features)
 - Git
 
 ### **1. Clone & Setup Backend**
@@ -117,11 +118,42 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Start AI-powered backend
-uvicorn app:app --reload
+# Start Redis (for enhanced version)
+redis-server --daemonize yes
 ```
 
-### **2. Setup Frontend**
+### **2. Start Backend Server**
+
+#### **🚀 Recommended: Use Startup Scripts**
+```bash
+# Easy startup with automatic environment setup
+./start.sh                    # Shell script (checks Redis, venv, etc.)
+python start_backend.py       # Python script with options
+
+# With options
+python start_backend.py --dev --host 0.0.0.0 --port 8000
+python start_backend.py --prod  # Production mode
+```
+
+#### **⚡ Direct Methods**
+```bash
+# Direct Python execution
+python app.py                 # Main application
+
+# Or use uvicorn directly
+uvicorn app:app --reload --host 127.0.0.1 --port 8000
+```
+
+#### **🔧 Enhanced Version (Advanced Features)**
+```bash
+# Start enhanced version with ML tracking, monitoring, and background tasks
+python app_enhanced.py
+
+# Optional: Start background workers in new terminal
+rq worker --url redis://localhost:6379/0
+```
+
+### **3. Setup Frontend**
 ```bash
 # New terminal window
 cd frontend
@@ -131,10 +163,11 @@ npm install
 npm run Enterprise
 ```
 
-### **3. Access SecureNet**
+### **4. Access SecureNet**
 - **🎯 Dashboard**: http://localhost:5173
 - **🔧 API**: http://localhost:8000
 - **📚 API Docs**: http://localhost:8000/docs
+- **📊 Enhanced Metrics**: http://localhost:8000/system/health (enhanced version only)
 
 ---
 
@@ -153,7 +186,8 @@ npm run Enterprise
 
 **Backend**: FastAPI • SQLite • WebSockets • JWT Auth • Pydantic • Asyncio  
 **Frontend**: React 18 • TypeScript • Vite • Tailwind CSS • Heroicons • Axios  
-**AI/ML**: Custom algorithms • Scikit-learn • Pattern recognition • Behavioral analytics  
+**AI/ML**: Custom algorithms • Scikit-learn • MLflow • Pattern recognition • Behavioral analytics  
+**Enhanced**: Redis • RQ • Sentry • Prometheus • Structured logging • Cryptography  
 **Infrastructure**: Docker • Multi-tenant SaaS • Stripe billing • Real-time processing
 
 ---
@@ -173,13 +207,35 @@ npm run Enterprise
 
 ---
 
-## 🧩 **SecureNet Integration Progress**
+## 🧩 **SecureNet Enhanced Architecture**
 
-| Phase | Status     | Docs |
-|-------|------------|------|
-| ✅ Phase 1: Observability | Complete | [docs/integration/phase-1-observability.md](docs/integration/phase-1-observability.md) |
-| 🔄 Phase 2: Developer Experience | In Progress | [docs/integration/phase-2-developer-experience.md](docs/integration/phase-2-developer-experience.md) |
-| ⏳ Phase 3: Advanced Tooling | Pending | [docs/integration/phase-3-advanced-tooling.md](docs/integration/phase-3-advanced-tooling.md) |
+SecureNet now offers **two deployment options** to meet different operational needs:
+
+### **🏭 Original SecureNet (`app.py`)**
+- ✅ **Production-ready** and battle-tested
+- ✅ **Full feature set** with real-time monitoring
+- ✅ **Stable architecture** for enterprise deployment
+- ✅ **Compatible** with existing frontend and workflows
+
+### **🚀 Enhanced SecureNet (`app_enhanced.py`)**
+- ✅ **All original features** PLUS advanced capabilities
+- 📊 **Prometheus metrics** and structured logging
+- 🔍 **Sentry error monitoring** and distributed tracing
+- 🤖 **MLflow experiment tracking** and model management
+- ⚡ **Redis task queues** for background processing
+- 🔐 **Advanced cryptography** and security services
+
+> **Seamless Migration**: Both versions use the same database and frontend - switch anytime!
+
+---
+
+## 📁 **Technical Integration Guides**
+
+- [🚀 Startup Guide](./docs/setup/STARTUP_GUIDE.md) - Complete setup instructions for both versions
+- [🔧 Production Configuration](./docs/setup/production_config.txt) - Environment setup template
+- [Phase 1: Observability](./docs/integration/phase-1-observability.md) - Monitoring and logging
+- [Phase 2: Developer Experience](./docs/integration/phase-2-developer-experience.md) - Testing and ML tools
+- [Phase 3: Advanced Tooling](./docs/integration/phase-3-advanced-tooling.md) - Cryptography and task queues
 
 ---
 
@@ -187,6 +243,9 @@ npm run Enterprise
 
 | Documentation | Description | Status |
 |---------------|-------------|--------|
+| **[🚀 Startup Guide](./docs/setup/STARTUP_GUIDE.md)** | Complete instructions for both original and enhanced versions | ✅ Ready |
+| **[⚡ Enhanced Features](./docs/reference/ENHANCED_FEATURES.md)** | Feature comparison and enhanced capabilities reference | ✅ Ready |
+| **[🔧 Production Config](./docs/setup/production_config.txt)** | Environment configuration template and setup guide | ✅ Ready |
 | **[📋 Installation Guide](./docs/installation/INSTALLATION.md)** | Complete setup instructions for backend + frontend | ✅ Ready |
 | **[🤖 AI Features](./docs/features/FEATURES.md)** | ML threat detection, predictive analytics, behavioral analysis | ✅ Ready |
 | **[📡 API Reference](./docs/api/API-Reference.md)** | REST endpoints, WebSocket connections, authentication | ✅ Ready |

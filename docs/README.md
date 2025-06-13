@@ -1,10 +1,12 @@
 # SecureNet Documentation
 
-This directory contains comprehensive documentation for SecureNet's architecture, integrations, and development guides.
+This directory contains comprehensive documentation for SecureNet's dual-architecture system: Original and Enhanced versions with advanced integrations and development guides.
 
 ## 📁 Directory Structure
 
 ### Core Documentation
+- **`/setup/`** - Startup guides, production configuration, and deployment instructions
+- **`/reference/`** - Feature comparisons, enhanced capabilities, and technical references
 - **`/features/`** - AI-powered features and CVE integration documentation
 - **`/api/`** - REST endpoints, WebSocket connections, and API specifications
 - **`/installation/`** - Setup guides and installation instructions
@@ -25,10 +27,21 @@ This directory contains comprehensive documentation for SecureNet's architecture
 
 ## 🚀 Getting Started
 
-1. Start with [Phase 1: Observability](integration/phase-1-observability.md)
-2. Review individual component docs in their respective directories
-3. Follow the integration guides in sequential order
+### **Quick Start Options**
+1. **Original SecureNet**: Follow [Installation Guide](installation/INSTALLATION.md) for stable production deployment
+2. **Enhanced SecureNet**: Review [Startup Guide](setup/STARTUP_GUIDE.md) for advanced features setup
+3. **Integration Deep Dive**: Start with [Phase 1: Observability](integration/phase-1-observability.md)
+
+### **Architecture Overview**
+- **Original Version** (`app.py`): Production-ready with full feature set
+- **Enhanced Version** (`app_enhanced.py`): All original features + advanced monitoring, ML tracking, and background processing
+- **Shared Components**: Same database, frontend, and core functionality
 
 ## 📋 Integration Status
 
-See the main [README.md](../README.md) for current integration progress and status. 
+✅ **Phase 1 Complete**: Observability, monitoring, and background tasks  
+✅ **Phase 2 Complete**: Developer experience, testing, and ML tools  
+✅ **Phase 3 Complete**: Advanced tooling, cryptography, and task queues  
+✅ **Production Ready**: Both versions fully operational and documented
+
+See the main [README.md](../README.md) and [Startup Guide](setup/STARTUP_GUIDE.md) for current status and deployment options. 

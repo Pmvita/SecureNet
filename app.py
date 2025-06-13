@@ -780,7 +780,6 @@ def update_db_schema():
 db = Database()
 
 # Initialize database schema on startup
-@app.on_event("startup")
 async def startup_event():
     """Initialize services on startup."""
     try:
@@ -2621,3 +2620,22 @@ async def get_user_activity(
     except Exception as e:
         logger.error(f"Error getting user activity: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to get activity log")
+
+# Main execution
+if __name__ == "__main__":
+    import uvicorn
+    
+    # Get host and port from environment variables
+    host = os.getenv("HOST", "127.0.0.1")
+    port = int(os.getenv("PORT", "8000"))
+    
+    logger.info(f"Starting SecureNet server on {host}:{port}")
+    logger.info(f"Development mode: {DEV_MODE}")
+    
+    uvicorn.run(
+        "app:app",
+        host=host,
+        port=port,
+        reload=DEV_MODE,
+        log_level="info"
+    )

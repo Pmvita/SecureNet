@@ -1,0 +1,70 @@
+# SecureNet Environment Configuration
+
+Currently in .env 
+
+DEV_MODE=false
+SECRET_KEY=bb21500adaa5bee953de1234567890abcdef1234567890abcdef1234567890ab
+
+# SecureNet Enhanced Production Configuration
+# Copy these settings to your .env file
+
+# Environment
+ENVIRONMENT=production
+DEBUG=false
+HOST=0.0.0.0
+PORT=8000
+
+# Database
+DATABASE_URL=sqlite:///data/securenet.db
+
+# Security & Authentication (GENERATE NEW KEYS!)
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+ENCRYPTION_KEY=your-encryption-key-material-32-chars
+MASTER_KEY_MATERIAL=your-master-key-material-for-crypto-64-chars
+
+# JWT Configuration
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+MAX_FAILED_ATTEMPTS=5
+LOCKOUT_DURATION_MINUTES=15
+
+# Redis (for RQ task queue)
+REDIS_URL=redis://localhost:6379/0
+
+# MLflow Tracking
+MLFLOW_TRACKING_URI=sqlite:///data/mlflow.db
+# For production MLflow server: MLFLOW_TRACKING_URI=http://your-mlflow-server:5000
+
+# Monitoring & Observability
+SENTRY_DSN=https://your-sentry-dsn-here@sentry.io/project-id
+ENABLE_METRICS=true
+PROMETHEUS_PORT=9090
+
+# External Services
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+
+# Development Mode (set to false for production)
+DEV_MODE=false
+
+# Rate Limiting
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_WINDOW=60
+
+# CORS Settings
+ALLOWED_ORIGINS=http://localhost:5173,https://your-frontend-domain.com
+
+# Logging
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+
+# Background Tasks
+RQ_WORKER_COUNT=3
+RQ_DEFAULT_TIMEOUT=300
+
+# Security Headers
+SECURE_HEADERS=true
+HSTS_MAX_AGE=31536000
