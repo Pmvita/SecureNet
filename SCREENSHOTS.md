@@ -168,6 +168,44 @@
 
 ---
 
+## 🏢 Tenant Management
+
+![Tenant Management](screenshots/tenant-management.png)
+*Tenant management interface featuring:*
+
+#### Tenant Management
+- **Tenant creation** and management
+- **User management** and role-based access control
+- **Organization settings** and preferences
+- **Compliance reporting** and analytics
+
+---
+
+## 💳 Billing Management
+
+![Billing](screenshots/billing.png)
+*Billing management interface featuring:*
+
+#### Billing Management
+- **Stripe integration** for subscription management
+- **Organization settings** and preferences
+- **Compliance reporting** and analytics
+
+---
+
+## 🗒️ Audit Logs
+
+![Audit Logs](screenshots/audit-logs.png)
+*Audit logs management interface featuring:*
+
+#### Audit Logs
+- **Real-time audit log updates** via WebSocket connections
+- **Advanced filtering and search** with regex support
+- **Comprehensive logs management** with export capabilities
+- **User management** and role-based access control
+
+---
+
 ## 👤 Profile Settings
 
 ![Profile](screenshots/profile-settings.png)
