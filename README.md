@@ -1,317 +1,287 @@
-# 🛡️ SecureNet 
+# 🛡️ SecureNet — AI-Powered Cybersecurity SaaS
 
-> **Next-Generation Security Platform**  
-> AI-driven threat detection • Real-time network monitoring • Comprehensive security management
+> **Real-time network defense. Enterprise-grade intelligence. One dashboard.**
 
-SecureNet is an **AI-powered network security monitoring and management system** that provides real-time threat detection, network health monitoring, and comprehensive security management. Built for cybersecurity professionals, SOC teams, and enterprise security operations.
+[![GitHub Stars](https://img.shields.io/github/stars/yourusername/securenet?style=social)](https://github.com/yourusername/securenet)
+[![Documentation](https://img.shields.io/badge/docs-available-brightgreen)](./INSTALLATION.md)
+[![License](https://img.shields.io/badge/license-Proprietary-red)](./LICENSE.txt)
+[![Status](https://img.shields.io/badge/status-Production%20Ready-success)](./SYSTEM-STATUS.md)
 
-## 🤖 **AI-Powered Security Features**
+**SecureNet** is a comprehensive AI-powered network security monitoring and management platform designed for cybersecurity professionals, SOC teams, and enterprise security operations. Built with modern SaaS architecture, it provides real-time threat detection, intelligent network discovery, and enterprise-grade security management.
 
-SecureNet leverages artificial intelligence and machine learning for advanced security monitoring:
+---
 
-- **🧠 AI Threat Detection**: Machine learning algorithms analyze network patterns to identify anomalies and potential threats
-- **🔍 Intelligent Device Discovery**: AI-enhanced network scanning automatically discovers and classifies devices on your WiFi network
-- **🛡️ Real-Time Security Analysis**: AI-driven vulnerability assessment and risk scoring based on network behavior
-- **📊 Predictive Analytics**: Machine learning models predict potential security issues before they become critical
-- **⚡ Automated Response**: AI-powered incident response and threat mitigation recommendations
-- **📈 Dynamic Risk Scoring**: Intelligent security posture calculation using AI algorithms
-- **🕒 Behavioral Analysis**: ML-based analysis of device and network behavior patterns
+## ⭐ **Quick Actions**
 
-### **AI-Enhanced Network Intelligence**
-```
-🤖 AI Models Active: Anomaly Detection, Risk Assessment, Pattern Recognition
-🔍 Live Network: 192.168.2.0/24 (7 devices monitored)
-🛡️ Security Score: 100/100 (AI-calculated risk assessment)
-📊 Threat Analysis: Real-time ML-powered threat detection
-⚡ Auto-Scanning: AI-optimized security analysis intervals
-```
+<div align="center">
 
-## 🚀 **Quick Start**
+[⭐ **Star this repo**](https://github.com/yourusername/securenet) • [📖 **View Documentation**](./INSTALLATION.md) • [🚀 **System Status**](./SYSTEM-STATUS.md) • [🔥 **CVE Integration**](./CVE-INTEGRATION-SUMMARY.md)
 
-### **Production Setup (AI-Powered Mode)**
+</div>
+
+---
+
+## 🚀 **Key Features**
+
+<table>
+<tr>
+<td width="50%">
+
+### 🧠 **AI-Powered Threat Detection**
+- Machine learning anomaly detection
+- Behavioral pattern recognition
+- Predictive risk assessment
+- Automated threat classification
+
+### 🔍 **Live Network Discovery**
+- Real-time device scanning (192.168.x.0/24)
+- Smart device classification (Router, IoT, Mobile)
+- Cross-platform support (macOS, Linux, Windows)
+- Network topology visualization
+
+### 🔔 **Real-Time Alert System**
+- WebSocket-powered notifications
+- Smart categorization & priority filtering
+- Bulk operations & search functionality
+- Mobile-responsive notification center
+
+</td>
+<td width="50%">
+
+### 🔐 **Enterprise Security & RBAC**
+- 3-tier role-based access control
+- JWT + API key authentication
+- Session tracking & audit logging
+- Multi-tenant SaaS architecture
+
+### 📊 **CVE Intelligence Integration**
+- NIST NVD API connectivity
+- Real-time vulnerability scoring (CVSS v3)
+- CISA KEV tracking
+- Vendor-specific analysis (Cisco, Fortinet, etc.)
+
+### 📦 **SaaS Infrastructure**
+- Stripe billing integration
+- Organization management
+- Usage analytics & metrics
+- Docker deployment ready
+
+</td>
+</tr>
+</table>
+
+---
+
+## 📸 **Platform Screenshots**
+
+| Dashboard Overview | Log Management | Security Management |
+|:------------------:|:-----------------:|:---------------:|
+| ![Dashboard](screenshots/dashboard.png) | ![Log Management](screenshots/log.png) | ![Alerts](screenshots/security.png) |
+
+| Network Monitoring | Anomaly Detection | System Configuration |
+|:---------------:|:----------------:|:-------------------:|
+| ![Network Monitoring](screenshots/Network-monitoring.png) | ![CVE](screenshots/anomalies.png) | ![System Configuration](screenshots/settings.png) |
+
+---
+
+## 🔑 **Development Credentials**
+
+**SecureNet includes pre-configured development users for testing role-based access:**
+
+| Role | Username | Password | Email | Access Level |
+|------|----------|----------|-------|--------------|
+| 🟣 **Super Admin** | `ceo` | `superadmin123` | `ceo@securenet.ai` | Full platform access, tenant management, audit logs |
+| 🔵 **Manager** | `admin` | `platform123` | `admin@secureorg.com` | Organization-level admin with advanced controls |
+| 🟢 **Analyst** | `user` | `enduser123` | `user@secureorg.com` | Standard user with dashboard access |
+
+> ⚠️ **Important**: These are development credentials only. Change them before production deployment.
+
+---
+
+## ⚡ **Quick Start**
+
+### **Prerequisites**
+- Python 3.8+ with pip
+- Node.js 16+ with npm
+- Git
+
+### **1. Clone & Setup Backend**
 ```bash
-# 1. Clone and setup
-git clone <repository-url>
+git clone https://github.com/yourusername/securenet.git
 cd SecureNet
 
-# 2. Backend setup with AI capabilities
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 
-# 3. Start AI-powered security monitoring
+# Start AI-powered backend
 uvicorn app:app --reload
-
-# 4. Frontend setup (new terminal)
-cd frontend
-npm install
-npm run Enterprise  # AI-enhanced real network mode
 ```
 
-### **Access SecureNet**
-- **AI Dashboard**: http://localhost:5173 (ML-powered security insights)
-- **Security API**: http://localhost:8000 (AI-driven threat data)
-- **API Documentation**: http://localhost:8000/docs
+### **2. Setup Frontend**
+```bash
+# New terminal window
+cd frontend
+npm install
 
-## 🔐 **Default Dev Logins**
+# Start in Enterprise mode (real network scanning)
+npm run Enterprise
+```
 
-SecureNet comes with 3 pre-configured development users for testing role-based access:
+### **3. Access SecureNet**
+- **🎯 Dashboard**: http://localhost:5173
+- **🔧 API**: http://localhost:8000
+- **📚 API Docs**: http://localhost:8000/docs
 
-### **👑 Super Admin**
-- **Email**: `ceo@securenet.ai`
-- **Username**: `ceo`
-- **Password**: `superadmin123`
-- **Role**: `superadmin`
-- **Access**: Full platform access, tenant management, audit logs
+---
 
-### **🛠 Platform Admin**
-- **Email**: `admin@secureorg.com`
-- **Username**: `admin`
-- **Password**: `platform123`
-- **Role**: `platform_admin`
-- **Access**: Organization-level admin with advanced controls
+## 🛠️ **Technology Stack**
 
-### **👤 End User**
-- **Email**: `user@secureorg.com`
-- **Username**: `user`
-- **Password**: `enduser123`
-- **Role**: `end_user`
-- **Access**: Standard tenant user with dashboard access
+<div align="center">
 
-> **Note**: These are development credentials only. Change them before production deployment.
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
-## 🏗️ **AI-Enhanced Architecture**
+</div>
+
+**Backend**: FastAPI • SQLite • WebSockets • JWT Auth • Pydantic • Asyncio  
+**Frontend**: React 18 • TypeScript • Vite • Tailwind CSS • Heroicons • Axios  
+**AI/ML**: Custom algorithms • Scikit-learn • Pattern recognition • Behavioral analytics  
+**Infrastructure**: Docker • Multi-tenant SaaS • Stripe billing • Real-time processing
+
+---
+
+## ✅ **Enterprise Readiness Checklist**
+
+- ✅ **Role-Based Access Control** — 3-tier security model (SuperAdmin → Manager → Analyst)
+- ✅ **CVE Integration** — Real-time NIST NVD API with CISA KEV tracking
+- ✅ **SaaS Billing** — Stripe integration with subscription management
+- ✅ **Audit Logging** — Comprehensive activity tracking and compliance
+- ✅ **Predictive Analytics** — AI-driven threat detection and risk assessment
+- ✅ **Multi-Tenant Architecture** — Organization isolation and management
+- ✅ **Real-Time Monitoring** — WebSocket alerts and live data streaming
+- ✅ **API-First Design** — RESTful endpoints with comprehensive documentation
+- ✅ **Docker Support** — Containerized deployment and scaling
+- ✅ **Security Hardening** — JWT authentication, API keys, session management
+
+---
+
+## 📚 **Documentation Hub**
+
+| Documentation | Description | Status |
+|---------------|-------------|--------|
+| **[📋 Installation Guide](./INSTALLATION.md)** | Complete setup instructions for backend + frontend | ✅ Ready |
+| **[🤖 AI Features](./FEATURES.md)** | ML threat detection, predictive analytics, behavioral analysis | ✅ Ready |
+| **[📡 API Reference](./API-Reference.md)** | REST endpoints, WebSocket connections, authentication | ✅ Ready |
+| **[🔥 CVE Integration](./CVE-INTEGRATION-SUMMARY.md)** | NIST NVD API sync, vulnerability scoring, CISA KEV | ✅ Ready |
+| **[📊 System Status](./SYSTEM-STATUS.md)** | Operational metrics, performance data, uptime monitoring | ✅ Ready |
+| **[🎯 Development Roadmap](./TODO.md)** | Feature milestones, upcoming AI enhancements | ✅ Ready |
+| **[🖼️ Screenshots](./SCREENSHOTS.md)** | Visual documentation, dashboard views, interface guide | ✅ Ready |
+| **[🏗️ Frontend Architecture](./FRONTEND-ARCHITECTURE.md)** | Component structure, design system, technical details | ✅ Ready |
+
+---
+
+## 🏗️ **Architecture Overview**
 
 ```mermaid
 graph TB
-    A[AI Network Scanner] --> B[ML Device Classification]
-    B --> C[Threat Detection Engine]
-    C --> D[AI Risk Assessment]
-    D --> E[Security Intelligence DB]
-    E --> F[FastAPI Backend]
-    F --> G[React Security Dashboard]
+    A[🌐 React Frontend] --> B[🔌 FastAPI Backend]
+    B --> C[🗄️ SQLite Database]
+    B --> D[🤖 AI/ML Engine]
+    B --> E[🔍 Network Scanner]
+    B --> F[🛡️ CVE Intelligence]
     
-    H[Real Network] --> A
-    I[ML Models] --> C
-    I --> D
-    J[Threat Intelligence] --> C
-    K[Behavioral Analytics] --> D
+    G[📡 WebSocket] --> A
+    H[🔔 Real-time Alerts] --> G
+    I[📊 Threat Analytics] --> D
+    J[🌍 NIST NVD API] --> F
+    K[🏢 Multi-tenant SaaS] --> B
 ```
 
-## 🔧 **Core AI-Powered Features**
+**Core Components:**
+- **AI-Powered Backend**: FastAPI with ML threat detection engine
+- **Intelligent Frontend**: React 18 with TypeScript and real-time updates
+- **Security Engine**: Custom vulnerability assessment and risk scoring
+- **Network Discovery**: Cross-platform device scanning and classification
+- **SaaS Infrastructure**: Multi-tenant architecture with billing integration
 
-### **🤖 Artificial Intelligence & Machine Learning**
-- **Anomaly Detection**: ML algorithms identify unusual network behavior
-- **Threat Pattern Recognition**: AI models detect known attack patterns
-- **Risk Prediction**: Predictive analytics for proactive security management
-- **Automated Classification**: AI-powered device and threat categorization
+---
 
-### **🌐 Intelligent Network Discovery**
-- **AI-Enhanced Scanning**: Machine learning optimized network discovery
-- **Smart Device Classification** (Router, Server, IoT, Mobile, Printer)
-- **Behavioral Profiling**: AI-based device behavior analysis
-- **Cross-platform Intelligence** (macOS, Linux, Windows)
+## 🚦 **Development Status**
 
-### **🛡️ Advanced Threat Detection**
-- **Real-time Vulnerability Analysis** using AI models
-- **Intelligent Port Analysis** with ML-based risk assessment
-- **Configuration Security AI** for automated security validation
-- **Predictive Threat Intelligence** with machine learning
+| Component | Status | Description |
+|-----------|--------|-------------|
+| 🤖 **ML Threat Detection** | ✅ **Production** | AI-powered anomaly detection and behavioral analysis |
+| 🛡️ **Security Intelligence** | ✅ **Production** | CVE integration with NIST NVD and vulnerability scoring |
+| 📊 **Analytics Dashboard** | ✅ **Production** | Real-time security metrics and threat visualization |
+| 🔔 **Notification System** | ✅ **Production** | WebSocket alerts with smart categorization |
+| 🔒 **Enterprise Auth** | ✅ **Production** | JWT + API key authentication with RBAC |
+| 📱 **Responsive UI** | ✅ **Production** | Modern interface with mobile support |
+| 📦 **SaaS Infrastructure** | ✅ **Production** | Multi-tenant architecture with billing |
+| 📚 **Documentation** | ✅ **Complete** | Comprehensive guides and API reference |
 
-### **🔥 CVE Integration & Vulnerability Intelligence** ✅ **IMPLEMENTED**
-- **NIST NVD API Integration**: Direct connection to National Vulnerability Database
-- **Real-Time CVE Lookup**: Live vulnerability data for discovered devices
-- **AI-Powered Device-CVE Correlation**: Smart vulnerability mapping with confidence scoring
-- **CISA KEV Tracking**: Known Exploited Vulnerabilities monitoring
-- **Risk Prioritization**: CVSS v3 scoring with AI-driven remediation priority
-- **Vendor-Specific Analysis**: Cisco, Fortinet, Palo Alto, Juniper, MikroTik support
-
-### **📊 AI-Powered Security Dashboard**
-- **ML-Enhanced Visualizations** with intelligent insights
-- **Predictive Security Analytics** and trend analysis
-- **AI-Generated Reports** and threat summaries
-- **Real-time Intelligence Feed** with ML-powered alerts
-
-### **🔔 Intelligent Notification System** ✅ **IMPLEMENTED**
-- **Real-time Security Alerts**: Instant notifications for network scans, threats, and system events
-- **Smart Categorization**: AI-powered notification classification (Security, Network, System, User)
-- **Priority-Based Filtering**: Intelligent severity levels (Critical, High, Medium, Low)
-- **Interactive Management**: Mark as read, bulk operations, and notification deletion
-- **WebSocket Integration**: Real-time notification delivery with live updates
-- **Comprehensive Filtering**: Search, category filters, and unread-only views
-
-### **🔒 Enterprise AI Security**
-- **3-Tier Role-Based Access Control**:
-  - 🟣 **Super Admin**: Full platform access, tenant management, audit logs
-  - 🔵 **Platform Admin**: Organization-level admin with advanced controls  
-  - 🟢 **End User**: Standard tenant user with dashboard access
-- **Session Tracking**: Login/logout timestamps with audit trails
-- **AI-Enhanced Audit Logging** with anomaly detection
-- **Automated Compliance Monitoring** using ML models
-- **Predictive Risk Management** with AI recommendations
-
-## 🛠️ **Advanced Technical Stack**
-
-### **AI & Machine Learning**
-- **Custom ML Models** - Anomaly detection and threat classification
-- **TensorFlow/Scikit-learn** - Machine learning framework integration
-- **Behavioral Analytics** - AI-powered pattern recognition
-- **Threat Intelligence** - ML-enhanced security data analysis
-
-### **Backend Intelligence**
-- **FastAPI** - High-performance API with AI endpoint integration
-- **SQLite + AI Analytics** - Intelligent data storage with ML insights
-- **Real-time Processing** - AI-powered streaming analytics
-- **Custom Security Engine** - ML-enhanced threat detection
-
-### **Frontend Intelligence**
-- **React 18** - Modern UI with AI-powered components
-- **TypeScript** - Type-safe development with ML data structures
-- **AI-Enhanced UX** - Intelligent user interface adaptations
-- **Real-time AI Insights** - Live machine learning visualizations
-
-## 📋 **AI-Powered Network Intelligence**
-
-The system leverages machine learning for comprehensive network analysis:
-
-### **AI-Enhanced Device Discovery**
-- **Network Range**: ML-optimized detection (192.168.x.0/24, 10.x.x.0/24)
-- **Active Devices**: 7 devices with AI behavioral profiling
-- **Smart Classification**: AI-categorized Router, IoT, Mobile, Server devices
-- **Predictive Monitoring**: ML-based availability and performance prediction
-
-### **Intelligent Security Assessment**
-- **AI Security Scans**: Machine learning enhanced vulnerability detection
-- **Behavioral Analysis**: AI-powered anomaly detection and pattern recognition
-- **Predictive Risk Scoring**: ML algorithms calculate dynamic threat levels
-- **Automated Threat Response**: AI-driven incident prioritization and recommendations
-
-## 📁 **Project Structure**
-
-```
-SecureNet/
-├── 🤖 AI-Powered Backend
-│   ├── app.py              # FastAPI + AI threat detection engine
-│   ├── database.py         # Intelligent data storage with ML analytics
-│   ├── network_scanner.py  # AI-enhanced WiFi discovery & classification
-│   └── src/
-│       ├── security.py     # AI-powered authentication & behavioral analysis
-│       └── ml_models/      # Machine learning threat detection models
-├── ⚛️ Intelligent Frontend
-│   ├── src/
-│   │   ├── components/     # AI-enhanced security dashboards
-│   │   ├── features/       # ML-powered Network, Security, Analytics
-│   │   └── hooks/          # Real-time AI insight fetching
-└── 📚 AI Documentation
-    ├── README.md           # AI-powered platform overview
-    ├── INSTALLATION.md     # ML environment setup
-    ├── FEATURES.md         # AI feature documentation
-    └── API-Reference.md    # Intelligent API endpoints
-```
-
-## 🔧 **AI Configuration**
-
-### **Intelligence Modes**
-- **AI-Powered Mode** (Recommended): `npm run Enterprise` - Full ML threat detection
-- **Demo Mode**: `npm run dev` - AI training data and sample analytics
-
-### **Machine Learning Configuration**
-The AI system automatically optimizes and learns:
-- **Primary Network Intelligence**: `192.168.x.0/24` with behavioral profiling
-- **Secondary Range Analysis**: `10.x.x.0/24` with predictive monitoring
-- **Custom AI Models**: Configurable ML algorithms for specialized environments
-
-## 🌟 **AI-Powered Achievements**
-
-✅ **Machine Learning Integration**: AI-driven threat detection and behavioral analysis  
-✅ **Intelligent Database**: ML-enhanced SQLite with predictive analytics storage  
-✅ **AI Security Engine**: Machine learning vulnerability assessment on live devices  
-✅ **Cross-platform AI**: Native ML-powered scanning on macOS, Linux, Windows  
-✅ **Enterprise AI**: Behavioral authentication, AI audit logging, intelligent access control  
-✅ **Predictive Dashboard**: ML-powered security insights and threat intelligence  
-✅ **Real-time Notifications**: Intelligent alert system with WebSocket integration and smart filtering  
-
-## 🚦 **AI Development Status**
-
-| AI Component | Status | Description |
-|--------------|--------|-------------|
-| 🤖 ML Threat Detection | ✅ **Production** | AI-powered anomaly detection active |
-| 🛡️ Intelligent Security | ✅ **Production** | ML-enhanced vulnerability assessment |
-| 📊 AI Dashboard | ✅ **Production** | Machine learning insights visualization |
-| 🔔 Notification System | ✅ **Production** | Real-time alerts with smart categorization |
-| 🔒 Behavioral Auth | ✅ **Production** | AI-powered authentication system |
-| 📱 Smart API | ✅ **Production** | ML-enhanced REST API endpoints |
-| 📚 AI Documentation | ✅ **Current** | Comprehensive ML feature docs |
-
-## 📚 **Documentation & Resources**
-
-### **📋 Setup & Installation**
-- **[INSTALLATION.md](INSTALLATION.md)** - Complete setup guide with ML environment configuration
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development workflow and contribution guidelines
-
-### **🔧 Technical Documentation** 
-- **[FEATURES.md](FEATURES.md)** - Comprehensive AI feature documentation and capabilities
-- **[API-Reference.md](API-Reference.md)** - Complete API documentation with ML endpoints
-- **[FRONTEND-ARCHITECTURE.md](FRONTEND-ARCHITECTURE.md)** - Frontend technical architecture and design
-
-### **📊 Project Status & Visuals**
-- **[TODO.md](TODO.md)** - Development roadmap and AI feature milestones
-- **[SCREENSHOTS.md](SCREENSHOTS.md)** - Visual documentation and platform screenshots
-- **[SYSTEM-STATUS.md](SYSTEM-STATUS.md)** - Comprehensive system status and operational report
-
-### **🔥 Security & CVE Integration**
-- **[CVE-INTEGRATION-SUMMARY.md](CVE-INTEGRATION-SUMMARY.md)** - Complete CVE implementation guide and NIST NVD integration
-
-### **🔗 Quick Links**
-| Resource | Purpose | Content |
-|----------|---------|---------|
-| 🚀 [Installation Guide](INSTALLATION.md) | Setup | ML environment, dependencies, Enterprise mode |
-| 🤖 [AI Features](FEATURES.md) | Capabilities | Machine learning, threat detection, analytics |
-| 📡 [API Documentation](API-Reference.md) | Integration | REST endpoints, WebSocket, authentication |
-| 🔥 [CVE Integration](CVE-INTEGRATION-SUMMARY.md) | Security | NIST NVD API, vulnerability scanning, CISA KEV |
-| 📊 [System Status](SYSTEM-STATUS.md) | Operations | Live system health, performance metrics, testing |
-| 🎯 [Development Roadmap](TODO.md) | Progress | Completed milestones, upcoming AI features |
-| 🖼️ [Screenshots](SCREENSHOTS.md) | Visual Guide | Dashboard, security interface, network views |
+---
 
 ## 🤝 **Contributing**
 
-1. **Review**: Read [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines
-2. **Fork**: Create your feature branch (`git checkout -b feature/ai-enhancement`)
-3. **Develop**: Build and test with real network environment
-4. **Test**: Validate AI features and ML model performance
-5. **Document**: Update relevant documentation files
-6. **Submit**: Push branch and open Pull Request
+We welcome contributions to SecureNet! Here's how to get started:
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development workflow.
+1. **📖 Read**: Review our [Contributing Guidelines](./CONTRIBUTING.md)
+2. **🍴 Fork**: Create your feature branch (`git checkout -b feature/ai-enhancement`)
+3. **🔨 Develop**: Build and test with real network environment
+4. **✅ Test**: Validate AI features and ML model performance
+5. **📝 Document**: Update relevant documentation files
+6. **🚀 Submit**: Push branch and open a Pull Request
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed development workflow and coding standards.
+
+---
 
 ## 📞 **Support & Community**
 
-### **📖 Documentation**
-- **Setup Issues**: See [INSTALLATION.md](INSTALLATION.md)
-- **Feature Questions**: Check [FEATURES.md](FEATURES.md)
-- **API Help**: Reference [API-Reference.md](API-Reference.md)
+### **📖 Getting Help**
+- **Setup Issues**: See [Installation Guide](./INSTALLATION.md)
+- **Feature Questions**: Check [Features Documentation](./FEATURES.md)
+- **API Help**: Reference [API Documentation](./API-Reference.md)
+- **System Status**: Monitor [Operational Metrics](./SYSTEM-STATUS.md)
 
-### **🐛 Issues & Support**
-- **Bug Reports**: [GitHub Issues](https://github.com/your-repo/issues)
-- **Feature Requests**: [GitHub Discussions](https://github.com/your-repo/discussions)
+### **🐛 Issues & Feedback**
+- **Bug Reports**: [GitHub Issues](https://github.com/yourusername/securenet/issues)
+- **Feature Requests**: [GitHub Discussions](https://github.com/yourusername/securenet/discussions)
 - **Security Issues**: Email security@securenet.ai
 
 ### **💬 Community**
-- **Discussions**: [GitHub Discussions](https://github.com/your-repo/discussions)
-- **Updates**: Follow development in [TODO.md](TODO.md)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/securenet/discussions)
+- **Updates**: Follow development in [Roadmap](./TODO.md)
+- **Documentation**: Contribute to [docs improvement](./CONTRIBUTING.md)
+
+---
 
 ## 📄 **License**
 
-Copyright (c) 2025 Pierre Mvita. All Rights Reserved.
+**Copyright (c) 2025 Pierre Mvita. All Rights Reserved.**
 
-This software is proprietary and confidential. See the **[LICENSE.txt](LICENSE.txt)** file for complete terms and conditions.
-
----
-
-**🛡️ SecureNet** - *AI-Powered Network Security Monitoring & Management System*  
-*Built for cybersecurity professionals, SOC teams, and enterprise security operations*
+This software is proprietary and confidential. See the [LICENSE.txt](./LICENSE.txt) file for complete terms and conditions.
 
 ---
 
-**Pierre Mvita** - [pierremvita.com](https://pierremvita.com)  
-**SecureNet AI** - [securenet.ai](https://securenet.ai)
+<div align="center">
+
+**🛡️ SecureNet** — *AI-Powered Network Security Monitoring & Management*
+
+Built for cybersecurity professionals, SOC teams, and enterprise security operations
+
+---
+
+**Pierre Mvita** • [pierremvita.com](https://pierremvita.com) • [SecureNet.ai](https://securenet.ai)
+
+*Transforming cybersecurity through artificial intelligence*
+
+</div>

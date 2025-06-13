@@ -4,7 +4,6 @@
 
 ## 🔐 Authentication
 
-### Login
 ![Login](screenshots/login.png)
 *Secure login interface with:*
 - Username and password authentication
@@ -16,7 +15,6 @@
 
 ## 📊 Dashboard Overview
 
-### Main Dashboard
 ![Dashboard](screenshots/dashboard.png)
 *Comprehensive Security Operations Center (SOC) dashboard featuring:*
 
@@ -37,32 +35,8 @@
 
 ---
 
-## 🔒 Security Management
-
-### Security Center
-![Security](screenshots/security.png)
-*Enhanced security management center featuring:*
-
-#### Real-time Security Scanning
-- **Security scan management** with real-time progress monitoring
-- **Multiple scan types**: Full system, vulnerability, compliance, and custom scans
-- **Scan scheduling** with datetime support and automated workflows
-- **Detailed findings management** with severity-based categorization
-- **Finding status tracking** and resolution workflows
-- **Interactive scan dashboard** with charts and statistics
-
-#### Advanced Security Features
-- **Threat detection visualization** with ML insights
-- **Anomaly analysis interface** with interactive timeline charts
-- **Security incident tracking** with detailed investigation tools
-- **Export capabilities** for scan results and findings
-- **WebSocket-based real-time updates** for live monitoring
-
----
-
 ## 📝 Log Management
 
-### Advanced Log Interface
 ![Log Management](screenshots/log.png)
 *Professional log management system (ELK Stack/Splunk style) featuring:*
 
@@ -88,9 +62,30 @@
 
 ---
 
+## 🔒 Security Management
+
+![Security](screenshots/security.png)
+*Enhanced security management center featuring:*
+
+#### Real-time Security Scanning
+- **Security scan management** with real-time progress monitoring
+- **Multiple scan types**: Full system, vulnerability, compliance, and custom scans
+- **Scan scheduling** with datetime support and automated workflows
+- **Detailed findings management** with severity-based categorization
+- **Finding status tracking** and resolution workflows
+- **Interactive scan dashboard** with charts and statistics
+
+#### Advanced Security Features
+- **Threat detection visualization** with ML insights
+- **Anomaly analysis interface** with interactive timeline charts
+- **Security incident tracking** with detailed investigation tools
+- **Export capabilities** for scan results and findings
+- **WebSocket-based real-time updates** for live monitoring
+
+---
+
 ## 🌐 Network Monitoring
 
-### Network Monitoring Center
 ![Network Monitoring](screenshots/Network-monitoring.png)
 *Comprehensive network monitoring center featuring:*
 
@@ -119,7 +114,6 @@
 
 ## ⚙️ Settings & Configuration
 
-### Settings Management
 ![Settings](screenshots/settings.png)
 *Configuration management interface featuring:*
 
@@ -147,9 +141,35 @@
 
 ---
 
+## ⭐️ Admin Dashboard
+
+![Admin Dashboard](screenshots/admin-dashboard.png)
+*Admin dashboard interface featuring:*
+
+#### Comprehensive Dashboard
+- **Real-time system status** with live updates
+- **Security score tracking** with trend analysis
+- **Network topology visualization** with device health monitoring
+- **Real-time data updates** via WebSocket connections
+- **User management** and role-based access control
+
+---
+
+## 👥 User Management
+
+![User Management](screenshots/user-management.png)
+*User management interface featuring:*
+
+#### User Management
+- **User profile creation** and management
+- **User role assignment** with access permissions
+- **Password management** with secure storage
+- **User preferences** and notification settings
+
+---
+
 ## 👤 Profile Settings
 
-### Profile Management
 ![Profile](screenshots/profile-settings.png)
 *Profile management interface featuring:*
 
@@ -163,7 +183,6 @@
 
 ## ⚙️ Preferences
 
-### Preferences Management
 ![Preferences](screenshots/Preferences.png)
 *Preferences management interface featuring:*
 
