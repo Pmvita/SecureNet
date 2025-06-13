@@ -8,7 +8,7 @@ interface User {
   id: string;
   username: string;
   email: string;
-  role: 'superadmin' | 'platform_admin' | 'end_user' | 'admin' | 'user';
+  role: 'superadmin' | 'manager' | 'analyst' | 'platform_admin' | 'end_user' | 'admin' | 'user';
   last_login: string;
   last_logout?: string;
   login_count?: number;
@@ -148,12 +148,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string) => {
     try {
+      setIsLoading(true); // Show loading during entire login process
+      
       // Make the login request using the special login method
       const backendResponse = await apiClient.loginRequest(username, password);
       
       if (backendResponse.status === 'success') {
         const { token, user } = backendResponse.data;
         localStorage.setItem('auth_token', token);
+        
+        // Initialize API key BEFORE setting user state and navigating
+        console.log('Login successful, initializing API client...');
+        const apiKeyInitialized = await initializeApiClient();
+        console.log('API key initialized:', apiKeyInitialized);
+        
+        if (!apiKeyInitialized) {
+          console.error('API key initialization failed');
+          // Don't proceed with login if API key initialization fails
+          localStorage.removeItem('auth_token');
+          setIsLoading(false);
+          showToast({
+            type: 'error',
+            message: 'Failed to initialize API key. Please try logging in again.',
+          });
+          return;
+        }
+        
+        // Only set user state AFTER API key is successfully initialized
         setUser({
           id: user.id.toString(),
           username: user.username,
@@ -166,17 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           organization_name: user.organization_name,
         });
         
-        // Initialize API key after successful login
-        console.log('Login successful, initializing API client...');
-        const apiKeyInitialized = await initializeApiClient();
-        console.log('API key initialized:', apiKeyInitialized);
-        if (!apiKeyInitialized) {
-          console.error('API key initialization failed');
-          showToast({
-            type: 'error',
-            message: 'Failed to initialize API key. Some features may not work.',
-          });
-        }
+        setIsLoading(false);
         
         showToast({
           type: 'success',
@@ -191,6 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Login error:', error);
+      setIsLoading(false);
       showToast({
         type: 'error',
         message: 'Invalid username or password',

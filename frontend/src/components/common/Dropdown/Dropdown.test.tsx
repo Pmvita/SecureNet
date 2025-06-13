@@ -2,10 +2,11 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Dropdown } from './Dropdown';
+import { UserIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 
 const mockItems = [
-  { id: '1', label: 'Option 1', onClick: jest.fn() },
-  { id: '2', label: 'Option 2', icon: '🔒', onClick: jest.fn() },
+  { id: '1', label: 'Option 1', icon: UserIcon, onClick: jest.fn() },
+  { id: '2', label: 'Option 2', icon: LockClosedIcon, onClick: jest.fn() },
   { id: '3', label: 'Option 3', disabled: true, onClick: jest.fn() }
 ];
 

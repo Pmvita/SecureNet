@@ -44,56 +44,35 @@ interface UserProfile {
   createdAt: string;
 }
 
+import { apiClient } from '../api/client';
+
 async function fetchSettings(): Promise<{
   notifications: NotificationSettings;
   security: SecuritySettings;
   system: SystemSettings;
 }> {
-  const response = await fetch('/api/settings');
-  if (!response.ok) throw new Error('Failed to fetch settings');
-  return response.json();
+  const response = await apiClient.get('/api/settings');
+  return response.data;
 }
 
 async function fetchUserProfile(): Promise<UserProfile> {
-  const response = await fetch('/api/user/profile');
-  if (!response.ok) throw new Error('Failed to fetch user profile');
-  return response.json();
+  const response = await apiClient.get('/api/user/profile');
+  return response.data;
 }
 
 async function updateNotificationSettings(settings: Partial<NotificationSettings>): Promise<NotificationSettings> {
-  const response = await fetch('/api/settings/notifications', {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(settings),
-  });
-  if (!response.ok) throw new Error('Failed to update notification settings');
-  return response.json();
+  const response = await apiClient.patch('/api/settings/notifications', settings);
+  return response.data;
 }
 
 async function updateSecuritySettings(settings: Partial<SecuritySettings>): Promise<SecuritySettings> {
-  const response = await fetch('/api/settings/security', {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(settings),
-  });
-  if (!response.ok) throw new Error('Failed to update security settings');
-  return response.json();
+  const response = await apiClient.patch('/api/settings/security', settings);
+  return response.data;
 }
 
 async function updateSystemSettings(settings: Partial<SystemSettings>): Promise<SystemSettings> {
-  const response = await fetch('/api/settings/system', {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(settings),
-  });
-  if (!response.ok) throw new Error('Failed to update system settings');
-  return response.json();
+  const response = await apiClient.patch('/api/settings/system', settings);
+  return response.data;
 }
 
 export default function Settings() {

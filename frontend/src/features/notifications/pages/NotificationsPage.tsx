@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BellIcon,
   CheckIcon,
@@ -9,6 +9,8 @@ import {
   InformationCircleIcon,
   CheckCircleIcon,
 } from '@heroicons/react/24/outline';
+import { apiClient } from '../../../api/client';
+import { useToast } from '../../../components/common/ToastContainer';
 
 interface Notification {
   id: string;
@@ -19,6 +21,8 @@ interface Notification {
   read: boolean;
   category: 'security' | 'system' | 'network' | 'user';
   priority: 'low' | 'medium' | 'high' | 'critical';
+  severity?: string; // Backend uses 'severity' instead of 'priority'
+  created_at?: string; // Backend uses 'created_at' instead of 'timestamp'
 }
 
 // Mock notifications data
@@ -88,19 +92,115 @@ const mockNotifications: Notification[] = [
 export const NotificationsPage: React.FC = () => {
   // Check if we're in development mode
   const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
+  const { showToast } = useToast();
   
   // Initialize notifications based on environment
   const [notifications, setNotifications] = useState<Notification[]>(DEV_MODE ? mockNotifications : []);
   const [filter, setFilter] = useState<'all' | 'unread' | 'security' | 'system' | 'network' | 'user'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  // TODO: In real API mode, fetch notifications from backend
-  React.useEffect(() => {
+  // Fetch notifications from API
+  const fetchNotifications = async () => {
+    try {
+      setIsLoading(true);
+      console.log('Fetching notifications from API...');
+      const response = await apiClient.get('/api/notifications?page=1&page_size=100');
+      console.log('Notifications API response:', response);
+      
+      const responseData = response.data as { 
+        status: string; 
+        data: { 
+          notifications: Array<{
+            id: number;
+            title: string;
+            message: string;
+            severity: string;
+            timestamp: string;
+            read: boolean;
+            category: string;
+            read_at?: string;
+            metadata?: Record<string, unknown>;
+          }>;
+        };
+      };
+      
+      if (responseData.status === 'success') {
+        console.log('Successfully fetched notifications:', responseData.data.notifications.length);
+        // Transform backend notifications to frontend format
+        const transformedNotifications: Notification[] = responseData.data.notifications.map((notif) => ({
+          id: notif.id.toString(),
+          title: notif.title,
+          message: notif.message,
+          type: mapSeverityToType(notif.severity),
+          timestamp: notif.timestamp, // Backend uses 'timestamp' not 'created_at'
+          read: notif.read,
+          category: (notif.category as 'security' | 'system' | 'network' | 'user') || 'system',
+          priority: mapSeverityToPriority(notif.severity),
+          severity: notif.severity,
+          created_at: notif.timestamp, // Use timestamp for both fields
+        }));
+        
+        setNotifications(transformedNotifications);
+        console.log('Transformed and set notifications:', transformedNotifications.length);
+      } else {
+        console.error('API returned error status:', responseData);
+      }
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+      console.error('Error details:', {
+        message: (error as Error)?.message,
+        status: (error as { response?: { status?: number } })?.response?.status,
+        data: (error as { response?: { data?: unknown } })?.response?.data
+      });
+      if (!DEV_MODE) {
+        showToast({
+          type: 'error',
+          message: 'Failed to load notifications',
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Map backend severity to frontend type
+  const mapSeverityToType = (severity: string): 'info' | 'warning' | 'success' | 'error' => {
+    switch (severity?.toLowerCase()) {
+      case 'critical':
+      case 'error':
+        return 'error';
+      case 'warning':
+        return 'warning';
+      case 'success':
+        return 'success';
+      default:
+        return 'info';
+    }
+  };
+
+  // Map backend severity to frontend priority
+  const mapSeverityToPriority = (severity: string): 'low' | 'medium' | 'high' | 'critical' => {
+    switch (severity?.toLowerCase()) {
+      case 'critical':
+        return 'critical';
+      case 'warning':
+        return 'high';
+      case 'success':
+        return 'medium';
+      default:
+        return 'low';
+    }
+  };
+
+  // Load notifications on component mount
+  useEffect(() => {
     if (!DEV_MODE) {
-      // Here you would fetch real notifications from the API
-      console.log('Real API mode: Would fetch notifications from /api/notifications');
-      // Example API call (uncomment when backend endpoint exists):
-      // fetchNotifications().then(setNotifications);
+      // Add a small delay to ensure API client is initialized
+      const timer = setTimeout(() => {
+        fetchNotifications();
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [DEV_MODE]);
 
@@ -146,22 +246,63 @@ export const NotificationsPage: React.FC = () => {
     );
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
+  const markAsRead = async (id: string) => {
+    try {
+      if (!DEV_MODE) {
+        await apiClient.post(`/api/notifications/${id}/read`);
+      }
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === id ? { ...notif, read: true } : notif
+        )
+      );
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+      showToast({
+        type: 'error',
+        message: 'Failed to mark notification as read',
+      });
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, read: true }))
-    );
+  const markAllAsRead = async () => {
+    try {
+      if (!DEV_MODE) {
+        await apiClient.post('/api/notifications/read-all');
+      }
+      setNotifications(prev => 
+        prev.map(notif => ({ ...notif, read: true }))
+      );
+      showToast({
+        type: 'success',
+        message: 'All notifications marked as read',
+      });
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+      showToast({
+        type: 'error',
+        message: 'Failed to mark all notifications as read',
+      });
+    }
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== id));
+  const deleteNotification = async (id: string) => {
+    try {
+      if (!DEV_MODE) {
+        await apiClient.delete(`/api/notifications/${id}`);
+      }
+      setNotifications(prev => prev.filter(notif => notif.id !== id));
+      showToast({
+        type: 'success',
+        message: 'Notification deleted',
+      });
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
+      showToast({
+        type: 'error',
+        message: 'Failed to delete notification',
+      });
+    }
   };
 
   const filteredNotifications = notifications.filter(notif => {
@@ -197,15 +338,27 @@ export const NotificationsPage: React.FC = () => {
           </p>
         </div>
         
-        {unreadCount > 0 && (
+        <div className="flex items-center space-x-3">
           <button
-            onClick={markAllAsRead}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            onClick={fetchNotifications}
+            disabled={isLoading}
+            className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
           >
-            <CheckIcon className="w-4 h-4 mr-2" />
-            Mark All Read
+            <svg className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
           </button>
-        )}
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllAsRead}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <CheckIcon className="w-4 h-4 mr-2" />
+              Mark All Read
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filters and Search */}
@@ -246,7 +399,13 @@ export const NotificationsPage: React.FC = () => {
 
       {/* Notifications List */}
       <div className="space-y-3">
-        {filteredNotifications.length === 0 ? (
+        {isLoading ? (
+          <div className="bg-gray-800 rounded-xl border border-gray-700 p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <h3 className="text-lg font-medium text-white mb-2">Loading notifications...</h3>
+            <p className="text-gray-400">Please wait while we fetch your notifications.</p>
+          </div>
+        ) : filteredNotifications.length === 0 ? (
           <div className="bg-gray-800 rounded-xl border border-gray-700 p-8 text-center">
             <BellIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-white mb-2">No notifications found</h3>

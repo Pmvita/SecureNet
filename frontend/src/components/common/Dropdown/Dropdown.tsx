@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { DropdownProps, DropdownItem, DropdownPosition, DropdownAlignment } from './Dropdown.types';
 import { LoadingSpinner } from '../LoadingSpinner';
+import { ChevronDownIcon } from '@heroicons/react/24/outline';
 
 /**
  * Dropdown component for displaying a menu of options
@@ -133,6 +134,18 @@ export const Dropdown: React.FC<DropdownProps> = ({
     </div>
   );
 
+  const renderIcon = (icon: string | React.ComponentType<{ className?: string }> | undefined) => {
+    if (!icon) return null;
+    
+    if (typeof icon === 'string') {
+      // Handle emoji strings
+      return <span className="dropdown-icon-emoji">{icon}</span>;
+    } else {
+      // Handle React component icons
+      return React.createElement(icon, { className: 'w-4 h-4' });
+    }
+  };
+
   return (
     <div
       className={`dropdown ${className || ''}`}
@@ -151,7 +164,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
         aria-expanded={isOpen}
         aria-disabled={disabled}
       >
-        {trigger}
+        <span>{trigger}</span>
+        <ChevronDownIcon className={`dropdown-chevron ${isOpen ? 'open' : ''}`} />
       </div>
 
       {isOpen && (

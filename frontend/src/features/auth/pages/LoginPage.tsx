@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import {
+  LockClosedIcon,
+  ShieldCheckIcon,
+  StarIcon,
+  Cog6ToothIcon,
+  UserIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  RocketLaunchIcon,
+  CpuChipIcon,
+  MagnifyingGlassIcon,
+  BoltIcon,
+} from '@heroicons/react/24/outline';
 
 export const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -32,9 +45,15 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleQuickLogin = (user: { username: string; password: string }) => {
-    setUsername(user.username);
-    setPassword(user.password);
+  const handleQuickLogin = async (user: { username: string; password: string }) => {
+    setIsSubmitting(true);
+    try {
+      await login(user.username, user.password);
+    } catch (error) {
+      // Error is handled by the auth context
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -50,12 +69,18 @@ export const LoginPage: React.FC = () => {
         {/* Logo and Header */}
         <div className="login-header">
           <div className="logo-container">
-            <div className="logo">🔒</div>
+            <div className="logo">
+              <img 
+                src="/securenet-logo.png" 
+                alt="SecureNet Logo" 
+                className="logo-image"
+              />
+            </div>
           </div>
           <h1 className="brand-title">SecureNet</h1>
           <p className="brand-subtitle">AI-Powered Network Security Platform</p>
           <div className="security-badge">
-            <span className="shield-icon">🛡️</span>
+            <ShieldCheckIcon className="w-4 h-4" />
             <span>Enterprise Security</span>
           </div>
         </div>
@@ -68,24 +93,36 @@ export const LoginPage: React.FC = () => {
               type="button"
               onClick={() => handleQuickLogin({ username: 'ceo', password: 'superadmin123' })}
               className="dev-button"
+              disabled={isSubmitting}
             >
-              <span className="dev-role">👑 Super Admin</span>
+              <span className="dev-role">
+                <StarIcon className="w-4 h-4 text-yellow-400 inline mr-1" />
+                Super Admin
+              </span>
               <span className="dev-username">ceo</span>
             </button>
             <button
               type="button"
               onClick={() => handleQuickLogin({ username: 'admin', password: 'platform123' })}
               className="dev-button"
+              disabled={isSubmitting}
             >
-              <span className="dev-role">🛠 Platform Admin</span>
+              <span className="dev-role">
+                <Cog6ToothIcon className="w-4 h-4 text-blue-400 inline mr-1" />
+                Manager
+              </span>
               <span className="dev-username">admin</span>
             </button>
             <button
               type="button"
               onClick={() => handleQuickLogin({ username: 'user', password: 'enduser123' })}
               className="dev-button"
+              disabled={isSubmitting}
             >
-              <span className="dev-role">👤 End User</span>
+              <span className="dev-role">
+                <UserIcon className="w-4 h-4 text-green-400 inline mr-1" />
+                Analyst
+              </span>
               <span className="dev-username">user</span>
             </button>
           </div>
@@ -95,7 +132,7 @@ export const LoginPage: React.FC = () => {
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
             <label htmlFor="username" className="form-label">
-              <span className="label-icon">👤</span>
+              <UserIcon className="w-4 h-4" />
               Username
             </label>
             <div className="input-wrapper">
@@ -115,7 +152,7 @@ export const LoginPage: React.FC = () => {
 
           <div className="form-group">
             <label htmlFor="password" className="form-label">
-              <span className="label-icon">🔒</span>
+              <LockClosedIcon className="w-4 h-4" />
               Password
             </label>
             <div className="input-wrapper password-wrapper">
@@ -136,7 +173,11 @@ export const LoginPage: React.FC = () => {
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isSubmitting}
               >
-                {showPassword ? '👁️' : '👁️‍🗨️'}
+                {showPassword ? (
+                  <EyeSlashIcon className="w-5 h-5" />
+                ) : (
+                  <EyeIcon className="w-5 h-5" />
+                )}
               </button>
             </div>
           </div>
@@ -153,7 +194,7 @@ export const LoginPage: React.FC = () => {
               </>
             ) : (
               <>
-                <span className="button-icon">🚀</span>
+                <RocketLaunchIcon className="w-5 h-5" />
                 Access SecureNet
               </>
             )}
@@ -164,15 +205,15 @@ export const LoginPage: React.FC = () => {
         <div className="login-footer">
           <div className="security-features">
             <div className="feature">
-              <span className="feature-icon">🤖</span>
+              <CpuChipIcon className="w-6 h-6 text-blue-400" />
               <span>AI-Powered</span>
             </div>
             <div className="feature">
-              <span className="feature-icon">🔍</span>
+              <MagnifyingGlassIcon className="w-6 h-6 text-green-400" />
               <span>Real-time Monitoring</span>
             </div>
             <div className="feature">
-              <span className="feature-icon">⚡</span>
+              <BoltIcon className="w-6 h-6 text-purple-400" />
               <span>Enterprise Grade</span>
             </div>
           </div>
@@ -302,6 +343,13 @@ export const LoginPage: React.FC = () => {
           box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
         }
 
+        .logo-image {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          border-radius: 50%;
+        }
+
         @keyframes logoGlow {
           from { box-shadow: 0 0 10px rgba(59, 130, 246, 0.2); }
           to { box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); }
@@ -336,10 +384,6 @@ export const LoginPage: React.FC = () => {
           color: #22c55e;
           font-size: 0.85rem;
           font-weight: 500;
-        }
-
-        .shield-icon {
-          font-size: 1rem;
         }
 
         .dev-credentials {
@@ -377,13 +421,20 @@ export const LoginPage: React.FC = () => {
           transition: all 0.2s ease;
         }
 
-        .dev-button:hover {
+        .dev-button:hover:not(:disabled) {
           background: rgba(255, 255, 255, 0.1);
           border-color: rgba(59, 130, 246, 0.3);
         }
 
+        .dev-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
         .dev-role {
           font-weight: 500;
+          display: flex;
+          align-items: center;
         }
 
         .dev-username {
@@ -411,10 +462,6 @@ export const LoginPage: React.FC = () => {
           font-size: 0.9rem;
           font-weight: 600;
           color: rgba(255, 255, 255, 0.9);
-        }
-
-        .label-icon {
-          font-size: 1rem;
         }
 
         .input-wrapper {
@@ -465,7 +512,6 @@ export const LoginPage: React.FC = () => {
           border: none;
           color: rgba(255, 255, 255, 0.6);
           cursor: pointer;
-          font-size: 1.2rem;
           transition: color 0.2s ease;
           z-index: 2;
         }
@@ -531,10 +577,6 @@ export const LoginPage: React.FC = () => {
           background: linear-gradient(135deg, #6b7280, #9ca3af);
         }
 
-        .button-icon {
-          font-size: 1.1rem;
-        }
-
         .loading-spinner {
           width: 1rem;
           height: 1rem;
@@ -568,10 +610,6 @@ export const LoginPage: React.FC = () => {
           gap: 0.25rem;
           font-size: 0.75rem;
           color: rgba(255, 255, 255, 0.6);
-        }
-
-        .feature-icon {
-          font-size: 1.2rem;
         }
 
         .copyright {

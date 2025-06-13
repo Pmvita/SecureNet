@@ -4,6 +4,17 @@ import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Progress } from '@/components/common/Progress';
 import type { NetworkDevice, BaseProps } from '../../../types';
+import { formatDistanceToNow } from 'date-fns';
+import {
+  ComputerDesktopIcon,
+  GlobeAltIcon,
+  DevicePhoneMobileIcon,
+  PrinterIcon,
+  ShieldCheckIcon,
+  ServerIcon,
+  EyeIcon,
+  PencilIcon,
+} from '@heroicons/react/24/outline';
 
 interface NetworkDeviceCardProps extends BaseProps {
   device: NetworkDevice;
@@ -28,13 +39,15 @@ const severityColors: Record<string, string> = {
   info: 'var(--info)',
 };
 
-const deviceTypeIcons: Record<NetworkDevice['type'], string> = {
-  server: '🖥️',
-  router: '🌐',
-  switch: '🔀',
-  firewall: '🛡️',
-  endpoint: '💻',
-  other: '🔌',
+// Device type icon mapping
+const deviceTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  endpoint: ComputerDesktopIcon,
+  server: ServerIcon,
+  router: GlobeAltIcon,
+  mobile: DevicePhoneMobileIcon,
+  firewall: ShieldCheckIcon,
+  printer: PrinterIcon,
+  unknown: ComputerDesktopIcon,
 };
 
 export function NetworkDeviceCard({
@@ -67,7 +80,9 @@ export function NetworkDeviceCard({
         <>
           <div className="network-device-card-header">
             <div className="network-device-card-title">
-              <span className="device-icon">{deviceTypeIcons[device.type]}</span>
+              <span className="device-icon">
+                {React.createElement(deviceTypeIcons[device.type], { className: 'h-6 w-6' })}
+              </span>
               <h3>{device.name}</h3>
               <Badge
                 color={statusColors[device.status]}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   UserCircleIcon,
   PencilIcon,
@@ -11,14 +11,23 @@ import {
   DocumentTextIcon,
   CameraIcon,
   CheckCircleIcon,
+  XMarkIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  StarIcon,
+  Cog6ToothIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
+import { useAuth } from '../../auth/context/AuthContext';
+import { apiClient } from '../../../api/client';
+import { useToast } from '../../../components/common/ToastContainer';
 
 interface UserProfile {
   id: string;
   username: string;
   email: string;
   name: string;
-  role: 'admin' | 'analyst' | 'viewer';
+  role: 'superadmin' | 'manager' | 'analyst' | 'platform_admin' | 'end_user' | 'admin' | 'user';
   status: 'active' | 'inactive' | 'suspended';
   lastLogin: string;
   createdAt: string;
@@ -34,108 +43,643 @@ interface UserProfile {
     ip: string;
     userAgent: string;
   }>;
+  org_id?: string;
+  organization_name?: string;
+  login_count?: number;
+  last_logout?: string;
+  two_factor_enabled?: boolean;
 }
 
-// Mock data for development
-const mockProfile: UserProfile = {
-  id: '1',
-  username: 'admin',
-  email: 'admin@securenet.com',
-  name: 'Administrator',
-  role: 'admin',
-  status: 'active',
-  lastLogin: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
-  createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90).toISOString(), // 90 days ago
-  department: 'Information Security',
-  title: 'Security Administrator',
-  phone: '+1 (555) 123-4567',
-  permissions: [
-    'manage_settings',
-    'view_logs',
-    'manage_security',
-    'manage_network',
-    'view_anomalies',
-    'manage_users',
-  ],
-  activityLog: [
+interface ChangePasswordModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (currentPassword: string, newPassword: string) => Promise<void>;
+}
+
+const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClose, onSubmit }) => {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setError('New password must be at least 8 characters long');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await onSubmit(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      onClose();
+    } catch (error) {
+      setError((error as Error).message || 'Failed to change password');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-md">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Change Password</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="bg-red-900 border border-red-700 text-red-300 px-3 py-2 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Current Password
+            </label>
+            <div className="relative">
+              <input
+                type={showCurrentPassword ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+              >
+                {showCurrentPassword ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                minLength={8}
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+              >
+                {showNewPassword ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Confirm New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                minLength={8}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+              >
+                {showConfirmPassword ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {isLoading ? 'Changing...' : 'Change Password'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+interface TwoFactorModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onEnable: () => Promise<void>;
+  onDisable: () => Promise<void>;
+  isEnabled: boolean;
+}
+
+const TwoFactorModal: React.FC<TwoFactorModalProps> = ({ isOpen, onClose, onEnable, onDisable, isEnabled }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [qrCode, setQrCode] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [error, setError] = useState('');
+
+  const handleToggle2FA = async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      
+      if (isEnabled) {
+        await onDisable();
+      } else {
+        await onEnable();
+        // In a real implementation, you'd get the QR code from the API
+        setQrCode('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
+      }
+    } catch (error) {
+      setError((error as Error).message || 'Failed to toggle 2FA');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-md">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Two-Factor Authentication</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {error && (
+            <div className="bg-red-900 border border-red-700 text-red-300 px-3 py-2 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <div className="text-center">
+            <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+              isEnabled ? 'bg-green-900' : 'bg-gray-700'
+            }`}>
+              <ShieldCheckIcon className={`w-8 h-8 ${isEnabled ? 'text-green-400' : 'text-gray-400'}`} />
+            </div>
+            <p className="text-white font-medium mb-2">
+              Two-Factor Authentication is {isEnabled ? 'Enabled' : 'Disabled'}
+            </p>
+            <p className="text-gray-400 text-sm">
+              {isEnabled 
+                ? 'Your account is protected with 2FA. You can disable it if needed.'
+                : 'Add an extra layer of security to your account by enabling 2FA.'
+              }
+            </p>
+          </div>
+
+          {!isEnabled && qrCode && (
+            <div className="text-center">
+              <p className="text-gray-300 text-sm mb-2">Scan this QR code with your authenticator app:</p>
+              <div className="bg-white p-4 rounded-lg inline-block">
+                <img src={qrCode} alt="2FA QR Code" className="w-32 h-32" />
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Enter verification code
+                </label>
+                <input
+                  type="text"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="000000"
+                  maxLength={6}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex space-x-3 pt-4">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleToggle2FA}
+              disabled={isLoading}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 ${
+                isEnabled 
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+            >
+              {isLoading ? 'Processing...' : (isEnabled ? 'Disable 2FA' : 'Enable 2FA')}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface ApiKeysModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const ApiKeysModal: React.FC<ApiKeysModalProps> = ({ isOpen, onClose }) => {
+  const [apiKeys, setApiKeys] = useState([
+    { id: '1', name: 'Production API', key: 'sk_prod_...', created: '2025-06-01', lastUsed: '2025-06-12' },
+    { id: '2', name: 'Development API', key: 'sk_dev_...', created: '2025-05-15', lastUsed: '2025-06-10' },
+  ]);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreateKey = async () => {
+    if (!newKeyName.trim()) return;
+    
+    setIsCreating(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const newKey = {
+      id: Date.now().toString(),
+      name: newKeyName,
+      key: `sk_${Date.now()}_...`,
+      created: new Date().toISOString().split('T')[0],
+      lastUsed: 'Never',
+    };
+    
+    setApiKeys([...apiKeys, newKey]);
+    setNewKeyName('');
+    setIsCreating(false);
+  };
+
+  const handleDeleteKey = (id: string) => {
+    setApiKeys(apiKeys.filter(key => key.id !== id));
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">API Keys Management</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Create new API key */}
+          <div className="bg-gray-700 rounded-lg p-4">
+            <h4 className="text-white font-medium mb-3">Create New API Key</h4>
+            <div className="flex space-x-3">
+              <input
+                type="text"
+                value={newKeyName}
+                onChange={(e) => setNewKeyName(e.target.value)}
+                placeholder="Enter key name (e.g., Production API)"
+                className="flex-1 px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={handleCreateKey}
+                disabled={!newKeyName.trim() || isCreating}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {isCreating ? 'Creating...' : 'Create'}
+              </button>
+            </div>
+          </div>
+
+          {/* Existing API keys */}
+          <div className="space-y-3">
+            <h4 className="text-white font-medium">Your API Keys</h4>
+            {apiKeys.map((key) => (
+              <div key={key.id} className="bg-gray-700 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h5 className="text-white font-medium">{key.name}</h5>
+                    <p className="text-gray-400 text-sm font-mono">{key.key}</p>
+                    <div className="flex space-x-4 text-xs text-gray-500 mt-1">
+                      <span>Created: {key.created}</span>
+                      <span>Last used: {key.lastUsed}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteKey(key.id)}
+                    className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface SessionsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const SessionsModal: React.FC<SessionsModalProps> = ({ isOpen, onClose }) => {
+  const [sessions] = useState([
     {
       id: '1',
-      action: 'Login',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+      device: 'MacBook Pro',
+      browser: 'Chrome 120.0',
+      location: 'San Francisco, CA',
       ip: '192.168.1.100',
-      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      lastActive: '2025-06-12T19:50:00Z',
+      current: true,
     },
     {
       id: '2',
-      action: 'Updated security settings',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-      ip: '192.168.1.100',
-      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-    },
-    {
-      id: '3',
-      action: 'Viewed network monitoring',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-      ip: '192.168.1.100',
-      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-    },
-    {
-      id: '4',
-      action: 'Login',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+      device: 'iPhone 15',
+      browser: 'Safari Mobile',
+      location: 'San Francisco, CA',
       ip: '192.168.1.105',
-      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      lastActive: '2025-06-12T15:30:00Z',
+      current: false,
     },
-  ],
+  ]);
+
+  const handleTerminateSession = (sessionId: string) => {
+    // In a real implementation, you'd call an API to terminate the session
+    console.log('Terminating session:', sessionId);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Active Sessions</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {sessions.map((session) => (
+            <div key={session.id} className="bg-gray-700 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <h5 className="text-white font-medium">{session.device}</h5>
+                    {session.current && (
+                      <span className="px-2 py-1 bg-green-600 text-white text-xs rounded-full">
+                        Current
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-400 space-y-1">
+                    <p>{session.browser} • {session.location}</p>
+                    <p>IP: {session.ip}</p>
+                    <p>Last active: {new Date(session.lastActive).toLocaleString()}</p>
+                  </div>
+                </div>
+                {!session.current && (
+                  <button
+                    onClick={() => handleTerminateSession(session.id)}
+                    className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+                  >
+                    Terminate
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-end pt-4">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export const ProfilePage: React.FC = () => {
-  // Check if we're in development mode
-  const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
-  
-  // Initialize profile data based on environment
-  const [profile, setProfile] = useState<UserProfile>(DEV_MODE ? mockProfile : {
-    id: '',
-    username: '',
-    email: '',
-    name: '',
-    role: 'viewer',
-    status: 'active',
-    lastLogin: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    department: '',
-    title: '',
-    phone: '',
-    permissions: [],
-    activityLog: [],
-  });
-  
+  const { user } = useAuth();
+  const { showToast } = useToast();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: profile.name,
-    email: profile.email,
-    phone: profile.phone || '',
-    department: profile.department || '',
-    title: profile.title || '',
+    name: '',
+    email: '',
+    phone: '',
+    department: '',
+    title: '',
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // TODO: In real API mode, fetch profile data from backend
-  React.useEffect(() => {
-    if (!DEV_MODE) {
-      // Here you would fetch real profile data from the API
-      // For now, we'll use a placeholder to avoid errors
-      console.log('Real API mode: Would fetch profile data from /api/profile');
-      // Example API call (uncomment when backend endpoint exists):
-      // fetchProfileData().then(setProfile);
+  // Modal states
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [showApiKeysModal, setShowApiKeysModal] = useState(false);
+  const [showSessionsModal, setShowSessionsModal] = useState(false);
+  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+
+  // Load profile data from API
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user) return;
+      
+      try {
+        setIsLoading(true);
+        const response = await apiClient.get('/api/user/profile');
+        const responseData = response.data as { status: string; data: UserProfile };
+        
+        if (responseData.status === 'success') {
+          const userProfile = responseData.data;
+          setProfile(userProfile);
+          setEditForm({
+            name: userProfile.name || '',
+            email: userProfile.email,
+            phone: userProfile.phone || '',
+            department: userProfile.department || '',
+            title: userProfile.title || '',
+          });
+          setIs2FAEnabled(userProfile.two_factor_enabled || false);
+        } else {
+          // Fallback to user context data if API fails
+          const userProfile: UserProfile = {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            name: user.username,
+            role: user.role,
+            status: 'active',
+            lastLogin: user.last_login,
+            createdAt: user.last_login,
+            department: '',
+            title: '',
+            phone: '',
+            permissions: [],
+            activityLog: [],
+            org_id: user.org_id,
+            organization_name: user.organization_name,
+            login_count: user.login_count,
+            last_logout: user.last_logout,
+          };
+          
+          setProfile(userProfile);
+          setEditForm({
+            name: userProfile.name,
+            email: userProfile.email,
+            phone: userProfile.phone || '',
+            department: userProfile.department || '',
+            title: userProfile.title || '',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+        // Fallback to user context data
+        if (user) {
+          const userProfile: UserProfile = {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            name: user.username,
+            role: user.role,
+            status: 'active',
+            lastLogin: user.last_login,
+            createdAt: user.last_login,
+            department: '',
+            title: '',
+            phone: '',
+            permissions: [],
+            activityLog: [],
+            org_id: user.org_id,
+            organization_name: user.organization_name,
+            login_count: user.login_count,
+            last_logout: user.last_logout,
+          };
+          
+          setProfile(userProfile);
+          setEditForm({
+            name: userProfile.name,
+            email: userProfile.email,
+            phone: userProfile.phone || '',
+            department: userProfile.department || '',
+            title: userProfile.title || '',
+          });
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!profile) return;
+    
+    try {
+      setIsSaving(true);
+      
+      // Update profile via API
+      const response = await apiClient.put('/api/user/profile', editForm);
+      const responseData = response.data as { status: string; data: UserProfile };
+      
+      if (responseData.status === 'success') {
+        setProfile(responseData.data);
+        setIsEditing(false);
+        
+        showToast({
+          type: 'success',
+          message: 'Profile updated successfully',
+        });
+      } else {
+        throw new Error('Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      showToast({
+        type: 'error',
+        message: 'Failed to update profile',
+      });
+    } finally {
+      setIsSaving(false);
     }
-  }, [DEV_MODE]);
-
-  const handleSave = () => {
-    setProfile({ ...profile, ...editForm });
-    setIsEditing(false);
   };
 
   const handleCancel = () => {
+    if (!profile) return;
+    
     setEditForm({
       name: profile.name,
       email: profile.email,
@@ -146,13 +690,79 @@ export const ProfilePage: React.FC = () => {
     setIsEditing(false);
   };
 
+  const handleChangePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      const response = await apiClient.post('/api/auth/change-password', { 
+        current_password: currentPassword, 
+        new_password: newPassword 
+      });
+      const responseData = response.data as { status: string; data: { message: string } };
+      
+      if (responseData.status === 'success') {
+        showToast({
+          type: 'success',
+          message: 'Password changed successfully',
+        });
+      } else {
+        throw new Error('Failed to change password');
+      }
+    } catch (error) {
+      console.error('Failed to change password:', error);
+      throw new Error('Failed to change password. Please check your current password.');
+    }
+  };
+
+  const handleEnable2FA = async () => {
+    try {
+      const response = await apiClient.post('/api/auth/2fa/enable', {});
+      const responseData = response.data as { status: string; data: { message: string } };
+      
+      if (responseData.status === 'success') {
+        setIs2FAEnabled(true);
+        showToast({
+          type: 'success',
+          message: 'Two-factor authentication enabled',
+        });
+      } else {
+        throw new Error('Failed to enable 2FA');
+      }
+    } catch (error) {
+      console.error('Failed to enable 2FA:', error);
+      throw new Error('Failed to enable two-factor authentication');
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    try {
+      const response = await apiClient.post('/api/auth/2fa/disable', {});
+      const responseData = response.data as { status: string; data: { message: string } };
+      
+      if (responseData.status === 'success') {
+        setIs2FAEnabled(false);
+        showToast({
+          type: 'success',
+          message: 'Two-factor authentication disabled',
+        });
+      } else {
+        throw new Error('Failed to disable 2FA');
+      }
+    } catch (error) {
+      console.error('Failed to disable 2FA:', error);
+      throw new Error('Failed to disable two-factor authentication');
+    }
+  };
+
   const getRoleBadge = (role: string) => {
     const roleConfig = {
-      admin: { label: 'Administrator', color: 'bg-red-500', icon: ShieldCheckIcon },
-      analyst: { label: 'Security Analyst', color: 'bg-blue-500', icon: DocumentTextIcon },
-      viewer: { label: 'Viewer', color: 'bg-green-500', icon: UserCircleIcon },
+      superadmin: { label: 'Super Admin', color: 'bg-red-500', icon: StarIcon },
+      manager: { label: 'Manager', color: 'bg-blue-500', icon: Cog6ToothIcon },
+      analyst: { label: 'Analyst', color: 'bg-green-500', icon: UserIcon },
+      platform_admin: { label: 'Platform Admin', color: 'bg-blue-500', icon: Cog6ToothIcon },
+      end_user: { label: 'End User', color: 'bg-green-500', icon: UserIcon },
+      admin: { label: 'Administrator', color: 'bg-red-500', icon: StarIcon },
+      user: { label: 'User', color: 'bg-green-500', icon: UserIcon },
     };
-    const config = roleConfig[role as keyof typeof roleConfig];
+    const config = roleConfig[role as keyof typeof roleConfig] || roleConfig.user;
     const Icon = config.icon;
     
     return (
@@ -178,6 +788,14 @@ export const ProfilePage: React.FC = () => {
       </span>
     );
   };
+
+  if (isLoading || !profile) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-white">Loading profile...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -208,9 +826,10 @@ export const ProfilePage: React.FC = () => {
               </button>
               <button
                 onClick={handleSave}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                disabled={isSaving}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
               >
-                Save Changes
+                {isSaving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           )}
@@ -258,9 +877,15 @@ export const ProfilePage: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Permissions</span>
-                  <span className="text-white">{profile.permissions.length}</span>
+                  <span className="text-gray-400">Login count</span>
+                  <span className="text-white">{profile.login_count || 0}</span>
                 </div>
+                {profile.organization_name && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Organization</span>
+                    <span className="text-white text-xs">{profile.organization_name}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -381,7 +1006,10 @@ export const ProfilePage: React.FC = () => {
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
+              <button 
+                onClick={() => setShowPasswordModal(true)}
+                className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+              >
                 <KeyIcon className="w-5 h-5 mr-3 text-blue-400" />
                 <div className="text-left">
                   <p className="text-white font-medium">Change Password</p>
@@ -389,15 +1017,23 @@ export const ProfilePage: React.FC = () => {
                 </div>
               </button>
 
-              <button className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
+              <button 
+                onClick={() => setShow2FAModal(true)}
+                className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+              >
                 <ShieldCheckIcon className="w-5 h-5 mr-3 text-green-400" />
                 <div className="text-left">
                   <p className="text-white font-medium">Two-Factor Auth</p>
-                  <p className="text-sm text-gray-400">Enable 2FA for your account</p>
+                  <p className="text-sm text-gray-400">
+                    {is2FAEnabled ? 'Manage 2FA settings' : 'Enable 2FA for your account'}
+                  </p>
                 </div>
               </button>
 
-              <button className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
+              <button 
+                onClick={() => setShowApiKeysModal(true)}
+                className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+              >
                 <DocumentTextIcon className="w-5 h-5 mr-3 text-purple-400" />
                 <div className="text-left">
                   <p className="text-white font-medium">API Keys</p>
@@ -405,11 +1041,14 @@ export const ProfilePage: React.FC = () => {
                 </div>
               </button>
 
-              <button className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
+              <button 
+                onClick={() => setShowSessionsModal(true)}
+                className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+              >
                 <ClockIcon className="w-5 h-5 mr-3 text-yellow-400" />
                 <div className="text-left">
                   <p className="text-white font-medium">Session Management</p>
-                  <p className="text-sm text-gray-400">View active sessions</p>
+                  <p className="text-sm text-gray-400">View and manage active sessions</p>
                 </div>
               </button>
             </div>
@@ -425,40 +1064,88 @@ export const ProfilePage: React.FC = () => {
         </h3>
         
         <div className="space-y-3">
-          {profile.activityLog.map((activity) => (
-            <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <div>
-                  <p className="text-white font-medium">{activity.action}</p>
-                  <p className="text-sm text-gray-400">
-                    {new Date(activity.timestamp).toLocaleString()} • IP: {activity.ip}
-                  </p>
+          {profile.activityLog.length > 0 ? (
+            profile.activityLog.map((activity) => (
+              <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <div>
+                    <p className="text-white font-medium">{activity.action}</p>
+                    <p className="text-sm text-gray-400">
+                      {new Date(activity.timestamp).toLocaleString()} • IP: {activity.ip}
+                    </p>
+                  </div>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <ClockIcon className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-400">No recent activity to display</p>
+              <p className="text-sm text-gray-500">Activity logs will appear here as you use the platform</p>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
-      {/* Permissions */}
-      <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-          <ShieldCheckIcon className="w-5 h-5 mr-2" />
-          Permissions
-        </h3>
-        
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-          {profile.permissions.map((permission) => (
-            <span
-              key={permission}
-              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-900 text-blue-300"
-            >
-              {permission.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-            </span>
-          ))}
+      {/* Modals */}
+      <ChangePasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onSubmit={handleChangePassword}
+      />
+
+      <TwoFactorModal
+        isOpen={show2FAModal}
+        onClose={() => setShow2FAModal(false)}
+        onEnable={handleEnable2FA}
+        onDisable={handleDisable2FA}
+        isEnabled={is2FAEnabled}
+      />
+
+      {/* API Keys Modal - TODO: Implement */}
+      {showApiKeysModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">API Keys</h3>
+              <button
+                onClick={() => setShowApiKeysModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="text-center py-8">
+              <KeyIcon className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-400">API Keys management coming soon</p>
+              <p className="text-sm text-gray-500">Create and manage your API access keys</p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Sessions Modal - TODO: Implement */}
+      {showSessionsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Active Sessions</h3>
+              <button
+                onClick={() => setShowSessionsModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="text-center py-8">
+              <ClockIcon className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-400">Session management coming soon</p>
+              <p className="text-sm text-gray-500">View and manage your active sessions</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }; 

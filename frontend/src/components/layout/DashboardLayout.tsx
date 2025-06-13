@@ -17,6 +17,11 @@ import {
   UserIcon,
   SunIcon,
   MoonIcon,
+  UsersIcon,
+  BuildingOfficeIcon,
+  CreditCardIcon,
+  ClipboardDocumentListIcon,
+  StarIcon,
 } from '@heroicons/react/24/outline';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../features/auth/context/AuthContext';
@@ -35,16 +40,29 @@ export interface DashboardLayoutProps {
 
 // Icon mapping for modern icons
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  'ChartBarIcon': ChartBarIcon,
+  'DocumentTextIcon': DocumentTextIcon,
+  'ShieldCheckIcon': ShieldCheckIcon,
+  'GlobeAltIcon': GlobeAltIcon,
+  'ExclamationTriangleIcon': ExclamationTriangleIcon,
+  'Cog6ToothIcon': Cog6ToothIcon,
+  'CrownIcon': StarIcon,
+  'UsersIcon': UsersIcon,
+  'BuildingOfficeIcon': BuildingOfficeIcon,
+  'CreditCardIcon': CreditCardIcon,
+  'ClipboardDocumentListIcon': ClipboardDocumentListIcon,
+  // Legacy emoji support (fallback)
   '📊': ChartBarIcon,
   '📝': DocumentTextIcon,
   '🔒': ShieldCheckIcon,
   '🌐': GlobeAltIcon,
   '⚠️': ExclamationTriangleIcon,
   '⚙️': Cog6ToothIcon,
-  '👑': ShieldCheckIcon, // Admin Dashboard
-  '👥': UserIcon, // Users
-  '🏢': ChartBarIcon, // Organizations (using chart as building icon alternative)
-  '📋': DocumentTextIcon, // Audit Logs
+  '👑': StarIcon,
+  '👥': UsersIcon,
+  '🏢': BuildingOfficeIcon,
+  '💳': CreditCardIcon,
+  '📋': ClipboardDocumentListIcon,
 };
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
@@ -317,11 +335,40 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     </div>
                     <div className="hidden sm:block text-left">
                       <p className="text-sm font-medium text-white">{user?.username || 'User'}</p>
-                      <p className="text-xs text-gray-400">
-                        {user?.role === 'superadmin' ? '👑 Super Admin' :
-                         user?.role === 'platform_admin' ? '🛠 Platform Admin' :
-                         user?.role === 'end_user' ? '👤 End User' :
-                         user?.role === 'admin' ? 'Administrator' : 'User'}
+                      <p className="text-xs text-gray-400 flex items-center gap-1">
+                        {user?.role === 'superadmin' && (
+                          <>
+                            <StarIcon className="w-3 h-3 text-yellow-400" />
+                            <span>Super Admin</span>
+                          </>
+                        )}
+                        {user?.role === 'manager' && (
+                          <>
+                            <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
+                            <span>Manager</span>
+                          </>
+                        )}
+                        {user?.role === 'analyst' && (
+                          <>
+                            <UserIcon className="w-3 h-3 text-green-400" />
+                            <span>Analyst</span>
+                          </>
+                        )}
+                        {user?.role === 'platform_admin' && (
+                          <>
+                            <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
+                            <span>Platform Admin</span>
+                          </>
+                        )}
+                        {user?.role === 'end_user' && (
+                          <>
+                            <UserIcon className="w-3 h-3 text-green-400" />
+                            <span>End User</span>
+                          </>
+                        )}
+                        {user?.role === 'admin' && <span>Administrator</span>}
+                        {!user?.role && <span>User</span>}
+                        {user?.organization_name && ` • ${user.organization_name}`}
                       </p>
                     </div>
                     <ChevronDownIcon className={`w-4 h-4 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
@@ -338,11 +385,39 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                           <div>
                             <p className="text-sm font-medium text-white">{user?.username || 'User'}</p>
                             <p className="text-xs text-gray-400">{user?.email || 'user@securenet.com'}</p>
-                            <p className="text-xs text-blue-400 mt-1">
-                              {user?.role === 'superadmin' ? '👑 Super Admin' :
-                               user?.role === 'platform_admin' ? '🛠 Platform Admin' :
-                               user?.role === 'end_user' ? '👤 End User' :
-                               user?.role === 'admin' ? 'Administrator' : 'User'}
+                            <p className="text-xs text-blue-400 mt-1 flex items-center gap-1">
+                              {user?.role === 'superadmin' && (
+                                <>
+                                  <StarIcon className="w-3 h-3 text-yellow-400" />
+                                  <span>Super Admin</span>
+                                </>
+                              )}
+                              {user?.role === 'manager' && (
+                                <>
+                                  <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
+                                  <span>Manager</span>
+                                </>
+                              )}
+                              {user?.role === 'analyst' && (
+                                <>
+                                  <UserIcon className="w-3 h-3 text-green-400" />
+                                  <span>Analyst</span>
+                                </>
+                              )}
+                              {user?.role === 'platform_admin' && (
+                                <>
+                                  <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
+                                  <span>Platform Admin</span>
+                                </>
+                              )}
+                              {user?.role === 'end_user' && (
+                                <>
+                                  <UserIcon className="w-3 h-3 text-green-400" />
+                                  <span>End User</span>
+                                </>
+                              )}
+                              {user?.role === 'admin' && <span>Administrator</span>}
+                              {!user?.role && <span>User</span>}
                               {user?.organization_name && ` • ${user.organization_name}`}
                             </p>
                             {user?.last_login && (

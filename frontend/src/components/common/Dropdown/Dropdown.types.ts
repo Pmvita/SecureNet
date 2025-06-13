@@ -8,7 +8,7 @@ export type DropdownTrigger = 'click' | 'hover';
 export interface DropdownItem {
   id: string;
   label: string;
-  icon?: string;
+  icon?: string | React.ComponentType<{ className?: string }>;
   disabled?: boolean;
   onClick?: () => void;
   children?: DropdownItem[];

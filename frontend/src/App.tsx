@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -22,8 +22,20 @@ import UsersManagement from './pages/admin/UsersManagement';
 import TenantsManagement from './pages/admin/TenantsManagement';
 import BillingManagement from './pages/admin/BillingManagement';
 import AuditLogs from './pages/admin/AuditLogs';
-import { initializeApiClient } from './api/client';
 import LoadingSpinner from './components/LoadingSpinner';
+import {
+  ChartBarIcon,
+  DocumentTextIcon,
+  ShieldCheckIcon,
+  GlobeAltIcon,
+  ExclamationTriangleIcon,
+  Cog6ToothIcon,
+  CrownIcon,
+  UsersIcon,
+  BuildingOfficeIcon,
+  CreditCardIcon,
+  ClipboardDocumentListIcon,
+} from '@heroicons/react/24/outline';
 
 // Development mode bypass
 const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
@@ -35,12 +47,12 @@ const AppRoutes: React.FC = () => {
   // Navigation items for the sidebar - role-based
   const getNavigationItems = () => {
     const baseItems = [
-      { path: '/', label: 'Dashboard', icon: '📊' },
-      { path: '/logs', label: 'Logs', icon: '📝' },
-      { path: '/security', label: 'Security', icon: '🔒' },
-      { path: '/network', label: 'Network', icon: '🌐' },
-      { path: '/anomalies', label: 'Anomalies', icon: '⚠️' },
-      { path: '/settings', label: 'Settings', icon: '⚙️' },
+      { path: '/', label: 'Dashboard', icon: 'ChartBarIcon' },
+      { path: '/logs', label: 'Logs', icon: 'DocumentTextIcon' },
+      { path: '/security', label: 'Security', icon: 'ShieldCheckIcon' },
+      { path: '/network', label: 'Network', icon: 'GlobeAltIcon' },
+      { path: '/anomalies', label: 'Anomalies', icon: 'ExclamationTriangleIcon' },
+      { path: '/settings', label: 'Settings', icon: 'Cog6ToothIcon' },
     ];
 
     // Add admin navigation items for users with system_admin permissions
@@ -48,11 +60,11 @@ const AppRoutes: React.FC = () => {
     if (user?.role === 'superadmin' || user?.role === 'admin') {
       return [
         ...baseItems,
-        { path: '/admin', label: 'Admin Dashboard', icon: '👑' },
-        { path: '/admin/users', label: 'Users', icon: '👥' },
-        { path: '/admin/tenants', label: 'Tenants', icon: '🏢' },
-        { path: '/admin/billing', label: 'Billing', icon: '💳' },
-        { path: '/admin/audit', label: 'Audit Logs', icon: '📋' },
+        { path: '/admin', label: 'Admin Dashboard', icon: 'CrownIcon' },
+        { path: '/admin/users', label: 'Users', icon: 'UsersIcon' },
+        { path: '/admin/tenants', label: 'Tenants', icon: 'BuildingOfficeIcon' },
+        { path: '/admin/billing', label: 'Billing', icon: 'CreditCardIcon' },
+        { path: '/admin/audit', label: 'Audit Logs', icon: 'ClipboardDocumentListIcon' },
       ];
     }
 
@@ -157,34 +169,12 @@ const AppRoutes: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  const [isInitialized, setIsInitialized] = useState(DEV_MODE);
-  const [error, setError] = useState<string | null>(null);
+  // In development mode, we don't need to initialize the API client at app level
+  // API client initialization happens after login in AuthContext
+  const [isInitialized] = useState(true);
+  const [error] = useState<string | null>(null);
 
-  useEffect(() => {
-    const init = async () => {
-      try {
-        // In development mode, skip API client initialization
-        if (DEV_MODE) {
-          setIsInitialized(true);
-          return;
-        }
-
-        const success = await initializeApiClient();
-        if (!success) {
-          setError('Failed to initialize API client. Please check your connection and try again.');
-        }
-        setIsInitialized(true);
-      } catch (err) {
-        console.error('Initialization error:', err);
-        setError('An unexpected error occurred while initializing the application.');
-        setIsInitialized(true);
-      }
-    };
-
-    if (!DEV_MODE) {
-      init();
-    }
-  }, []);
+  // Remove the useEffect that was causing conflicts with login-based initialization
 
   if (!isInitialized) {
     return (

@@ -52,8 +52,9 @@ export class ApiClient {
 
     this.setupInterceptors();
     
-    // Set dev API key immediately in development mode
-    if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
+    // Set dev API key immediately in development mode (but not in Enterprise mode)
+    if ((process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') && 
+        import.meta.env.VITE_MOCK_DATA === 'true') {
       this.setApiKey('dev-api-key');
     }
   }
@@ -95,24 +96,40 @@ export class ApiClient {
           ));
         }
         if (error.response?.status === 401 || error.response?.status === 403) {
-          // In development mode, only clear on 401 (not 403) to avoid API key issues
-          if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
+          // In mock mode, only clear on 401 (not 403) to avoid API key issues
+          if (import.meta.env.VITE_MOCK_DATA === 'true') {
             if (error.response?.status === 401) {
               localStorage.removeItem('auth_token');
               if (!window.location.pathname.includes('/login')) {
                 window.location.href = '/login';
               }
             }
-            // Don't clear API key or redirect on 403 in dev mode
+            // Don't clear API key or redirect on 403 in mock mode
             return Promise.reject(error);
           }
           
-          // Clear both auth token and API key on auth errors in production
-          localStorage.removeItem('auth_token');
-          this.clearApiKey();
-          if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
+          // In production mode, be more careful about clearing auth state
+          // Only clear on 401 (unauthorized) or if we don't have an API key and get 403
+          if (error.response?.status === 401) {
+            // 401 means the JWT token is invalid/expired
+            localStorage.removeItem('auth_token');
+            this.clearApiKey();
+            if (!window.location.pathname.includes('/login')) {
+              window.location.href = '/login';
+            }
+          } else if (error.response?.status === 403 && !this.apiKey) {
+            // 403 without API key means we need to re-authenticate
+            // But only if we're not currently initializing
+            if (this.isInitialized) {
+              localStorage.removeItem('auth_token');
+              this.clearApiKey();
+              if (!window.location.pathname.includes('/login')) {
+                window.location.href = '/login';
+              }
+            }
           }
+          // If we have an API key and get 403, it might be a permission issue, not auth
+          // Don't clear auth state in this case
         }
         return Promise.reject(error);
       }
@@ -120,19 +137,16 @@ export class ApiClient {
   }
 
   async initialize(): Promise<void> {
-    // Only initialize once
-    if (this.isInitialized) {
+    // Only initialize once successfully
+    if (this.isInitialized && this.apiKey) {
+      console.log('API client already initialized with API key, skipping...');
       return;
     }
 
-    // In development mode, set a default API key and token
-    const isDev = import.meta.env.DEV || 
-                  import.meta.env.VITE_MOCK_DATA === 'true' || 
-                  window.location.hostname === 'localhost' ||
-                  window.location.hostname === '127.0.0.1' ||
-                  window.location.port === '5173';
+    // In development mode with mock data, set a default API key and token
+    const isMockMode = import.meta.env.VITE_MOCK_DATA === 'true';
     
-    if (isDev) {
+    if (isMockMode) {
       this.setApiKey('dev-api-key');
       // Set a dev token if none exists
       if (!localStorage.getItem('auth_token')) {
@@ -145,23 +159,34 @@ export class ApiClient {
 
     // Check if we have an auth token
     const token = localStorage.getItem('auth_token');
+    console.log('Initializing API client... Token exists:', !!token);
+    
     if (!token) {
-      this.isInitialized = true;
+      console.log('No auth token found, skipping API key initialization');
+      this.isInitialized = false;
       return;
     }
 
-    // Try to get the API key, but don't block initialization if it fails
     try {
+      console.log('Attempting to get API key...');
       const response = await this.client.get<ApiResponse<{ api_key: string }>>('/api/get-api-key');
+      console.log('API key response received:', response);
+      
       if (response?.data?.data?.api_key) {
         this.setApiKey(response.data.data.api_key);
+        console.log('API key set successfully:', response.data.data.api_key.substring(0, 10) + '...');
+        this.isInitialized = true;
+        console.log('API client initialization complete with API key');
+      } else {
+        console.warn('No API key in response:', response);
+        this.isInitialized = false;
+        throw new Error('No API key received from server');
       }
     } catch (error) {
-      console.warn('Failed to get API key:', error);
-      // Don't throw the error, just log it
-      // The API key is not required for all endpoints
-    } finally {
-      this.isInitialized = true;
+      console.error('Failed to get API key:', error);
+      this.isInitialized = false;
+      // Throw the error so the caller knows initialization failed
+      throw error;
     }
   }
 
@@ -233,11 +258,15 @@ export const apiClient = new ApiClient();
 export async function initializeApiClient(): Promise<boolean> {
   try {
     await apiClient.initialize();
+    console.log('API client initialized successfully');
     return true;
   } catch (error) {
     console.error('Failed to initialize API client:', error);
-    // Don't throw the error, just return false
-    // The API key is not required for all endpoints
+    console.error('Error details:', {
+      message: (error as Error)?.message,
+      status: (error as { response?: { status?: number } })?.response?.status,
+      data: (error as { response?: { data?: unknown } })?.response?.data
+    });
     return false;
   }
 }

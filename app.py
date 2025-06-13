@@ -896,18 +896,22 @@ async def login(request: LoginRequest):
         # Update login tracking with new session management
         try:
             db = Database()
-            await db.update_user_login(user['id'])
-            
-            # Log the login for audit
-            await db.store_log({
-                'level': 'info',
-                'category': 'auth',
-                'source': 'login_api',
-                'message': f"User {user['username']} logged in",
-                'metadata': f'{{"user_id": {user["id"]}, "role": "{user["role"]}"}}'
-            })
-            
-            logger.info(f"Updated login tracking for user '{request.username}'")
+            user_id = user.get('id') or user.get('user_id')
+            if user_id:
+                await db.update_user_login(user_id)
+                
+                # Log the login for audit
+                await db.store_log({
+                    'level': 'info',
+                    'category': 'auth',
+                    'source': 'login_api',
+                    'message': f"User {user['username']} logged in",
+                    'metadata': f'{{"user_id": {user_id}, "role": "{user["role"]}"}}'
+                })
+                
+                logger.info(f"Updated login tracking for user '{request.username}'")
+            else:
+                logger.warning(f"No user ID found for login tracking: {user}")
         except Exception as e:
             logger.error(f"Error updating login tracking for user '{request.username}': {str(e)}")
             # Continue with login even if login tracking update fails
@@ -915,16 +919,21 @@ async def login(request: LoginRequest):
         # Get user's organization information (handle gracefully if none)
         try:
             db = Database()
-            user_orgs = await db.get_user_organizations(user['id'])
-            primary_org_id = user_orgs[0]['organization_id'] if user_orgs else None
+            user_id = user.get('id') or user.get('user_id')
+            if user_id:
+                user_orgs = await db.get_user_organizations(user_id)
+                primary_org_id = user_orgs[0]['organization_id'] if user_orgs else None
+            else:
+                primary_org_id = None
         except Exception as org_error:
             logger.warning(f"Could not get organization for user {user['username']}: {str(org_error)}")
             primary_org_id = None
         
         # Create access token with role and organization information
+        user_id = user.get('id') or user.get('user_id')
         token_data = {
             "sub": user["username"],
-            "user_id": user["id"],
+            "user_id": user_id,
             "role": user["role"],
             "org_id": primary_org_id,
             "email": user["email"]
@@ -938,14 +947,15 @@ async def login(request: LoginRequest):
         logger.info(f"User '{request.username}' successfully logged in")
         
         # Create login response
+        user_id = user.get('id') or user.get('user_id')
         login_response = LoginResponse(
             token=access_token,
             user=UserResponse(
-                id=user["id"],
+                id=user_id,
                 username=user["username"],
                 email=user["email"],
                 role=user["role"],
-                last_login=user["last_login"]
+                last_login=user.get("last_login")
             )
         )
         
@@ -1048,7 +1058,12 @@ async def whoami(current_user: dict = Depends(get_current_user)):
         # Add organization information to response data
         response_data = user_response.dict()
         response_data['org_id'] = primary_org_id
-        response_data['organization_name'] = user_orgs[0]['organization_name'] if user_orgs else None
+        
+        # Get organization name safely
+        org_name = None
+        if user_orgs and len(user_orgs) > 0:
+            org_name = user_orgs[0].get('organization_name') or user_orgs[0].get('name')
+        response_data['organization_name'] = org_name
         
         return ApiResponse(
             status="success",
@@ -1069,18 +1084,30 @@ async def logout(current_user: dict = Depends(get_current_user)):
         # Update logout tracking
         db = Database()
         user_id = current_user.get('id') or current_user.get('user_id')
-        await db.update_user_logout(user_id)
+        if not user_id:
+            logger.error(f"No user ID found in current_user: {current_user}")
+            # Try to find user by username as fallback
+            if current_user.get('username'):
+                user = get_user_by_username(current_user['username'])
+                if user:
+                    user_id = user['id']
         
-        # Log the logout for audit
-        await db.store_log({
-            'level': 'info',
-            'category': 'auth',
-            'source': 'logout_api',
-            'message': f"User {current_user['username']} logged out",
-            'metadata': f'{{"user_id": {user_id}, "role": "{current_user.get("role", "unknown")}"}}'
-        })
+        if user_id:
+            await db.update_user_logout(user_id)
+            
+            # Log the logout for audit
+            await db.store_log({
+                'level': 'info',
+                'category': 'auth',
+                'source': 'logout_api',
+                'message': f"User {current_user.get('username', 'unknown')} logged out",
+                'metadata': f'{{"user_id": {user_id}, "role": "{current_user.get("role", "unknown")}"}}'
+            })
+            
+            logger.info(f"User '{current_user.get('username', 'unknown')}' logged out successfully")
+        else:
+            logger.warning(f"Could not determine user ID for logout: {current_user}")
         
-        logger.info(f"User '{current_user['username']}' logged out successfully")
         return ApiResponse(
             status="success",
             data={"message": "Successfully logged out"},
@@ -1227,7 +1254,7 @@ async def get_api_key_endpoint(request: Request, current_user: dict = Depends(ge
             )
         
         # Only allow admin users to get the API key
-        if current_user["role"] != "admin":
+        if current_user["role"] not in ["superadmin", "manager", "admin", "platform_admin"]:
             raise HTTPException(
                 status_code=403,
                 detail="Only admin users can access the API key"
@@ -2097,3 +2124,500 @@ async def create_test_notifications(request: Request, api_key: APIKey = Depends(
     except Exception as e:
         logger.error(f"Error creating test notifications: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error creating test notifications: {str(e)}")
+
+# ===== PROFILE MANAGEMENT MODELS =====
+
+class UpdateProfileRequest(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    department: Optional[str] = None
+    title: Optional[str] = None
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+class Enable2FARequest(BaseModel):
+    verification_code: Optional[str] = None
+
+class CreateAPIKeyRequest(BaseModel):
+    name: str
+
+class APIKeyResponse(BaseModel):
+    id: str
+    name: str
+    key: str
+    created_at: str
+    last_used: Optional[str] = None
+
+class SessionResponse(BaseModel):
+    id: str
+    device: str
+    browser: str
+    location: str
+    ip: str
+    last_active: str
+    current: bool
+
+class ActivityLogResponse(BaseModel):
+    id: str
+    action: str
+    timestamp: str
+    ip: str
+    user_agent: str
+
+class UserProfileResponse(BaseModel):
+    id: str
+    username: str
+    email: str
+    name: Optional[str] = None
+    role: str
+    status: str
+    last_login: Optional[str] = None
+    created_at: str
+    department: Optional[str] = None
+    title: Optional[str] = None
+    phone: Optional[str] = None
+    permissions: List[str] = []
+    activity_log: List[ActivityLogResponse] = []
+    org_id: Optional[str] = None
+    organization_name: Optional[str] = None
+    login_count: int = 0
+    last_logout: Optional[str] = None
+    two_factor_enabled: bool = False
+
+# ===== PROFILE MANAGEMENT ENDPOINTS =====
+
+@app.get("/api/user/profile", response_model=ApiResponse[UserProfileResponse])
+async def get_user_profile(current_user: dict = Depends(get_current_user)):
+    """Get current user's profile information."""
+    try:
+        db = Database()
+        
+        # Get user with session info
+        user_data = await db.get_user_with_session_info(current_user['id'])
+        if not user_data:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get user's organization information
+        try:
+            user_orgs = await db.get_user_organizations(current_user['id'])
+            primary_org_id = user_orgs[0]['organization_id'] if user_orgs else None
+            org_name = user_orgs[0].get('organization_name') if user_orgs else None
+        except Exception:
+            primary_org_id = None
+            org_name = None
+        
+        # Get user's activity log (last 10 activities)
+        activity_log = await db.get_user_activity_log(current_user['id'], limit=10)
+        
+        # Get user permissions based on role
+        permissions = db.get_role_permissions(user_data['role'])
+        
+        profile = UserProfileResponse(
+            id=str(user_data['id']),
+            username=user_data['username'],
+            email=user_data['email'],
+            name=user_data.get('name') or user_data['username'],
+            role=user_data['role'],
+            status='active' if user_data.get('is_active', True) else 'inactive',
+            last_login=user_data.get('last_login'),
+            created_at=user_data.get('created_at', datetime.now().isoformat()),
+            department=user_data.get('department'),
+            title=user_data.get('title'),
+            phone=user_data.get('phone'),
+            permissions=permissions,
+            activity_log=[
+                ActivityLogResponse(
+                    id=str(log['id']),
+                    action=log['action'],
+                    timestamp=log['timestamp'],
+                    ip=log['ip_address'],
+                    user_agent=log.get('user_agent', 'Unknown')
+                ) for log in activity_log
+            ],
+            org_id=primary_org_id,
+            organization_name=org_name,
+            login_count=user_data.get('login_count', 0),
+            last_logout=user_data.get('last_logout'),
+            two_factor_enabled=user_data.get('two_factor_enabled', False)
+        )
+        
+        return ApiResponse(
+            status="success",
+            data=profile,
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"Error getting user profile: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get user profile")
+
+@app.put("/api/user/profile", response_model=ApiResponse[UserProfileResponse])
+async def update_user_profile(
+    profile_update: UpdateProfileRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update current user's profile information."""
+    try:
+        db = Database()
+        
+        # Prepare update data
+        update_data = {}
+        if profile_update.name is not None:
+            update_data['name'] = profile_update.name
+        if profile_update.email is not None:
+            update_data['email'] = profile_update.email
+        if profile_update.phone is not None:
+            update_data['phone'] = profile_update.phone
+        if profile_update.department is not None:
+            update_data['department'] = profile_update.department
+        if profile_update.title is not None:
+            update_data['title'] = profile_update.title
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No valid fields to update")
+        
+        # Update user profile
+        success = await db.update_user_profile(current_user['id'], update_data)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update profile")
+        
+        # Log the activity
+        await db.log_user_activity(
+            user_id=current_user['id'],
+            action="Profile updated",
+            ip_address="127.0.0.1",  # TODO: Get real IP from request
+            user_agent="SecureNet Dashboard"
+        )
+        
+        # Return updated profile
+        return await get_user_profile(current_user)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating user profile: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update profile")
+
+@app.post("/api/auth/change-password", response_model=ApiResponse[Dict[str, str]])
+async def change_password(
+    password_request: ChangePasswordRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Change user's password."""
+    try:
+        db = Database()
+        
+        # Get current user data
+        user_data = db.get_user_by_username(current_user['username'])
+        if not user_data:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Verify current password
+        if not verify_password(password_request.current_password, user_data['password_hash']):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+        
+        # Validate new password
+        if len(password_request.new_password) < 8:
+            raise HTTPException(status_code=400, detail="New password must be at least 8 characters long")
+        
+        # Update password
+        success = await db.update_user_password(current_user['id'], password_request.new_password)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update password")
+        
+        # Log the activity
+        await db.log_user_activity(
+            user_id=current_user['id'],
+            action="Password changed",
+            ip_address="127.0.0.1",  # TODO: Get real IP from request
+            user_agent="SecureNet Dashboard"
+        )
+        
+        return ApiResponse(
+            status="success",
+            data={"message": "Password changed successfully"},
+            timestamp=datetime.now().isoformat()
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error changing password: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to change password")
+
+@app.post("/api/auth/2fa/enable", response_model=ApiResponse[Dict[str, str]])
+async def enable_2fa(
+    request: Enable2FARequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Enable two-factor authentication for user."""
+    try:
+        db = Database()
+        
+        # For now, we'll just mark 2FA as enabled
+        # In a real implementation, you would:
+        # 1. Generate a secret key
+        # 2. Create QR code
+        # 3. Verify the provided code
+        # 4. Store the secret securely
+        
+        success = await db.update_user_2fa_status(current_user['id'], True)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to enable 2FA")
+        
+        # Log the activity
+        await db.log_user_activity(
+            user_id=current_user['id'],
+            action="Two-factor authentication enabled",
+            ip_address="127.0.0.1",  # TODO: Get real IP from request
+            user_agent="SecureNet Dashboard"
+        )
+        
+        return ApiResponse(
+            status="success",
+            data={"message": "Two-factor authentication enabled successfully"},
+            timestamp=datetime.now().isoformat()
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error enabling 2FA: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to enable 2FA")
+
+@app.post("/api/auth/2fa/disable", response_model=ApiResponse[Dict[str, str]])
+async def disable_2fa(current_user: dict = Depends(get_current_user)):
+    """Disable two-factor authentication for user."""
+    try:
+        db = Database()
+        
+        success = await db.update_user_2fa_status(current_user['id'], False)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to disable 2FA")
+        
+        # Log the activity
+        await db.log_user_activity(
+            user_id=current_user['id'],
+            action="Two-factor authentication disabled",
+            ip_address="127.0.0.1",  # TODO: Get real IP from request
+            user_agent="SecureNet Dashboard"
+        )
+        
+        return ApiResponse(
+            status="success",
+            data={"message": "Two-factor authentication disabled successfully"},
+            timestamp=datetime.now().isoformat()
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error disabling 2FA: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to disable 2FA")
+
+@app.get("/api/user/api-keys", response_model=ApiResponse[List[APIKeyResponse]])
+async def get_user_api_keys(current_user: dict = Depends(get_current_user)):
+    """Get user's API keys."""
+    try:
+        db = Database()
+        
+        api_keys = await db.get_user_api_keys(current_user['id'])
+        
+        keys_response = [
+            APIKeyResponse(
+                id=str(key['id']),
+                name=key['name'],
+                key=key['key_preview'],  # Only show preview for security
+                created_at=key['created_at'],
+                last_used=key.get('last_used')
+            ) for key in api_keys
+        ]
+        
+        return ApiResponse(
+            status="success",
+            data=keys_response,
+            timestamp=datetime.now().isoformat()
+        )
+        
+    except Exception as e:
+        logger.error(f"Error getting user API keys: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get API keys")
+
+@app.post("/api/user/api-keys", response_model=ApiResponse[APIKeyResponse])
+async def create_user_api_key(
+    key_request: CreateAPIKeyRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new API key for user."""
+    try:
+        db = Database()
+        
+        # Generate new API key
+        api_key = f"sk_{secrets.token_urlsafe(32)}"
+        
+        # Store API key
+        key_id = await db.create_user_api_key(
+            user_id=current_user['id'],
+            name=key_request.name,
+            key=api_key
+        )
+        
+        if not key_id:
+            raise HTTPException(status_code=500, detail="Failed to create API key")
+        
+        # Log the activity
+        await db.log_user_activity(
+            user_id=current_user['id'],
+            action=f"API key created: {key_request.name}",
+            ip_address="127.0.0.1",  # TODO: Get real IP from request
+            user_agent="SecureNet Dashboard"
+        )
+        
+        key_response = APIKeyResponse(
+            id=str(key_id),
+            name=key_request.name,
+            key=api_key,  # Return full key only on creation
+            created_at=datetime.now().isoformat(),
+            last_used=None
+        )
+        
+        return ApiResponse(
+            status="success",
+            data=key_response,
+            timestamp=datetime.now().isoformat()
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating API key: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create API key")
+
+@app.delete("/api/user/api-keys/{key_id}", response_model=ApiResponse[Dict[str, str]])
+async def delete_user_api_key(
+    key_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete user's API key."""
+    try:
+        db = Database()
+        
+        success = await db.delete_user_api_key(current_user['id'], key_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="API key not found")
+        
+        # Log the activity
+        await db.log_user_activity(
+            user_id=current_user['id'],
+            action=f"API key deleted: {key_id}",
+            ip_address="127.0.0.1",  # TODO: Get real IP from request
+            user_agent="SecureNet Dashboard"
+        )
+        
+        return ApiResponse(
+            status="success",
+            data={"message": "API key deleted successfully"},
+            timestamp=datetime.now().isoformat()
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting API key: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete API key")
+
+@app.get("/api/user/sessions", response_model=ApiResponse[List[SessionResponse]])
+async def get_user_sessions(current_user: dict = Depends(get_current_user)):
+    """Get user's active sessions."""
+    try:
+        db = Database()
+        
+        sessions = await db.get_user_sessions(current_user['id'])
+        
+        sessions_response = [
+            SessionResponse(
+                id=str(session['id']),
+                device=session.get('device', 'Unknown Device'),
+                browser=session.get('browser', 'Unknown Browser'),
+                location=session.get('location', 'Unknown Location'),
+                ip=session['ip_address'],
+                last_active=session['last_active'],
+                current=session.get('current', False)
+            ) for session in sessions
+        ]
+        
+        return ApiResponse(
+            status="success",
+            data=sessions_response,
+            timestamp=datetime.now().isoformat()
+        )
+        
+    except Exception as e:
+        logger.error(f"Error getting user sessions: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get sessions")
+
+@app.delete("/api/user/sessions/{session_id}", response_model=ApiResponse[Dict[str, str]])
+async def terminate_user_session(
+    session_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Terminate a user session."""
+    try:
+        db = Database()
+        
+        success = await db.terminate_user_session(current_user['id'], session_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Log the activity
+        await db.log_user_activity(
+            user_id=current_user['id'],
+            action=f"Session terminated: {session_id}",
+            ip_address="127.0.0.1",  # TODO: Get real IP from request
+            user_agent="SecureNet Dashboard"
+        )
+        
+        return ApiResponse(
+            status="success",
+            data={"message": "Session terminated successfully"},
+            timestamp=datetime.now().isoformat()
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error terminating session: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to terminate session")
+
+@app.get("/api/user/activity", response_model=ApiResponse[List[ActivityLogResponse]])
+async def get_user_activity(
+    current_user: dict = Depends(get_current_user),
+    limit: int = 50
+):
+    """Get user's activity log."""
+    try:
+        db = Database()
+        
+        activity_log = await db.get_user_activity_log(current_user['id'], limit=limit)
+        
+        activity_response = [
+            ActivityLogResponse(
+                id=str(log['id']),
+                action=log['action'],
+                timestamp=log['timestamp'],
+                ip=log['ip_address'],
+                user_agent=log.get('user_agent', 'Unknown')
+            ) for log in activity_log
+        ]
+        
+        return ApiResponse(
+            status="success",
+            data=activity_response,
+            timestamp=datetime.now().isoformat()
+        )
+        
+    except Exception as e:
+        logger.error(f"Error getting user activity: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get activity log")

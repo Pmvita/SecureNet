@@ -41,8 +41,8 @@ class OrganizationStatus(Enum):
 class UserRole(Enum):
     """User role types for 3-tier RBAC system."""
     SUPERADMIN = "superadmin"      # Full platform access, tenant management
-    PLATFORM_ADMIN = "platform_admin"  # Organization admin with advanced controls
-    END_USER = "end_user"          # Standard tenant user
+    MANAGER = "manager"            # Organization admin with advanced controls (previously platform_admin)
+    ANALYST = "analyst"            # Standard tenant user (previously end_user)
 
 class Database:
     _instances = {}  # Process-specific instances
@@ -253,7 +253,7 @@ class Database:
                 
                 rows = await cursor.fetchall()
                 return [{
-                    'id': row[0],
+                    'organization_id': row[0],  # changed from 'id' to 'organization_id'
                     'name': row[1],
                     'status': row[2],
                     'plan_type': row[3],
@@ -3212,6 +3212,61 @@ class Database:
                     )
                 """)
 
+                # ===== PROFILE MANAGEMENT TABLES =====
+
+                # Add profile fields to users table
+                await add_column_if_not_exists('users', 'name', 'TEXT')
+                await add_column_if_not_exists('users', 'phone', 'TEXT')
+                await add_column_if_not_exists('users', 'department', 'TEXT')
+                await add_column_if_not_exists('users', 'title', 'TEXT')
+                await add_column_if_not_exists('users', 'two_factor_enabled', 'BOOLEAN DEFAULT 0')
+
+                # Create user_api_keys table
+                await cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS user_api_keys (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        key TEXT NOT NULL,
+                        is_active BOOLEAN DEFAULT 1,
+                        last_used TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id)
+                    )
+                """)
+
+                # Create user_sessions table
+                await cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS user_sessions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        device TEXT,
+                        browser TEXT,
+                        location TEXT,
+                        ip_address TEXT NOT NULL,
+                        is_current BOOLEAN DEFAULT 0,
+                        is_active BOOLEAN DEFAULT 1,
+                        last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id)
+                    )
+                """)
+
+                # Create user_activity_log table
+                await cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS user_activity_log (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        action TEXT NOT NULL,
+                        ip_address TEXT NOT NULL,
+                        user_agent TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id)
+                    )
+                """)
+
                 # Create cve_data table
                 await cursor.execute("""
                     CREATE TABLE IF NOT EXISTS cve_data (
@@ -4196,7 +4251,7 @@ class Database:
                 'view_organization', 'manage_organization_users', 'manage_settings',
                 'view_organization_logs', 'manage_alerts', 'view_billing'
             ],
-            UserRole.END_USER.value: [
+            UserRole.ANALYST.value: [
                 'view_dashboard', 'view_logs', 'view_network', 'view_security',
                 'view_anomalies', 'view_profile'
             ]
@@ -4242,7 +4297,7 @@ class Database:
                         'username': 'user',
                         'email': 'user@secureorg.com',
                         'password': 'enduser123',
-                        'role': UserRole.END_USER.value,
+                        'role': UserRole.ANALYST.value,
                         'org_id': default_org_id
                     }
                 ]
@@ -4381,3 +4436,382 @@ class Database:
                 
         except Exception as e:
             logger.error(f"Error creating sample org data: {str(e)}")
+
+    async def get_user_by_email(self, email: str) -> Optional[Dict]:
+        """Get user by email address."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT id, username, email, role, is_active, created_at
+                    FROM users 
+                    WHERE email = ? AND is_active = 1
+                """, (email,))
+                
+                row = await cursor.fetchone()
+                if row:
+                    return {
+                        'id': row[0],
+                        'username': row[1],
+                        'email': row[2],
+                        'role': row[3],
+                        'is_active': bool(row[4]),
+                        'created_at': row[5]
+                    }
+                return None
+        except Exception as e:
+            logger.error(f"Error getting user by email: {str(e)}")
+            return None
+
+    async def create_user_admin(self, username: str, email: str, password: str, role: str, organization_id: Optional[str] = None) -> Optional[int]:
+        """Create a new user (admin operation)."""
+        try:
+            # Hash the password
+            from passlib.context import CryptContext
+            pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+            password_hash = pwd_context.hash(password)
+            
+            async with aiosqlite.connect(self.db_path) as conn:
+                # Create user
+                cursor = await conn.execute("""
+                    INSERT INTO users (username, email, password_hash, role, is_active, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, 1, ?, ?)
+                """, (
+                    username, email, password_hash, role,
+                    datetime.now().isoformat(), datetime.now().isoformat()
+                ))
+                
+                user_id = cursor.lastrowid
+                
+                # If organization_id is provided, add user to that organization
+                if organization_id:
+                    await conn.execute("""
+                        INSERT INTO org_users (organization_id, user_id, role, created_at)
+                        VALUES (?, ?, ?, ?)
+                    """, (organization_id, user_id, 'member', datetime.now().isoformat()))
+                else:
+                    # Add to default organization if no specific org provided
+                    default_org_id = await self.ensure_default_organization()
+                    await conn.execute("""
+                        INSERT INTO org_users (organization_id, user_id, role, created_at)
+                        VALUES (?, ?, ?, ?)
+                    """, (default_org_id, user_id, 'member', datetime.now().isoformat()))
+                
+                await conn.commit()
+                logger.info(f"Created user: {username} (ID: {user_id})")
+                return user_id
+        except Exception as e:
+            logger.error(f"Error creating user: {str(e)}")
+            return None
+
+    async def delete_user_admin(self, user_id: int) -> bool:
+        """Delete a user (admin operation)."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                # Remove from organization relationships
+                await conn.execute("DELETE FROM org_users WHERE user_id = ?", (user_id,))
+                
+                # Mark user as inactive instead of hard delete to preserve audit trail
+                await conn.execute("""
+                    UPDATE users 
+                    SET is_active = 0, updated_at = ?
+                    WHERE id = ?
+                """, (datetime.now().isoformat(), user_id))
+                
+                await conn.commit()
+                logger.info(f"Deleted user ID: {user_id}")
+                return True
+        except Exception as e:
+            logger.error(f"Error deleting user: {str(e)}")
+            return False
+
+    async def update_user_admin(self, user_id: int, updates: Dict) -> bool:
+        """Update user information (admin operation)."""
+        try:
+            if not updates:
+                return True
+            
+            # Build dynamic update query
+            set_clauses = []
+            values = []
+            
+            for field, value in updates.items():
+                if field in ['username', 'email', 'role', 'is_active']:
+                    set_clauses.append(f"{field} = ?")
+                    values.append(value)
+            
+            if not set_clauses:
+                return True
+            
+            # Add updated_at timestamp
+            set_clauses.append("updated_at = ?")
+            values.append(datetime.now().isoformat())
+            values.append(user_id)
+            
+            async with aiosqlite.connect(self.db_path) as conn:
+                query = f"UPDATE users SET {', '.join(set_clauses)} WHERE id = ?"
+                await conn.execute(query, values)
+                await conn.commit()
+                
+                logger.info(f"Updated user ID: {user_id} with changes: {updates}")
+                return True
+        except Exception as e:
+            logger.error(f"Error updating user: {str(e)}")
+            return False
+
+    async def store_log(self, log_data: Dict) -> bool:
+        """Store a log entry in the database."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute("""
+                    INSERT INTO logs (timestamp, level, category, source, message, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    log_data.get('timestamp', datetime.now().isoformat()),
+                    log_data.get('level', 'info'),
+                    log_data.get('category', 'system'),
+                    log_data.get('source', 'unknown'),
+                    log_data.get('message', ''),
+                    json.dumps(log_data.get('metadata', {}))
+                ))
+                await conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error storing log: {str(e)}")
+            return False
+
+    # ===== PROFILE MANAGEMENT METHODS =====
+
+    async def update_user_profile(self, user_id: int, update_data: Dict) -> bool:
+        """Update user profile information."""
+        try:
+            # Build dynamic update query
+            set_clauses = []
+            values = []
+            
+            for field, value in update_data.items():
+                if field in ['name', 'email', 'phone', 'department', 'title']:
+                    set_clauses.append(f"{field} = ?")
+                    values.append(value)
+            
+            if not set_clauses:
+                return False
+            
+            # Add updated_at timestamp
+            set_clauses.append("updated_at = ?")
+            values.append(datetime.now().isoformat())
+            values.append(user_id)
+            
+            query = f"UPDATE users SET {', '.join(set_clauses)} WHERE id = ?"
+            
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute(query, values)
+                await conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error updating user profile: {str(e)}")
+            return False
+
+    async def update_user_password(self, user_id: int, new_password: str) -> bool:
+        """Update user password."""
+        try:
+            password_hash = get_password_hash(new_password)
+            
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute("""
+                    UPDATE users 
+                    SET password_hash = ?, updated_at = ?
+                    WHERE id = ?
+                """, (password_hash, datetime.now().isoformat(), user_id))
+                await conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error updating user password: {str(e)}")
+            return False
+
+    async def update_user_2fa_status(self, user_id: int, enabled: bool) -> bool:
+        """Update user's 2FA status."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute("""
+                    UPDATE users 
+                    SET two_factor_enabled = ?, updated_at = ?
+                    WHERE id = ?
+                """, (enabled, datetime.now().isoformat(), user_id))
+                await conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error updating user 2FA status: {str(e)}")
+            return False
+
+    async def get_user_api_keys(self, user_id: int) -> List[Dict]:
+        """Get user's API keys."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT id, name, key, created_at, last_used
+                    FROM user_api_keys
+                    WHERE user_id = ? AND is_active = 1
+                    ORDER BY created_at DESC
+                """, (user_id,))
+                
+                rows = await cursor.fetchall()
+                return [
+                    {
+                        'id': row[0],
+                        'name': row[1],
+                        'key_preview': f"{row[2][:8]}...{row[2][-4:]}",  # Show only preview
+                        'created_at': row[3],
+                        'last_used': row[4]
+                    } for row in rows
+                ]
+        except Exception as e:
+            logger.error(f"Error getting user API keys: {str(e)}")
+            return []
+
+    async def create_user_api_key(self, user_id: int, name: str, key: str) -> Optional[int]:
+        """Create a new API key for user."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    INSERT INTO user_api_keys (user_id, name, key, created_at, is_active)
+                    VALUES (?, ?, ?, ?, 1)
+                """, (user_id, name, key, datetime.now().isoformat()))
+                
+                await conn.commit()
+                return cursor.lastrowid
+        except Exception as e:
+            logger.error(f"Error creating user API key: {str(e)}")
+            return None
+
+    async def delete_user_api_key(self, user_id: int, key_id: str) -> bool:
+        """Delete user's API key."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    UPDATE user_api_keys 
+                    SET is_active = 0, updated_at = ?
+                    WHERE id = ? AND user_id = ?
+                """, (datetime.now().isoformat(), key_id, user_id))
+                
+                await conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error deleting user API key: {str(e)}")
+            return False
+
+    async def get_user_sessions(self, user_id: int) -> List[Dict]:
+        """Get user's active sessions."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT id, device, browser, location, ip_address, last_active, is_current
+                    FROM user_sessions
+                    WHERE user_id = ? AND is_active = 1
+                    ORDER BY last_active DESC
+                """, (user_id,))
+                
+                rows = await cursor.fetchall()
+                return [
+                    {
+                        'id': row[0],
+                        'device': row[1],
+                        'browser': row[2],
+                        'location': row[3],
+                        'ip_address': row[4],
+                        'last_active': row[5],
+                        'current': bool(row[6])
+                    } for row in rows
+                ]
+        except Exception as e:
+            logger.error(f"Error getting user sessions: {str(e)}")
+            return []
+
+    async def terminate_user_session(self, user_id: int, session_id: str) -> bool:
+        """Terminate a user session."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    UPDATE user_sessions 
+                    SET is_active = 0, updated_at = ?
+                    WHERE id = ? AND user_id = ? AND is_current = 0
+                """, (datetime.now().isoformat(), session_id, user_id))
+                
+                await conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error terminating user session: {str(e)}")
+            return False
+
+    async def log_user_activity(self, user_id: int, action: str, ip_address: str, user_agent: str) -> bool:
+        """Log user activity."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute("""
+                    INSERT INTO user_activity_log (user_id, action, ip_address, user_agent, timestamp)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (user_id, action, ip_address, user_agent, datetime.now().isoformat()))
+                
+                await conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error logging user activity: {str(e)}")
+            return False
+
+    async def get_user_activity_log(self, user_id: int, limit: int = 50) -> List[Dict]:
+        """Get user's activity log."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT id, action, ip_address, user_agent, timestamp
+                    FROM user_activity_log
+                    WHERE user_id = ?
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                """, (user_id, limit))
+                
+                rows = await cursor.fetchall()
+                return [
+                    {
+                        'id': row[0],
+                        'action': row[1],
+                        'ip_address': row[2],
+                        'user_agent': row[3],
+                        'timestamp': row[4]
+                    } for row in rows
+                ]
+        except Exception as e:
+            logger.error(f"Error getting user activity log: {str(e)}")
+            return []
+
+    def get_role_permissions(self, role: str) -> List[str]:
+        """Get permissions for a user role."""
+        role_permissions = {
+            'superadmin': [
+                'manage_users', 'manage_organizations', 'view_audit_logs',
+                'manage_settings', 'view_logs', 'manage_security',
+                'manage_network', 'view_anomalies', 'manage_billing'
+            ],
+            'manager': [
+                'manage_org_users', 'manage_settings', 'view_logs',
+                'manage_security', 'manage_network', 'view_anomalies'
+            ],
+            'analyst': [
+                'view_logs', 'view_security', 'view_network', 'view_anomalies'
+            ],
+            'platform_admin': [  # Legacy role mapping
+                'manage_org_users', 'manage_settings', 'view_logs',
+                'manage_security', 'manage_network', 'view_anomalies'
+            ],
+            'end_user': [  # Legacy role mapping
+                'view_logs', 'view_security', 'view_network', 'view_anomalies'
+            ],
+            'admin': [  # Legacy role mapping
+                'manage_users', 'manage_organizations', 'view_audit_logs',
+                'manage_settings', 'view_logs', 'manage_security',
+                'manage_network', 'view_anomalies'
+            ],
+            'user': [  # Legacy role mapping
+                'view_logs', 'view_security', 'view_network', 'view_anomalies'
+            ]
+        }
+        return role_permissions.get(role, [])

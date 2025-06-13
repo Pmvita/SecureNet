@@ -9,8 +9,11 @@ from pydantic import BaseModel
 from typing import List, Dict, Optional
 from datetime import datetime
 import logging
+import os
+from jose import JWTError, jwt
 
 from database import Database, UserRole
+from src.security import SECRET_KEY, ALGORITHM
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer()
@@ -61,42 +64,134 @@ class OrganizationUpdate(BaseModel):
     plan_type: Optional[str] = None
     device_limit: Optional[int] = None
 
-async def get_superadmin_user(credentials: HTTPAuthorizationCredentials = Security(security)) -> Dict:
-    """Verify superadmin access and return user info."""
-    try:
-        api_key = credentials.credentials
-        if not api_key or not api_key.startswith("sk-"):
-            raise HTTPException(status_code=401, detail="Invalid API key format")
-        
-        db = Database()
-        org = await db.get_organization_by_api_key(api_key)
-        if not org:
-            raise HTTPException(status_code=401, detail="Invalid API key")
-        
-        # For now, we'll use a simple check - in production, this would be more sophisticated
-        # We need to get the actual user making the request
-        # This is a simplified implementation for the demo
+class CreateUserRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+    role: str
+    organization_id: Optional[str] = None
+
+class UpdateUserRequest(BaseModel):
+    username: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+
+# Add after line 15
+DEV_MODE = os.getenv("DEV_MODE", "true").lower() == "true"
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security)) -> Dict:
+    """Verify JWT token and return user info."""
+    # In development mode, return a dev superadmin user (skip JWT validation)
+    if DEV_MODE:
         return {
-            'id': 1,  # Placeholder
-            'role': UserRole.SUPERADMIN.value,
-            'organization_id': org['id']
+            "id": 1,
+            "username": "admin",
+            "email": "admin@securenet.local",
+            "role": "superadmin",
+            "last_login": datetime.now().isoformat()
         }
+    
+    try:
+        # Extract token from credentials
+        if not credentials:
+            logger.error("No credentials provided")
+            raise HTTPException(status_code=401, detail="Authorization header required")
+        
+        token = credentials.credentials
+        if not token:
+            logger.error("No token in credentials")
+            raise HTTPException(status_code=401, detail="Token required")
+        
+        # First try JWT authentication (for frontend)
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            
+            # Handle both username-based (sub) and user_id-based tokens
+            user_id = payload.get("user_id")
+            username = payload.get("sub")
+            
+            if not user_id and not username:
+                logger.error(f"Invalid token payload: {payload}")
+                raise HTTPException(status_code=401, detail="Invalid token payload")
+            
+            db = Database()
+            
+            # If we have user_id, use it directly
+            if user_id:
+                user = await db.get_user_with_session_info(user_id)
+            # Otherwise, look up by username
+            elif username:
+                from app import get_user_by_username
+                user = get_user_by_username(username)
+                if user:
+                    # Convert to the format expected by admin API
+                    user = await db.get_user_with_session_info(user['id'])
+            
+            if not user:
+                logger.error(f"User not found for user_id={user_id}, username={username}")
+                raise HTTPException(status_code=401, detail="User not found")
+            
+            # Ensure the user has sufficient permissions for admin access
+            allowed_admin_roles = ['superadmin', 'manager', 'platform_admin']
+            if user.get('role', '').lower() not in allowed_admin_roles:
+                logger.error(f"Insufficient permissions for user {user.get('username')} with role {user.get('role')}")
+                raise HTTPException(status_code=403, detail="Admin access required")
+            
+            return user
+            
+        except JWTError as e:
+            logger.error(f"JWT validation error: {str(e)}")
+            # Fall back to API key authentication (for API clients)
+            if token.startswith("sk-"):
+                db = Database()
+                org = await db.get_organization_by_api_key(token)
+                if not org:
+                    raise HTTPException(status_code=401, detail="Invalid API key")
+                
+                # Return a superadmin user for API key access
+                return {
+                    'id': 1,
+                    'role': 'superadmin',
+                    'username': 'api_access',
+                    'email': 'api@securenet.com',
+                    'organization_id': org['id']
+                }
+            else:
+                raise HTTPException(status_code=401, detail="Invalid authentication token")
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error validating superadmin access: {str(e)}")
+        logger.error(f"Error validating authentication: {str(e)}")
         raise HTTPException(status_code=401, detail="Authentication failed")
 
-async def verify_superadmin_permission(user: Dict = Depends(get_superadmin_user)) -> Dict:
+async def verify_superadmin_permission(user: Dict = Depends(get_current_user)) -> Dict:
     """Verify user has superadmin permissions."""
-    if user['role'] != UserRole.SUPERADMIN.value:
-        raise HTTPException(status_code=403, detail="Superadmin access required")
+    user_role = user.get('role', '').lower()
+    # Support both old and new role names for backward compatibility
+    allowed_roles = ['superadmin', 'manager', 'platform_admin', UserRole.SUPERADMIN.value, UserRole.MANAGER.value]
+    if user_role not in allowed_roles:
+        raise HTTPException(status_code=403, detail="Superadmin or Manager access required")
     return user
 
 @router.get("/users", response_model=List[UserInfo])
-async def get_all_users(user: Dict = Depends(verify_superadmin_permission)) -> List[UserInfo]:
-    """Get all users across all organizations (superadmin only)."""
+async def get_all_users(
+    org_filter: Optional[str] = None,
+    role_filter: Optional[str] = None,
+    user: Dict = Depends(verify_superadmin_permission)
+) -> List[UserInfo]:
+    """Get all users across all organizations with optional filtering (superadmin only)."""
     try:
         db = Database()
         users = await db.get_all_users_for_admin(user['role'])
+        
+        # Apply filters if provided
+        if org_filter:
+            users = [u for u in users if org_filter in u.get('organizations', [])]
+        
+        if role_filter and role_filter != 'all':
+            users = [u for u in users if u.get('role') == role_filter]
         
         return [UserInfo(**user_data) for user_data in users]
     except PermissionError as e:
@@ -327,4 +422,139 @@ async def impersonate_user(
         raise
     except Exception as e:
         logger.error(f"Error creating impersonation session: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to create impersonation session") 
+        raise HTTPException(status_code=500, detail="Failed to create impersonation session")
+
+@router.post("/users")
+async def create_user(
+    user_data: CreateUserRequest,
+    user: Dict = Depends(verify_superadmin_permission)
+) -> Dict:
+    """Create a new user (superadmin only)."""
+    try:
+        # Validate role
+        if user_data.role not in [role.value for role in UserRole]:
+            raise HTTPException(status_code=400, detail="Invalid role")
+        
+        db = Database()
+        
+        # Check if user already exists
+        existing_user = db.get_user_by_username(user_data.username)
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Username already exists")
+        
+        # Check if email already exists
+        existing_email = await db.get_user_by_email(user_data.email)
+        if existing_email:
+            raise HTTPException(status_code=400, detail="Email already exists")
+        
+        # Create user
+        user_id = await db.create_user_admin(
+            username=user_data.username,
+            email=user_data.email,
+            password=user_data.password,
+            role=user_data.role,
+            organization_id=user_data.organization_id
+        )
+        
+        if not user_id:
+            raise HTTPException(status_code=500, detail="Failed to create user")
+        
+        # Log the user creation for audit
+        await db.store_log({
+            'level': 'info',
+            'category': 'admin',
+            'source': 'admin_api',
+            'message': f"User created: {user_data.username} (ID: {user_id})",
+            'metadata': f'{{"admin_user_id": {user["id"]}, "created_user_id": {user_id}, "role": "{user_data.role}"}}'
+        })
+        
+        return {
+            "success": True, 
+            "message": "User created successfully",
+            "user_id": user_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating user: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create user")
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: int,
+    user: Dict = Depends(verify_superadmin_permission)
+) -> Dict:
+    """Delete a user (superadmin only)."""
+    try:
+        db = Database()
+        
+        # Get user info before deletion for logging
+        target_user = await db.get_user_with_session_info(user_id)
+        if not target_user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Prevent deletion of superadmin users for safety
+        if target_user['role'] == UserRole.SUPERADMIN.value:
+            raise HTTPException(status_code=400, detail="Cannot delete superadmin users")
+        
+        # Delete user
+        success = await db.delete_user_admin(user_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete user")
+        
+        # Log the user deletion for audit
+        await db.store_log({
+            'level': 'warning',
+            'category': 'admin',
+            'source': 'admin_api',
+            'message': f"User deleted: {target_user['username']} (ID: {user_id})",
+            'metadata': f'{{"admin_user_id": {user["id"]}, "deleted_user_id": {user_id}, "deleted_username": "{target_user["username"]}"}}'
+        })
+        
+        return {"success": True, "message": "User deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting user: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete user")
+
+@router.patch("/users/{user_id}")
+async def update_user(
+    user_id: int,
+    user_data: UpdateUserRequest,
+    user: Dict = Depends(verify_superadmin_permission)
+) -> Dict:
+    """Update user information (superadmin only)."""
+    try:
+        db = Database()
+        
+        # Validate role if provided
+        if user_data.role and user_data.role not in [role.value for role in UserRole]:
+            raise HTTPException(status_code=400, detail="Invalid role")
+        
+        # Get existing user
+        existing_user = await db.get_user_with_session_info(user_id)
+        if not existing_user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Update user
+        success = await db.update_user_admin(user_id, user_data.dict(exclude_none=True))
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update user")
+        
+        # Log the user update for audit
+        changes = user_data.dict(exclude_none=True)
+        await db.store_log({
+            'level': 'info',
+            'category': 'admin',
+            'source': 'admin_api',
+            'message': f"User updated: {existing_user['username']} (ID: {user_id})",
+            'metadata': f'{{"admin_user_id": {user["id"]}, "updated_user_id": {user_id}, "changes": {changes}}}'
+        })
+        
+        return {"success": True, "message": "User updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating user: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update user") 

@@ -20,13 +20,19 @@ interface NotificationState {
 }
 
 export function useRealTimeNotifications() {
-  const apiKey = apiClient.getApiKey();
+  const [apiKey, setApiKey] = useState<string | null>(null);
   const [state, setState] = useState<NotificationState>({
     notifications: [],
     unreadCount: 0,
     isConnected: false,
     connectionError: null,
   });
+
+  // Get API key reactively
+  useEffect(() => {
+    const key = apiClient.getApiKey();
+    setApiKey(key);
+  }, []);
   
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -35,29 +41,19 @@ export function useRealTimeNotifications() {
 
   // Fetch initial notifications from API
   const fetchNotifications = useCallback(async () => {
-    if (!apiKey) return;
-
     try {
-      const response = await fetch('/api/notifications?page=1&page_size=50', {
-        headers: {
-          'X-API-Key': apiKey,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const notifications = data.data.notifications || [];
-        
-        setState(prev => ({
-          ...prev,
-          notifications,
-          unreadCount: notifications.filter((n: RealTimeNotification) => !n.read).length,
-        }));
-      }
+      const response = await apiClient.get('/api/notifications?page=1&page_size=50');
+      const notifications = response.data.notifications || [];
+      
+      setState(prev => ({
+        ...prev,
+        notifications,
+        unreadCount: notifications.filter((n: RealTimeNotification) => !n.read).length,
+      }));
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
-  }, [apiKey]);
+  }, []);
 
   // Connect to WebSocket
   const connectWebSocket = useCallback(() => {
@@ -139,80 +135,50 @@ export function useRealTimeNotifications() {
 
   // Mark notification as read
   const markAsRead = useCallback(async (notificationId: number) => {
-    if (!apiKey) return;
-
     try {
-      const response = await fetch(`/api/notifications/${notificationId}/read`, {
-        method: 'POST',
-        headers: {
-          'X-API-Key': apiKey,
-        },
-      });
-
-      if (response.ok) {
-        setState(prev => ({
-          ...prev,
-          notifications: prev.notifications.map(n =>
-            n.id === notificationId ? { ...n, read: true } : n
-          ),
-          unreadCount: Math.max(0, prev.unreadCount - 1),
-        }));
-      }
+      await apiClient.post(`/api/notifications/${notificationId}/read`);
+      setState(prev => ({
+        ...prev,
+        notifications: prev.notifications.map(n =>
+          n.id === notificationId ? { ...n, read: true } : n
+        ),
+        unreadCount: Math.max(0, prev.unreadCount - 1),
+      }));
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
-  }, [apiKey]);
+  }, []);
 
   // Mark all notifications as read
   const markAllAsRead = useCallback(async () => {
-    if (!apiKey) return;
-
     try {
-      const response = await fetch('/api/notifications/read-all', {
-        method: 'POST',
-        headers: {
-          'X-API-Key': apiKey,
-        },
-      });
-
-      if (response.ok) {
-        setState(prev => ({
-          ...prev,
-          notifications: prev.notifications.map(n => ({ ...n, read: true })),
-          unreadCount: 0,
-        }));
-      }
+      await apiClient.post('/api/notifications/read-all');
+      setState(prev => ({
+        ...prev,
+        notifications: prev.notifications.map(n => ({ ...n, read: true })),
+        unreadCount: 0,
+      }));
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
-  }, [apiKey]);
+  }, []);
 
   // Delete notification
   const deleteNotification = useCallback(async (notificationId: number) => {
-    if (!apiKey) return;
-
     try {
-      const response = await fetch(`/api/notifications/${notificationId}`, {
-        method: 'DELETE',
-        headers: {
-          'X-API-Key': apiKey,
-        },
+      await apiClient.delete(`/api/notifications/${notificationId}`);
+      setState(prev => {
+        const notification = prev.notifications.find(n => n.id === notificationId);
+        return {
+          ...prev,
+          notifications: prev.notifications.filter(n => n.id !== notificationId),
+          unreadCount: notification && !notification.read ? prev.unreadCount - 1 : prev.unreadCount,
+        };
       });
-
-      if (response.ok) {
-        setState(prev => {
-          const notification = prev.notifications.find(n => n.id === notificationId);
-          return {
-            ...prev,
-            notifications: prev.notifications.filter(n => n.id !== notificationId),
-            unreadCount: notification && !notification.read ? prev.unreadCount - 1 : prev.unreadCount,
-          };
-        });
-      }
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
-  }, [apiKey]);
+  }, []);
 
   // Request browser notification permission
   const requestNotificationPermission = useCallback(async () => {
@@ -223,7 +189,9 @@ export function useRealTimeNotifications() {
 
   // Initialize
   useEffect(() => {
-    if (apiKey) {
+    // Check if we have a valid API key or auth token
+    const hasAuth = apiKey || localStorage.getItem('auth_token');
+    if (hasAuth) {
       fetchNotifications();
       connectWebSocket();
       requestNotificationPermission();

@@ -47,7 +47,7 @@ const OrganizationsManagement: React.FC = () => {
   const fetchOrganizations = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('/api/admin/organizations', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -65,27 +65,27 @@ const OrganizationsManagement: React.FC = () => {
     }
   };
 
-  const updateOrganization = async (orgId: string, updates: any) => {
+  const handleOrganizationUpdate = async (orgId: string, updateData: any) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/admin/organizations/${orgId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(updates)
+        body: JSON.stringify(updateData)
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update organization');
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to update organization');
       }
 
-      await fetchOrganizations(); // Refresh the list
-      setShowEditModal(false);
-      setSelectedOrg(null);
+      fetchOrganizations(); // Refresh the list
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update organization');
+      const message = err instanceof Error ? err.message : 'An error occurred';
+      setError(message);
     }
   };
 
@@ -404,7 +404,7 @@ const OrganizationsManagement: React.FC = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={() => updateOrganization(selectedOrg.id, {
+                  onClick={() => handleOrganizationUpdate(selectedOrg.id, {
                     // This would include the form values in a real implementation
                     plan_type: selectedOrg.plan_type,
                     device_limit: selectedOrg.device_limit
