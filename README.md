@@ -368,7 +368,7 @@ Built for cybersecurity professionals, SOC teams, and enterprise security operat
 
 ---
 
-**Pierre Mvita** • [pierremvita.com](https://pierremvita.com) • [SecureNet.ai](https://securenet.ai)
+**Pierre Mvita** • [LinkedIn](https://www.linkedin.com/in/pierre-mvita/) • [SecureNet.ai](https://securenet.ai)
 
 *Transforming cybersecurity through artificial intelligence*
 
