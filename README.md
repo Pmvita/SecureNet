@@ -240,6 +240,7 @@ SecureNet now offers **two deployment options** to meet different operational ne
 
 ## 📁 **Technical Integration Guides**
 
+### **🏗️ Backend Integration**
 - [🚀 Startup Guide](./docs/setup/STARTUP_GUIDE.md) - Complete setup instructions for both versions
 - [🔧 Production Configuration](./docs/setup/production_config.txt) - Environment setup template
 - [🔒 Production Setup](./docs/setup/DEV_MODE_DISABLED.md) - Production mode configuration and security
@@ -247,6 +248,12 @@ SecureNet now offers **two deployment options** to meet different operational ne
 - [Phase 1: Observability](./docs/integration/phase-1-observability.md) - Monitoring and logging
 - [Phase 2: Developer Experience](./docs/integration/phase-2-developer-experience.md) - Testing and ML tools
 - [Phase 3: Advanced Tooling](./docs/integration/phase-3-advanced-tooling.md) - Cryptography and task queues
+
+### **🎨 Frontend Integration**
+- [🎨 Frontend Integration Hub](./docs/integration/frontend/README.md) - Complete frontend enhancement roadmap
+- [🚀 Phase 1: Immediate Enhancements](./docs/integration/frontend/phase-1-frontend-enhancements.md) - Performance & reliability improvements
+- [📊 Phase 2: UI & Visualization](./docs/integration/frontend/phase-2-ui-visualization.md) - Advanced analytics & user experience
+- [🏢 Phase 3: Enterprise Components](./docs/integration/frontend/phase-3-enterprise-components.md) - Enterprise-grade development tools
 
 ---
 
