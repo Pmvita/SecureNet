@@ -1222,6 +1222,7 @@ async def get_network_status(
     try:
         db = Database()
         devices = await db.get_network_devices()
+        connections = await db.get_network_connections()
         traffic = await db.get_network_traffic(limit=100)
         protocols = await db.get_network_protocols()
         stats = await db.get_network_stats()
@@ -1230,6 +1231,7 @@ async def get_network_status(
             "status": "success",
             "data": {
                 "devices": devices,
+                "connections": connections,
                 "traffic": traffic,
                 "protocols": protocols,
                 "stats": stats

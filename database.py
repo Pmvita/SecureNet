@@ -2828,6 +2828,42 @@ class Database:
             logger.error(f"Error getting network devices: {str(e)}")
             return []
 
+    async def get_network_connections(self) -> List[Dict]:
+        """Get network connections."""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                conn.row_factory = aiosqlite.Row
+                cursor = await conn.execute("""
+                    SELECT 
+                        nc.id,
+                        nc.source_device_id,
+                        sd.name as source_device,
+                        nc.target_device_id,
+                        td.name as target_device,
+                        nc.protocol,
+                        nc.port,
+                        nc.status,
+                        nc.last_seen,
+                        nc.metadata
+                    FROM network_connections nc
+                    JOIN network_devices sd ON nc.source_device_id = sd.id
+                    JOIN network_devices td ON nc.target_device_id = td.id
+                    ORDER BY nc.last_seen DESC
+                """)
+                rows = await cursor.fetchall()
+                await cursor.close()
+                
+                connections = []
+                for row in rows:
+                    connection = dict(row)
+                    if connection.get('metadata'):
+                        connection['metadata'] = json.loads(connection['metadata'])
+                    connections.append(connection)
+                return connections
+        except Exception as e:
+            logger.error(f"Error getting network connections: {str(e)}")
+            return []
+
     async def get_network_traffic(self, limit: int = 100) -> List[Dict]:
         """Get network traffic data."""
         try:

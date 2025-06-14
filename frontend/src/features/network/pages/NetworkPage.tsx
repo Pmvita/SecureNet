@@ -308,12 +308,9 @@ export const NetworkPage: React.FC = () => {
       return () => clearInterval(interval);
     } else {
       // Real API mode - use traffic data from backend
-      if (metrics?.traffic) {
+      if (metrics?.traffic && metrics.traffic.length > 0) {
         const realTrafficLogs = convertTrafficToLogs(metrics.traffic);
-        setTrafficLogs(prev => {
-          const newLogs = [...realTrafficLogs, ...prev];
-          return newLogs.slice(0, 200); // Keep last 200 logs
-        });
+        setTrafficLogs(realTrafficLogs); // Replace with real data
       }
     }
   }, [isTrafficMonitoring, DEV_MODE, metrics?.traffic]);
@@ -698,7 +695,7 @@ export const NetworkPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-red-400">Threats Detected</p>
-                    <p className="text-2xl font-bold text-white mt-1">{metrics.threatsDetected}</p>
+                    <p className="text-2xl font-bold text-white mt-1">{trafficStats.blockedPackets + trafficStats.flaggedPackets}</p>
                   </div>
                   <FireIcon className="h-8 w-8 text-red-400" />
                 </div>
@@ -885,6 +882,7 @@ export const NetworkPage: React.FC = () => {
               {filteredTrafficLogs.length > 0 ? (
                 <List
                   height={400}
+                  width="100%"
                   itemCount={filteredTrafficLogs.length}
                   itemSize={48}
                   itemData={filteredTrafficLogs}
