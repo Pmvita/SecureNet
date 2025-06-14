@@ -40,19 +40,29 @@ const AuditLogs: React.FC = () => {
   const fetchAuditLogs = async () => {
     try {
       setLoading(true);
+      setError(null); // Clear previous errors
       const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/admin/audit-logs?limit=${limit}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch audit logs');
+        if (response.status === 401) {
+          // JWT expired, redirect to login
+          localStorage.removeItem('auth_token');
+          window.location.href = '/login';
+          return;
+        }
+        throw new Error(`Failed to fetch audit logs: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
       setLogs(data);
+      setError(null); // Clear error on success
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      console.error('Audit logs fetch error:', err);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -127,13 +137,60 @@ const AuditLogs: React.FC = () => {
     }
   };
 
-  const parseMetadata = (metadata: string | null) => {
+  const parseMetadata = (metadata: string | null): Record<string, unknown> | null => {
     if (!metadata) return null;
     try {
-      return JSON.parse(metadata);
-    } catch {
+      // Handle case where metadata might already be an object
+      if (typeof metadata === 'object') {
+        return metadata as Record<string, unknown>;
+      }
+      
+      // Try to parse as JSON string
+      const parsed = JSON.parse(metadata);
+      return parsed;
+    } catch (error) {
+      // If parsing fails, try to extract meaningful info from the string
+      console.warn('Failed to parse metadata:', metadata, error);
+      
+      // Check if it's a stringified object that got corrupted
+      if (typeof metadata === 'string') {
+        // Try to extract user_id and role from common patterns
+        const userIdMatch = metadata.match(/user_id["\s]*:\s*(\d+)/);
+        const roleMatch = metadata.match(/role["\s]*:\s*["']([^"']+)["']/);
+        
+        if (userIdMatch || roleMatch) {
+          const result: Record<string, unknown> = {};
+          if (userIdMatch) result.user_id = parseInt(userIdMatch[1]);
+          if (roleMatch) result.role = roleMatch[1];
+          return result;
+        }
+      }
+      
       return null;
     }
+  };
+
+  const formatMetadata = (metadata: Record<string, unknown> | null): string | null => {
+    if (!metadata) return null;
+    
+    // Handle common metadata patterns
+    if (typeof metadata === 'object') {
+      const entries = Object.entries(metadata);
+      if (entries.length === 0) return null;
+      
+      return entries.map(([key, value]) => {
+        // Format specific keys nicely
+        if (key === 'user_id') return `User ID: ${value}`;
+        if (key === 'role') return `Role: ${value}`;
+        if (key === 'ip_address') return `IP: ${value}`;
+        if (key === 'session_id') return `Session: ${value}`;
+        
+        // Default formatting
+        return `${key}: ${value}`;
+      }).join(', ');
+    }
+    
+    return String(metadata);
   };
 
   if (loading) {
@@ -160,10 +217,21 @@ const AuditLogs: React.FC = () => {
               Showing {filteredLogs.length} of {logs.length} logs
             </div>
             <button
-              onClick={fetchAuditLogs}
-              className="inline-flex items-center px-3 py-2 border border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-300 bg-gray-800 hover:bg-gray-700"
+              onClick={() => {
+                setError(null);
+                fetchAuditLogs();
+              }}
+              disabled={loading}
+              className="inline-flex items-center px-3 py-2 border border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-300 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Refresh
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-300 mr-2"></div>
+                  Loading...
+                </>
+              ) : (
+                'Refresh'
+              )}
             </button>
           </div>
         </div>
@@ -172,12 +240,26 @@ const AuditLogs: React.FC = () => {
       {/* Error Display */}
       {error && (
         <div className="glass-card p-4">
-          <div className="flex">
-            <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-300">Error</h3>
-              <p className="mt-1 text-sm text-red-200">{error}</p>
+          <div className="flex items-center justify-between">
+            <div className="flex">
+              <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-300">Error Loading Audit Logs</h3>
+                <p className="mt-1 text-sm text-red-200">{error}</p>
+                {error.includes('401') && (
+                  <p className="mt-1 text-xs text-red-300">Your session may have expired. Please refresh the page or log in again.</p>
+                )}
+              </div>
             </div>
+            <button
+              onClick={() => {
+                setError(null);
+                fetchAuditLogs();
+              }}
+              className="ml-4 inline-flex items-center px-3 py-2 border border-red-600 shadow-sm text-sm leading-4 font-medium rounded-md text-red-300 bg-red-900/20 hover:bg-red-900/40"
+            >
+              Try Again
+            </button>
           </div>
         </div>
       )}
@@ -319,12 +401,8 @@ const AuditLogs: React.FC = () => {
                       <div className="max-w-md">
                         <p className="text-white">{log.message}</p>
                         {metadata && (
-                          <div className="mt-1 text-xs text-gray-500">
-                            {Object.entries(metadata).map(([key, value]) => (
-                              <span key={key} className="mr-2">
-                                {key}: {value}
-                              </span>
-                            ))}
+                          <div className="mt-1 text-xs text-gray-400 bg-gray-800/50 rounded px-2 py-1">
+                            {formatMetadata(metadata)}
                           </div>
                         )}
                       </div>
@@ -332,7 +410,71 @@ const AuditLogs: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                       <div className="flex items-center">
                         <BuildingOfficeIcon className="h-4 w-4 mr-1" />
-                        {log.organization_name || 'System'}
+                        {(() => {
+                          // Debug: log the organization_name to see what we're getting
+                          if (index === 0) {
+                            console.log('Sample log data:', {
+                              organization_name: log.organization_name,
+                              metadata: log.metadata,
+                              full_log: log
+                            });
+                          }
+                          
+                          const orgName = log.organization_name;
+                          
+                          // Handle null/undefined
+                          if (!orgName) return 'System';
+                          
+                          // Handle normal string
+                          if (typeof orgName === 'string') {
+                            // Check if it looks like corrupted indexed data (e.g., "0: {1: "2: u3: s...")
+                            if (orgName.match(/^\d+:\s*\{/)) {
+                              // This is corrupted indexed data, try to extract meaningful info
+                              
+                              // Look for user_id pattern in the corrupted string
+                              const userIdMatch = orgName.match(/(\d+):\s*(\d+)/);
+                              if (userIdMatch) {
+                                return `User ${userIdMatch[2]}`;
+                              }
+                              
+                              // Look for role patterns
+                              if (orgName.includes('platform_owner') || orgName.includes('p25: l26: a27: t28: f29: o30: r31: m32: _33: o34: w35: n36: e37: r38:')) {
+                                return 'Platform Owner';
+                              }
+                              if (orgName.includes('security_admin') || orgName.includes('s25: e26: c27: u28: r29: i30: t31: y32: _33: a34: d35: m36: i37: n38:')) {
+                                return 'Security Admin';
+                              }
+                              if (orgName.includes('soc_analyst') || orgName.includes('s25: o26: c27: _28: a29: n30: a31: l32: y33: s34: t35:')) {
+                                return 'SOC Analyst';
+                              }
+                              
+                              // Default for corrupted data
+                              return 'System';
+                            }
+                            
+                            // Check if it looks like JSON
+                            if (orgName.startsWith('{') && orgName.endsWith('}')) {
+                              try {
+                                const parsed = JSON.parse(orgName);
+                                if (parsed.user_id && parsed.role) {
+                                  return `User ${parsed.user_id} (${parsed.role})`;
+                                } else if (parsed.user_id) {
+                                  return `User ${parsed.user_id}`;
+                                } else if (parsed.role) {
+                                  return parsed.role;
+                                }
+                              } catch (e) {
+                                // JSON parsing failed, fall through to default
+                              }
+                            }
+                            
+                            // Normal organization name
+                            return orgName;
+                          }
+                          
+                          // Fallback
+                          return 'System';
+                        })()}
                       </div>
                     </td>
                   </motion.tr>
