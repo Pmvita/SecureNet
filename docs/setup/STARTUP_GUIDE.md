@@ -1,6 +1,31 @@
 # 🚀 SecureNet Startup Guide
 
-## Quick Start Commands
+## 🔒 **Production Mode (Recommended)**
+
+### **One-Command Production Setup**
+```bash
+# Complete production environment with security checks
+./start_production.sh
+
+# Stop all services
+./stop_production.sh
+```
+
+**Features:**
+- ✅ Automatic DEV_MODE disabling
+- ✅ Security configuration verification
+- ✅ Both backend and frontend startup
+- ✅ Production environment validation
+- ✅ Dependency checking
+
+### **Access Production Application**
+- **Backend API**: http://localhost:8000
+- **Frontend**: http://localhost:5173
+- **API Documentation**: http://localhost:8000/docs
+
+---
+
+## 🛠 **Development Mode**
 
 ### Prerequisites
 ```bash
@@ -14,7 +39,7 @@ cd /path/to/SecureNet
 source venv/bin/activate
 ```
 
-## Option 1: Original SecureNet (Recommended for Production)
+## Option 1: Original SecureNet (Stable)
 
 ### Start Backend
 ```bash
@@ -25,7 +50,7 @@ python app.py
 ```bash
 # In a new terminal
 cd frontend
-npm run Enterprise
+npm run dev  # Development mode with mock data
 ```
 
 ### Access Application
@@ -78,10 +103,18 @@ Both versions use the same credentials:
 
 ## 🔧 Configuration
 
-### Environment Setup
+### **Automatic Production Configuration**
+The `./start_production.sh` script automatically:
+- ✅ Creates `.env` file if missing
+- ✅ Sets `DEV_MODE=false` for backend
+- ✅ Creates `frontend/.env` with `VITE_MOCK_DATA=false`
+- ✅ Verifies security settings
+- ✅ Checks dependencies
+
+### **Manual Environment Setup**
 1. Copy configuration template:
    ```bash
-   cp production_config.txt .env
+   cp docs/setup/production_config.txt .env
    ```
 
 2. Generate secure keys:
@@ -91,11 +124,15 @@ Both versions use the same credentials:
 
 3. Update `.env` with generated keys and your settings
 
-### Key Configuration Variables
+### **Key Configuration Variables**
 ```bash
+# Production Mode (CRITICAL)
+DEV_MODE=false                    # Backend production mode
+VITE_MOCK_DATA=false             # Frontend production mode
+
 # Basic Settings
-DEV_MODE=false
 ENVIRONMENT=production
+DEBUG=false
 
 # Security (use generated keys)
 JWT_SECRET=your-generated-jwt-secret
@@ -105,6 +142,18 @@ MASTER_KEY_MATERIAL=your-generated-master-key
 # Services
 REDIS_URL=redis://localhost:6379/0
 SENTRY_DSN=your-sentry-dsn-here
+```
+
+### **Security Verification**
+```bash
+# Check production mode status
+grep "DEV_MODE=false" .env
+grep "VITE_MOCK_DATA=false" frontend/.env
+
+# Verify role-based access controls are working
+curl -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "user", "password": "enduser123"}'
 ```
 
 ---

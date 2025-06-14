@@ -124,15 +124,24 @@ redis-server --daemonize yes
 
 ### **2. Start Backend Server**
 
-#### **🚀 Recommended: Use Startup Scripts**
+#### **🚀 Production Mode (Recommended)**
 ```bash
-# Easy startup with automatic environment setup
+# Complete production environment (backend + frontend)
+./start_production.sh         # Full production setup with security checks
+
+# Stop production services
+./stop_production.sh          # Clean shutdown
+```
+
+#### **🛠 Development Mode**
+```bash
+# Development with automatic environment setup
 ./start.sh                    # Shell script (checks Redis, venv, etc.)
 python start_backend.py       # Python script with options
 
 # With options
 python start_backend.py --dev --host 0.0.0.0 --port 8000
-python start_backend.py --prod  # Production mode
+python start_backend.py --prod  # Production mode only
 ```
 
 #### **⚡ Direct Methods**
@@ -233,6 +242,8 @@ SecureNet now offers **two deployment options** to meet different operational ne
 
 - [🚀 Startup Guide](./docs/setup/STARTUP_GUIDE.md) - Complete setup instructions for both versions
 - [🔧 Production Configuration](./docs/setup/production_config.txt) - Environment setup template
+- [🔒 Production Setup](./docs/setup/DEV_MODE_DISABLED.md) - Production mode configuration and security
+- [⚡ Production Quick Reference](./docs/setup/PRODUCTION_QUICK_REFERENCE.md) - Fast production deployment commands
 - [Phase 1: Observability](./docs/integration/phase-1-observability.md) - Monitoring and logging
 - [Phase 2: Developer Experience](./docs/integration/phase-2-developer-experience.md) - Testing and ML tools
 - [Phase 3: Advanced Tooling](./docs/integration/phase-3-advanced-tooling.md) - Cryptography and task queues

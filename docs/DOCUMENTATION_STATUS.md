@@ -12,6 +12,7 @@ All documentation has been updated to reflect the **dual-architecture SecureNet 
 ### **Setup & Configuration**
 - ✅ **[setup/STARTUP_GUIDE.md](setup/STARTUP_GUIDE.md)** - Complete startup instructions for both versions
 - ✅ **[setup/production_config.txt](setup/production_config.txt)** - Production environment configuration template
+- ✅ **[setup/DEV_MODE_DISABLED.md](setup/DEV_MODE_DISABLED.md)** - Production mode configuration and security verification
 
 ### **Reference Documentation**
 - ✅ **[reference/ENHANCED_FEATURES.md](reference/ENHANCED_FEATURES.md)** - Feature comparison and enhanced capabilities reference
@@ -46,6 +47,8 @@ All documentation has been updated to reflect the **dual-architecture SecureNet 
 - Complete environment variable templates
 - Security key generation scripts
 - Service dependency documentation
+- Production startup scripts (`start_production.sh`, `stop_production.sh`)
+- DEV_MODE disabling and security verification
 
 ### **5. Feature Documentation**
 - Enhanced endpoints documentation
@@ -57,7 +60,7 @@ All documentation has been updated to reflect the **dual-architecture SecureNet 
 
 | Category | Status | Files Updated |
 |----------|--------|---------------|
-| **Setup & Installation** | ✅ Complete | 3 files |
+| **Setup & Installation** | ✅ Complete | 4 files |
 | **Feature Documentation** | ✅ Complete | 2 files |
 | **API Reference** | ✅ Current | Existing docs valid |
 | **Architecture Overview** | ✅ Complete | 2 files |

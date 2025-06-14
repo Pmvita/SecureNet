@@ -72,8 +72,28 @@ POST /threats/analyze       # Queue threat analysis
 
 ## 🚀 **Production Configuration**
 
+### **🔒 Production Mode Setup**
+```bash
+# One-command production setup (recommended)
+./start_production.sh
+
+# Manual production startup
+python start_backend.py --prod
+cd frontend && npm run start:prod
+```
+
+**Production Mode Features:**
+- ✅ **DEV_MODE=false**: Disables development bypasses
+- ✅ **VITE_MOCK_DATA=false**: Uses real API calls
+- ✅ **Security Enforcement**: Full JWT authentication and RBAC
+- ✅ **Performance Optimization**: Production-optimized settings
+
 ### **Environment Variables**
 ```bash
+# Production Mode (CRITICAL)
+DEV_MODE=false                    # Backend production mode
+VITE_MOCK_DATA=false             # Frontend production mode
+
 # Enhanced monitoring
 SENTRY_DSN=your-sentry-dsn
 ENABLE_METRICS=true
@@ -98,6 +118,18 @@ redis-server --daemonize yes
 
 # Optional background workers
 rq worker --url redis://localhost:6379/0
+```
+
+### **Security Verification**
+```bash
+# Verify production mode is active
+curl -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "user", "password": "enduser123"}'
+
+# Test role-based access (should be denied for analyst)
+curl -X GET http://localhost:8000/api/get-api-key \
+  -H "Authorization: Bearer <analyst-token>"
 ```
 
 ## 📈 **Performance Benefits**

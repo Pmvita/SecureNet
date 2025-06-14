@@ -4102,7 +4102,7 @@ class Database:
     async def get_organization_users(self, org_id: str, requesting_user_role: str) -> List[Dict]:
         """Get users for a specific organization (platform_admin and above)."""
         try:
-            if requesting_user_role not in [UserRole.SUPERADMIN.value, UserRole.PLATFORM_ADMIN.value]:
+            if requesting_user_role not in [UserRole.SUPERADMIN.value, UserRole.MANAGER.value]:
                 raise PermissionError("Insufficient permissions to view organization users")
                 
             async with aiosqlite.connect(self.db_path) as conn:
@@ -4247,7 +4247,7 @@ class Database:
                 'view_all_organizations', 'manage_organizations', 'view_all_users',
                 'manage_users', 'view_audit_logs', 'manage_billing', 'system_admin'
             ],
-            UserRole.PLATFORM_ADMIN.value: [
+            UserRole.MANAGER.value: [
                 'view_organization', 'manage_organization_users', 'manage_settings',
                 'view_organization_logs', 'manage_alerts', 'view_billing'
             ],
@@ -4290,7 +4290,7 @@ class Database:
                         'username': 'admin',
                         'email': 'admin@secureorg.com',
                         'password': 'platform123',
-                        'role': UserRole.PLATFORM_ADMIN.value,
+                        'role': UserRole.MANAGER.value,
                         'org_id': default_org_id
                     },
                     {
@@ -4339,7 +4339,7 @@ class Database:
                         """, (
                             user_data['org_id'],
                             user_id,
-                            'admin' if user_data['role'] == UserRole.PLATFORM_ADMIN.value else 'member',
+                            'admin' if user_data['role'] == UserRole.MANAGER.value else 'member',
                             datetime.now().isoformat()
                         ))
                 

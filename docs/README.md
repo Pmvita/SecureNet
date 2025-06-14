@@ -5,7 +5,7 @@ This directory contains comprehensive documentation for SecureNet's dual-archite
 ## 📁 Directory Structure
 
 ### Core Documentation
-- **`/setup/`** - Startup guides, production configuration, and deployment instructions
+- **`/setup/`** - Startup guides, production configuration, deployment instructions, and security setup
 - **`/reference/`** - Feature comparisons, enhanced capabilities, and technical references
 - **`/features/`** - AI-powered features and CVE integration documentation
 - **`/api/`** - REST endpoints, WebSocket connections, and API specifications
@@ -28,9 +28,10 @@ This directory contains comprehensive documentation for SecureNet's dual-archite
 ## 🚀 Getting Started
 
 ### **Quick Start Options**
-1. **Original SecureNet**: Follow [Installation Guide](installation/INSTALLATION.md) for stable production deployment
-2. **Enhanced SecureNet**: Review [Startup Guide](setup/STARTUP_GUIDE.md) for advanced features setup
-3. **Integration Deep Dive**: Start with [Phase 1: Observability](integration/phase-1-observability.md)
+1. **🔒 Production Deployment**: Use [Production Setup Guide](setup/DEV_MODE_DISABLED.md) for secure production deployment
+2. **🚀 Quick Start**: Follow [Startup Guide](setup/STARTUP_GUIDE.md) for both development and production setup
+3. **📦 Installation**: Review [Installation Guide](installation/INSTALLATION.md) for detailed setup instructions
+4. **🔧 Integration**: Start with [Phase 1: Observability](integration/phase-1-observability.md) for advanced features
 
 ### **Architecture Overview**
 - **Original Version** (`app.py`): Production-ready with full feature set
