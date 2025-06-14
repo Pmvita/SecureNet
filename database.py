@@ -2170,18 +2170,18 @@ class Database:
         try:
             async with aiosqlite.connect(self.db_path) as conn:
                 now = datetime.now().isoformat()
+                # Don't insert into id column since it's AUTOINCREMENT
                 await conn.execute("""
-                    INSERT INTO security_scans (id, timestamp, type, target, status, progress,
+                    INSERT INTO security_scans (timestamp, type, target, status, progress,
                                                findings_count, start_time, end_time, metadata,
                                                created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    scan_data.get('id'),
                     scan_data.get('start_time', now),
                     scan_data.get('type'),
                     scan_data.get('target'),
                     scan_data.get('status'),
-                    100.0 if scan_data.get('status') == 'completed' else 0.0,
+                    100 if scan_data.get('status') == 'completed' else 0,  # Use INTEGER instead of REAL
                     scan_data.get('findings_count', 0),
                     scan_data.get('start_time', now),
                     scan_data.get('end_time', now if scan_data.get('status') == 'completed' else None),
@@ -2277,26 +2277,26 @@ class Database:
     async def store_security_scan_config(self, config: Dict) -> str:
         """Store security scan configuration and return scan ID."""
         try:
-            scan_id = str(uuid.uuid4())
             async with aiosqlite.connect(self.db_path) as conn:
-                await conn.execute("""
+                # Don't insert into id column since it's AUTOINCREMENT
+                cursor = await conn.execute("""
                     INSERT INTO security_scans (
-                        id, timestamp, type, status, target, progress,
+                        timestamp, type, status, target, progress,
                         findings_count, start_time, metadata, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    scan_id,
                     datetime.utcnow().isoformat(),
                     config.get('type', 'vulnerability'),
                     'pending',
                     config.get('target', ''),
-                    0.0,
+                    0,  # Use INTEGER instead of REAL
                     0,
                     datetime.utcnow().isoformat(),
                     json.dumps(config),
                     datetime.utcnow().isoformat(),
                     datetime.utcnow().isoformat()
                 ))
+                scan_id = str(cursor.lastrowid)
                 await conn.commit()
                 return scan_id
         except Exception as e:

@@ -36,6 +36,9 @@ import {
   CreditCardIcon,
   ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
+import { AppErrorBoundary } from './components/error/AppErrorBoundary';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
 
 // Development mode bypass
 const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
@@ -205,19 +208,32 @@ const App: React.FC = () => {
     );
   }
 
+  // Create a client
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: 1,
+        refetchOnWindowFocus: false,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+      },
+    },
+  });
+
   return (
-    <ErrorBoundary>
-      <ThemeProvider>
-        <ToastProvider>
-          <Router>
-            <AuthProvider>
-              <AppRoutes />
-            </AuthProvider>
-          </Router>
-        </ToastProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Router>
+              <AuthProvider>
+                <AppRoutes />
+              </AuthProvider>
+            </Router>
+          </ToastProvider>
+        </ThemeProvider>
         <ReactQueryDevtools initialIsOpen={false} />
-      </ThemeProvider>
-    </ErrorBoundary>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   );
 };
 

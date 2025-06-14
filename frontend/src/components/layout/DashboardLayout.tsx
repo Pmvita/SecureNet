@@ -139,8 +139,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </div>
         </div>
 
-        {/* Search Bar */}
-        {!sidebarCollapsed && (
+        {/* Search Bar - Hidden on pages with their own search */}
+        {!sidebarCollapsed && !location.pathname.match(/\/(logs|security|network|anomalies)/) && (
           <div className="p-4">
             <div className="relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />

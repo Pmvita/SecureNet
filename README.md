@@ -3,9 +3,9 @@
 > **Real-time network defense. Enterprise-grade intelligence. One dashboard.**
 
 [![GitHub Stars](https://img.shields.io/github/stars/yourusername/securenet?style=social)](https://github.com/yourusername/securenet)
-[![Documentation](https://img.shields.io/badge/docs-available-brightgreen)](./INSTALLATION.md)
+[![Documentation](https://img.shields.io/badge/docs-available-brightgreen)](./docs/installation/INSTALLATION.md)
 [![License](https://img.shields.io/badge/license-Proprietary-red)](./LICENSE.txt)
-[![Status](https://img.shields.io/badge/status-Production%20Ready-success)](./SYSTEM-STATUS.md)
+[![Status](https://img.shields.io/badge/status-Production%20Ready-success)](./docs/system/SYSTEM-STATUS.md)
 
 **SecureNet** is a comprehensive AI-powered network security monitoring and management platform designed for cybersecurity professionals, SOC teams, and enterprise security operations. Built with modern SaaS architecture, it provides real-time threat detection, intelligent network discovery, and enterprise-grade security management.
 
@@ -15,7 +15,7 @@
 
 <div align="center">
 
-[⭐ **Star this repo**](https://github.com/yourusername/securenet) • [📖 **View Documentation**](./INSTALLATION.md) • [🚀 **System Status**](./SYSTEM-STATUS.md) • [🔥 **CVE Integration**](./CVE-INTEGRATION-SUMMARY.md)
+[⭐ **Star this repo**](https://github.com/yourusername/securenet) • [📖 **View Documentation**](./docs/installation/INSTALLATION.md) • [🚀 **System Status**](./docs/system/SYSTEM-STATUS.md) • [🔥 **CVE Integration**](./docs/features/CVE-INTEGRATION-SUMMARY.md)
 
 </div>
 
@@ -133,34 +133,9 @@ redis-server --daemonize yes
 ./stop_production.sh          # Clean shutdown
 ```
 
-#### **🛠 Development Mode**
-```bash
-# Development with automatic environment setup
-./start.sh                    # Shell script (checks Redis, venv, etc.)
-python start_backend.py       # Python script with options
-
-# With options
-python start_backend.py --dev --host 0.0.0.0 --port 8000
-python start_backend.py --prod  # Production mode only
-```
-
-#### **⚡ Direct Methods**
-```bash
-# Direct Python execution
-python app.py                 # Main application
-
-# Or use uvicorn directly
-uvicorn app:app --reload --host 127.0.0.1 --port 8000
-```
-
-#### **🔧 Enhanced Version (Advanced Features)**
-```bash
-# Start enhanced version with ML tracking, monitoring, and background tasks
-python app_enhanced.py
-
-# Optional: Start background workers in new terminal
-rq worker --url redis://localhost:6379/0
-```
+- **🛠 Development Mode**: See [Development Mode Guide](./docs/setup/DEV_MODE_GUIDE.md) for complete dev setup instructions
+- **⚡ Direct Methods**: See [Direct Startup Methods](./docs/setup/START_DIRECT.md) for manual app.py / uvicorn execution
+- **🔧 Enhanced Version**: See [Enhanced Version Guide](./docs/setup/ENHANCED_VERSION_GUIDE.md) for advanced features with monitoring & ML tracking
 
 ### **3. Setup Frontend**
 ```bash
@@ -251,9 +226,9 @@ SecureNet now offers **two deployment options** to meet different operational ne
 
 ### **🎨 Frontend Integration**
 - [🎨 Frontend Integration Hub](./docs/integration/frontend/README.md) - Complete frontend enhancement roadmap
-- [🚀 Phase 1: Immediate Enhancements](./docs/integration/frontend/phase-1-frontend-enhancements.md) - Performance & reliability improvements
-- [📊 Phase 2: UI & Visualization](./docs/integration/frontend/phase-2-ui-visualization.md) - Advanced analytics & user experience
-- [🏢 Phase 3: Enterprise Components](./docs/integration/frontend/phase-3-enterprise-components.md) - Enterprise-grade development tools
+- ✅ [🚀 Phase 1: Immediate Enhancements](./docs/integration/frontend/phase-1-frontend-enhancements.md) - **COMPLETE** - Performance & reliability improvements
+- 📊 [Phase 2: UI & Visualization](./docs/integration/frontend/phase-2-ui-visualization.md) - Advanced analytics & user experience
+- 🏢 [Phase 3: Enterprise Components](./docs/integration/frontend/phase-3-enterprise-components.md) - Enterprise-grade development tools
 
 ---
 
@@ -335,10 +310,10 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed development workflow and c
 ## 📞 **Support & Community**
 
 ### **📖 Getting Help**
-- **Setup Issues**: See [Installation Guide](./INSTALLATION.md)
-- **Feature Questions**: Check [Features Documentation](./FEATURES.md)
-- **API Help**: Reference [API Documentation](./API-Reference.md)
-- **System Status**: Monitor [Operational Metrics](./SYSTEM-STATUS.md)
+- **Setup Issues**: See [Installation Guide](./docs/installation/INSTALLATION.md)
+- **Feature Questions**: Check [Features Documentation](./docs/features/FEATURES.md)
+- **API Help**: Reference [API Documentation](./docs/api/API-Reference.md)
+- **System Status**: Monitor [Operational Metrics](./docs/system/SYSTEM-STATUS.md)
 
 ### **🐛 Issues & Feedback**
 - **Bug Reports**: [GitHub Issues](https://github.com/yourusername/securenet/issues)
@@ -346,8 +321,8 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed development workflow and c
 - **Security Issues**: Email security@securenet.ai
 
 ### **💬 Community**
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/securenet/discussions)
-- **Updates**: Follow development in [Roadmap](./TODO.md)
+- **Discussions**: [GitHub Discussions](https://github.com/pmvita/securenet/discussions)
+- **Updates**: Follow development in [Roadmap](./docs/project/TODO.md)
 - **Documentation**: Contribute to [docs improvement](./CONTRIBUTING.md)
 
 ---
@@ -373,3 +348,36 @@ Built for cybersecurity professionals, SOC teams, and enterprise security operat
 *Transforming cybersecurity through artificial intelligence*
 
 </div>
+
+## 🔄 **Integration Status**
+
+### ✅ **Phase 1: Frontend Integration (COMPLETE)**
+- **@tanstack/react-table**: ✅ Installed & Implemented
+  - Advanced data management for security logs and device lists
+  - Sorting, filtering, and pagination capabilities
+  - BaseTable component created and ready
+  - SecurityLogsTable specialized component implemented
+- **react-error-boundary**: ✅ Installed & Implemented
+  - Enterprise-grade error handling and graceful degradation
+  - AppErrorBoundary for application-wide protection
+  - SecurityErrorBoundary for security-specific components
+  - Comprehensive error fallback UI components
+- **react-window**: ✅ Installed & Implemented
+  - Virtual scrolling for optimal performance with large datasets
+  - VirtualLogList component for security logs
+  - Performance optimization for 10,000+ log entries
+  - Custom hook useVirtualLogs for data management
+
+**Demo Available**: Visit `/phase1-demo` in the application to see all Phase 1 enhancements in action.
+
+### 📋 **Phase 2: Backend Integration (ROADMAP)**
+- **Redis**: Advanced caching and session management
+- **Celery**: Background task processing for security scans
+- **MLflow**: ML experiment tracking and model management
+- **Advanced Analytics**: Enhanced security intelligence
+
+### 🎯 **Phase 3: AI/ML Integration (ROADMAP)**
+- **TensorFlow**: Deep learning for threat detection
+- **Scikit-learn**: Machine learning algorithms for anomaly detection
+- **Real-time AI**: Intelligent security monitoring
+- **Predictive Analytics**: Proactive threat identification
