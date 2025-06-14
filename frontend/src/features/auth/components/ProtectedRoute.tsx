@@ -13,13 +13,18 @@ const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
 
 // Role-based permissions mapping
 const ROLE_PERMISSIONS = {
+  // New role names
+  platform_owner: ['system_admin', 'manage_settings', 'manage_users', 'manage_organizations', 'view_audit_logs'],
+  security_admin: ['manage_settings', 'manage_org_users', 'view_org_data'],
+  soc_analyst: ['view_dashboard', 'view_logs', 'view_network'],
+  // Legacy role names for backward compatibility
   superadmin: ['system_admin', 'manage_settings', 'manage_users', 'manage_organizations', 'view_audit_logs'],
   manager: ['manage_settings', 'manage_org_users', 'view_org_data'],
-  platform_admin: ['manage_settings', 'manage_org_users', 'view_org_data'], // backward compatibility
+  platform_admin: ['manage_settings', 'manage_org_users', 'view_org_data'],
   analyst: ['view_dashboard', 'view_logs', 'view_network'],
-  end_user: ['view_dashboard', 'view_logs', 'view_network'], // backward compatibility
-  admin: ['system_admin', 'manage_settings'], // Legacy admin role
-  user: ['view_dashboard', 'view_logs'] // Legacy user role
+  end_user: ['view_dashboard', 'view_logs', 'view_network'],
+  admin: ['system_admin', 'manage_settings'],
+  user: ['view_dashboard', 'view_logs']
 };
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({

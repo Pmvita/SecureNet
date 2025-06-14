@@ -1253,7 +1253,7 @@ async def get_api_key_endpoint(request: Request, current_user: dict = Depends(ge
             )
         
         # Only allow admin users to get the API key
-        if current_user["role"] not in ["superadmin", "manager", "admin", "platform_admin"]:
+        if current_user["role"] not in ["platform_owner", "security_admin", "superadmin", "manager", "admin", "platform_admin"]:
             raise HTTPException(
                 status_code=403,
                 detail="Only admin users can access the API key"
@@ -1264,6 +1264,9 @@ async def get_api_key_endpoint(request: Request, current_user: dict = Depends(ge
             data={"api_key": API_KEY},
             timestamp=datetime.now().isoformat()
         )
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 403) without modification
+        raise
     except Exception as e:
         logger.error(f"Error getting API key: {str(e)}")
         raise HTTPException(

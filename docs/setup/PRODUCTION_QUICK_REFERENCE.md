@@ -53,14 +53,20 @@ curl http://localhost:5173
 
 ### **3. Authentication Testing**
 ```bash
-# Login as analyst user
+# Login as soc_analyst user
 curl -X POST http://localhost:8000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username": "user", "password": "enduser123"}'
 
-# Test role-based access (should be denied)
-curl -X GET http://localhost:8000/api/get-api-key \
-  -H "Authorization: Bearer <analyst-token>"
+# Test API endpoint with JWT token 
+curl -X GET http://localhost:8000/api/logs \
+  -H "Authorization: Bearer <soc_analyst-token>"
+
+# ⚠️ **Access Control Testing**
+# Platform Owner users should have access to all endpoints
+# Security Admin users should have access to org-scoped endpoints  
+# SOC Analyst users should be denied admin endpoints
+# Security Admin/Admin users should have access
 ```
 
 ### **4. Security Verification**
@@ -76,11 +82,11 @@ curl -X GET http://localhost:8000/api/get-api-key
 
 ## 🔑 **Default Production Credentials**
 
-| Role | Username | Password | Access Level |
-|------|----------|----------|--------------|
-| **Super Admin** | `ceo` | `superadmin123` | Full platform access |
-| **Manager** | `admin` | `platform123` | Organization admin |
-| **Analyst** | `user` | `enduser123` | Standard user |
+| **Role** | **Username** | **Password** | **Access Level** |
+|----------|--------------|--------------|------------------|
+| **Platform Owner** | `ceo` | `superadmin123` | Full platform access |
+| **Security Admin** | `admin` | `platform123` | Organization admin |
+| **SOC Analyst** | `user` | `enduser123` | Standard user |
 
 ⚠️ **Change these credentials before production deployment!**
 

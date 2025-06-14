@@ -40,9 +40,9 @@ class OrganizationStatus(Enum):
 
 class UserRole(Enum):
     """User role types for 3-tier RBAC system."""
-    SUPERADMIN = "superadmin"      # Full platform access, tenant management
-    MANAGER = "manager"            # Organization admin with advanced controls (previously platform_admin)
-    ANALYST = "analyst"            # Standard tenant user (previously end_user)
+    PLATFORM_OWNER = "platform_owner"    # Full platform access, tenant management (formerly superadmin)
+    SECURITY_ADMIN = "security_admin"     # Organization admin with advanced controls (formerly manager/platform_admin)
+    SOC_ANALYST = "soc_analyst"           # Standard tenant user (formerly analyst/end_user)
 
 class Database:
     _instances = {}  # Process-specific instances
@@ -3021,7 +3021,7 @@ class Database:
                         username TEXT UNIQUE NOT NULL,
                         email TEXT UNIQUE NOT NULL,
                         password_hash TEXT NOT NULL,
-                        role TEXT NOT NULL DEFAULT 'end_user',
+                        role TEXT NOT NULL DEFAULT 'soc_analyst',
                         is_active BOOLEAN NOT NULL DEFAULT 1,
                         last_login TIMESTAMP,
                         last_logout TIMESTAMP,
@@ -4062,8 +4062,8 @@ class Database:
     async def get_all_users_for_admin(self, requesting_user_role: str) -> List[Dict]:
         """Get all users for admin interface (superadmin only)."""
         try:
-            if requesting_user_role != UserRole.SUPERADMIN.value:
-                raise PermissionError("Only superadmin can view all users")
+            if requesting_user_role != UserRole.PLATFORM_OWNER.value:
+                raise PermissionError("Only platform_owner can view all users")
                 
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.execute("""
@@ -4102,7 +4102,7 @@ class Database:
     async def get_organization_users(self, org_id: str, requesting_user_role: str) -> List[Dict]:
         """Get users for a specific organization (platform_admin and above)."""
         try:
-            if requesting_user_role not in [UserRole.SUPERADMIN.value, UserRole.MANAGER.value]:
+            if requesting_user_role not in [UserRole.PLATFORM_OWNER.value, UserRole.SECURITY_ADMIN.value]:
                 raise PermissionError("Insufficient permissions to view organization users")
                 
             async with aiosqlite.connect(self.db_path) as conn:
@@ -4136,32 +4136,32 @@ class Database:
             logger.error(f"Error getting organization users: {str(e)}")
             return []
 
-    async def create_superadmin_user(self, username: str, email: str, password_hash: str) -> int:
-        """Create a superadmin user (for initial setup)."""
+    async def create_platform_owner_user(self, username: str, email: str, password_hash: str) -> int:
+        """Create a platform_owner user (for initial setup)."""
         try:
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.execute("""
                     INSERT INTO users (username, email, password_hash, role, is_active, created_at, updated_at)
                     VALUES (?, ?, ?, ?, 1, ?, ?)
                 """, (
-                    username, email, password_hash, UserRole.SUPERADMIN.value,
+                    username, email, password_hash, UserRole.PLATFORM_OWNER.value,
                     datetime.now().isoformat(), datetime.now().isoformat()
                 ))
                 
                 user_id = cursor.lastrowid
                 await conn.commit()
                 
-                logger.info(f"Created superadmin user: {username} (ID: {user_id})")
+                logger.info(f"Created platform_owner user: {username} (ID: {user_id})")
                 return user_id
         except Exception as e:
-            logger.error(f"Error creating superadmin user: {str(e)}")
+            logger.error(f"Error creating platform_owner user: {str(e)}")
             raise
 
     async def get_audit_logs(self, requesting_user_role: str, limit: int = 100) -> List[Dict]:
-        """Get audit logs for admin interface (superadmin only)."""
+        """Get audit logs for admin interface (platform_owner only)."""
         try:
-            if requesting_user_role != UserRole.SUPERADMIN.value:
-                raise PermissionError("Only superadmin can view audit logs")
+            if requesting_user_role != UserRole.PLATFORM_OWNER.value:
+                raise PermissionError("Only platform_owner can view audit logs")
                 
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.execute("""
@@ -4195,10 +4195,10 @@ class Database:
             return []
 
     async def get_all_organizations_for_admin(self, requesting_user_role: str) -> List[Dict]:
-        """Get all organizations for admin interface (superadmin only)."""
+        """Get all organizations for admin interface (platform_owner only)."""
         try:
-            if requesting_user_role != UserRole.SUPERADMIN.value:
-                raise PermissionError("Only superadmin can view all organizations")
+            if requesting_user_role != UserRole.PLATFORM_OWNER.value:
+                raise PermissionError("Only platform_owner can view all organizations")
                 
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.execute("""
@@ -4243,15 +4243,15 @@ class Database:
     def has_permission(self, user_role: str, required_permission: str) -> bool:
         """Check if user role has required permission."""
         permissions = {
-            UserRole.SUPERADMIN.value: [
+            UserRole.PLATFORM_OWNER.value: [
                 'view_all_organizations', 'manage_organizations', 'view_all_users',
                 'manage_users', 'view_audit_logs', 'manage_billing', 'system_admin'
             ],
-            UserRole.MANAGER.value: [
+            UserRole.SECURITY_ADMIN.value: [
                 'view_organization', 'manage_organization_users', 'manage_settings',
                 'view_organization_logs', 'manage_alerts', 'view_billing'
             ],
-            UserRole.ANALYST.value: [
+            UserRole.SOC_ANALYST.value: [
                 'view_dashboard', 'view_logs', 'view_network', 'view_security',
                 'view_anomalies', 'view_profile'
             ]
@@ -4283,21 +4283,21 @@ class Database:
                         'username': 'ceo',
                         'email': 'ceo@securenet.ai',
                         'password': 'superadmin123',
-                        'role': UserRole.SUPERADMIN.value,
-                        'org_id': None  # Superadmin not tied to specific org
+                        'role': UserRole.PLATFORM_OWNER.value,
+                        'org_id': None  # Platform owner not tied to specific org
                     },
                     {
                         'username': 'admin',
                         'email': 'admin@secureorg.com',
                         'password': 'platform123',
-                        'role': UserRole.MANAGER.value,
+                        'role': UserRole.SECURITY_ADMIN.value,
                         'org_id': default_org_id
                     },
                     {
                         'username': 'user',
                         'email': 'user@secureorg.com',
                         'password': 'enduser123',
-                        'role': UserRole.ANALYST.value,
+                        'role': UserRole.SOC_ANALYST.value,
                         'org_id': default_org_id
                     }
                 ]
@@ -4339,7 +4339,7 @@ class Database:
                         """, (
                             user_data['org_id'],
                             user_id,
-                            'admin' if user_data['role'] == UserRole.MANAGER.value else 'member',
+                            'admin' if user_data['role'] == UserRole.SECURITY_ADMIN.value else 'member',
                             datetime.now().isoformat()
                         ))
                 
@@ -4786,31 +4786,44 @@ class Database:
     def get_role_permissions(self, role: str) -> List[str]:
         """Get permissions for a user role."""
         role_permissions = {
-            'superadmin': [
+            'platform_owner': [
                 'manage_users', 'manage_organizations', 'view_audit_logs',
                 'manage_settings', 'view_logs', 'manage_security',
                 'manage_network', 'view_anomalies', 'manage_billing'
             ],
-            'manager': [
+            'security_admin': [
                 'manage_org_users', 'manage_settings', 'view_logs',
                 'manage_security', 'manage_network', 'view_anomalies'
             ],
-            'analyst': [
+            'soc_analyst': [
                 'view_logs', 'view_security', 'view_network', 'view_anomalies'
             ],
-            'platform_admin': [  # Legacy role mapping
+            # Legacy role mappings for backward compatibility
+            'superadmin': [  # Legacy -> platform_owner
+                'manage_users', 'manage_organizations', 'view_audit_logs',
+                'manage_settings', 'view_logs', 'manage_security',
+                'manage_network', 'view_anomalies', 'manage_billing'
+            ],
+            'manager': [  # Legacy -> security_admin
                 'manage_org_users', 'manage_settings', 'view_logs',
                 'manage_security', 'manage_network', 'view_anomalies'
             ],
-            'end_user': [  # Legacy role mapping
+            'analyst': [  # Legacy -> soc_analyst
                 'view_logs', 'view_security', 'view_network', 'view_anomalies'
             ],
-            'admin': [  # Legacy role mapping
+            'platform_admin': [  # Legacy -> security_admin
+                'manage_org_users', 'manage_settings', 'view_logs',
+                'manage_security', 'manage_network', 'view_anomalies'
+            ],
+            'end_user': [  # Legacy -> soc_analyst
+                'view_logs', 'view_security', 'view_network', 'view_anomalies'
+            ],
+            'admin': [  # Legacy -> platform_owner
                 'manage_users', 'manage_organizations', 'view_audit_logs',
                 'manage_settings', 'view_logs', 'manage_security',
                 'manage_network', 'view_anomalies'
             ],
-            'user': [  # Legacy role mapping
+            'user': [  # Legacy -> soc_analyst
                 'view_logs', 'view_security', 'view_network', 'view_anomalies'
             ]
         }

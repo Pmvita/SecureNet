@@ -8,7 +8,7 @@ interface User {
   id: string;
   username: string;
   email: string;
-  role: 'superadmin' | 'manager' | 'analyst' | 'platform_admin' | 'end_user' | 'admin' | 'user';
+  role: 'platform_owner' | 'security_admin' | 'soc_analyst' | 'superadmin' | 'manager' | 'analyst' | 'platform_admin' | 'end_user' | 'admin' | 'user';
   last_login: string;
   last_logout?: string;
   login_count?: number;

@@ -184,6 +184,15 @@ export class ApiClient {
       }
     } catch (error) {
       console.error('Failed to get API key:', error);
+      
+      // Check if this is a 403 error (user doesn't have permission for API key)
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 403) {
+        console.log('User does not have API key permissions (analyst role) - continuing without API key');
+        this.isInitialized = true; // Allow initialization to succeed for analyst users
+        return;
+      }
+      
       this.isInitialized = false;
       // Throw the error so the caller knows initialization failed
       throw error;

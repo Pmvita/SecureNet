@@ -36,11 +36,10 @@ SecureNet has **two separate DEV_MODE configurations** that needed to be disable
 ## **🧪 Verification Tests**
 
 ### **Backend Role-Based Access Control** ✅
-| User Role | Username | API Key Access | Admin Endpoints | Status |
-|-----------|----------|----------------|-----------------|---------|
-| **Analyst** | `user` | ❌ **Denied** | ❌ **Denied** | ✅ **Correct** |
-| **Manager** | `admin` | ✅ **Allowed** | ✅ **Allowed** | ✅ **Correct** |
-| **Super Admin** | `ceo` | ✅ **Allowed** | ✅ **Allowed** | ✅ **Correct** |
+| **Role** | **Username** | **Admin Routes** | **API Key Access** | **JWT Auth** |
+|----------|--------------|------------------|-------------------|--------------|
+| **SOC Analyst** | `user` | ❌ **Denied** | ❌ **Denied** | ✅ **Correct** |
+| **Security Admin** | `admin` | ✅ **Allowed** | ✅ **Allowed** | ✅ **Correct** |
 
 ### **Authentication Tests** ✅
 - ✅ JWT tokens are properly validated
@@ -82,7 +81,7 @@ cd frontend && npm run start:prod
 ### **✅ Production Security Enabled**
 - **Authentication**: JWT tokens required for all protected endpoints
 - **Authorization**: Role-based access control (RBAC) enforced
-- **API Security**: Admin endpoints restricted to manager+ roles
+- **API Security**: Admin endpoints restricted to security_admin+ roles
 - **Session Management**: Proper token expiration and validation
 
 ### **⚠️ Security Recommendations**

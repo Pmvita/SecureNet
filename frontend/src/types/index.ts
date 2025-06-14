@@ -331,7 +331,7 @@ export interface UserProfile {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'analyst' | 'viewer';
+  role: 'platform_owner' | 'security_admin' | 'soc_analyst';
   status: 'active' | 'inactive' | 'suspended';
   lastLogin: string;
   preferences: {

@@ -95,9 +95,9 @@ Both versions use the same credentials:
 
 | Username | Password | Role | Access Level |
 |----------|----------|------|--------------|
-| `ceo` | `superadmin123` | superadmin | Full platform access |
-| `admin` | `platform123` | manager | Organization admin |
-| `user` | `enduser123` | analyst | Standard user |
+| `ceo` | `superadmin123` | platform_owner | Full platform access |
+| `admin` | `platform123` | security_admin | Organization admin |
+| `user` | `enduser123` | soc_analyst | Standard user |
 
 ---
 

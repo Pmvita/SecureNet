@@ -155,21 +155,29 @@ SecureNet has evolved into a **production-ready network security monitoring plat
 
 SecureNet implements a comprehensive 3-tier role system for enterprise security management:
 
-#### **👑 Super Admin (`superadmin`)**
-- **Full Platform Access**: Complete control over the entire SecureNet platform
-- **Tenant Management**: Create, manage, and monitor all organizations
-- **Audit Logs**: Access to comprehensive platform-wide audit trails
-- **Billing Oversight**: Monitor usage and billing across all tenants
-- **User Management**: Create and manage users across all organizations
-- **System Configuration**: Platform-level settings and integrations
+#### **🟣 Platform Owner (`platform_owner`)**
+- **Full platform access** across all organizations and tenants
+- **System administration** capabilities and global configurations
+- **User management** for all roles and organizations
+- **Audit log access** for compliance and security monitoring
+- **Billing management** and subscription controls
+- **Organization creation** and management privileges
 
-#### **🛠 Platform Admin (`platform_admin`)**
-- **Organization-Level Admin**: Advanced controls within their assigned organization
-- **User Management**: Manage users within their organization
-- **Security Configuration**: Advanced security settings and policies
-- **Compliance Reporting**: Generate compliance reports for their organization
-- **Integration Management**: Configure SIEM, SOAR, and other integrations
-- **Advanced Analytics**: Access to detailed security analytics and insights
+#### **🔵 Security Admin (`security_admin`)**
+- **Organization-scoped administration** within assigned organization
+- **User management** for organization members only
+- **Security scan management** and configuration
+- **Threat investigation** and incident response capabilities
+- **Organization settings** and policy configuration
+- **Limited billing access** for organization usage monitoring
+
+#### **🟢 SOC Analyst (`soc_analyst`)**
+- **Dashboard access** for monitoring and analysis
+- **Read-only log access** for investigation and analysis
+- **Network monitoring** and device status viewing
+- **Security alert viewing** and basic response capabilities
+- **Report generation** for assigned scope
+- **Limited configuration** access for personal preferences
 
 #### **👤 End User (`end_user`)**
 - **Standard Dashboard Access**: Core security monitoring and analytics

@@ -90,9 +90,9 @@
 
 | Role | Username | Password | Email | Access Level |
 |------|----------|----------|-------|--------------|
-| 🟣 **Super Admin** | `ceo` | `superadmin123` | `ceo@securenet.ai` | Full platform access, tenant management, audit logs |
-| 🔵 **Manager** | `admin` | `platform123` | `admin@secureorg.com` | Organization-level admin with advanced controls |
-| 🟢 **Analyst** | `user` | `enduser123` | `user@secureorg.com` | Standard user with dashboard access |
+| 🟣 **Platform Owner** | `ceo` | `superadmin123` | `ceo@securenet.ai` | Full platform access, tenant management, audit logs |
+| 🔵 **Security Admin** | `admin` | `platform123` | `admin@secureorg.com` | Organization-level admin with advanced controls |
+| 🟢 **SOC Analyst** | `user` | `enduser123` | `user@secureorg.com` | Standard user with dashboard access |
 
 > ⚠️ **Important**: These are development credentials only. Change them before production deployment.
 
@@ -203,7 +203,7 @@ npm run Enterprise
 
 ## ✅ **Enterprise Readiness Checklist**
 
-- ✅ **Role-Based Access Control** — 3-tier security model (SuperAdmin → Manager → Analyst)
+- ✅ **Role-Based Access Control** — 3-tier security model (Platform Owner → Security Admin → SOC Analyst)
 - ✅ **CVE Integration** — Real-time NIST NVD API with CISA KEV tracking
 - ✅ **SaaS Billing** — Stripe integration with subscription management
 - ✅ **Audit Logging** — Comprehensive activity tracking and compliance

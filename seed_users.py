@@ -38,9 +38,9 @@ async def main():
         
         if success:
             logger.info("✅ Successfully seeded default users:")
-            logger.info("   👑 Super Admin: ceo@securenet.ai / superadmin123")
-            logger.info("   🛠 Platform Admin: admin@secureorg.com / platform123") 
-            logger.info("   👤 End User: user@secureorg.com / enduser123")
+            logger.info("   👑 Platform Owner: ceo@securenet.ai / superadmin123")
+            logger.info("   🔵 Security Admin: admin@secureorg.com / platform123") 
+            logger.info("   🟢 SOC Analyst: user@secureorg.com / enduser123")
             logger.info("")
             logger.info("🚀 You can now login with any of these accounts!")
         else:

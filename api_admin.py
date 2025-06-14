@@ -88,7 +88,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
             "id": 1,
             "username": "admin",
             "email": "admin@securenet.local",
-            "role": "superadmin",
+            "role": "platform_owner",
             "last_login": datetime.now().isoformat()
         }
     
@@ -133,7 +133,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
                 raise HTTPException(status_code=401, detail="User not found")
             
             # Ensure the user has sufficient permissions for admin access
-            allowed_admin_roles = ['superadmin', 'manager', 'platform_admin']
+            allowed_admin_roles = ['platform_owner', 'security_admin', 'superadmin', 'manager', 'platform_admin']
             if user.get('role', '').lower() not in allowed_admin_roles:
                 logger.error(f"Insufficient permissions for user {user.get('username')} with role {user.get('role')}")
                 raise HTTPException(status_code=403, detail="Admin access required")
@@ -152,7 +152,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
                 # Return a superadmin user for API key access
                 return {
                     'id': 1,
-                    'role': 'superadmin',
+                    'role': 'platform_owner',
                     'username': 'api_access',
                     'email': 'api@securenet.com',
                     'organization_id': org['id']
@@ -170,7 +170,7 @@ async def verify_superadmin_permission(user: Dict = Depends(get_current_user)) -
     """Verify user has superadmin permissions."""
     user_role = user.get('role', '').lower()
     # Support both old and new role names for backward compatibility
-    allowed_roles = ['superadmin', 'manager', 'platform_admin', UserRole.SUPERADMIN.value, UserRole.MANAGER.value]
+    allowed_roles = ['platform_owner', 'security_admin', 'superadmin', 'manager', 'platform_admin', UserRole.PLATFORM_OWNER.value, UserRole.SECURITY_ADMIN.value]
     if user_role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Superadmin or Manager access required")
     return user
@@ -494,7 +494,7 @@ async def delete_user(
             raise HTTPException(status_code=404, detail="User not found")
         
         # Prevent deletion of superadmin users for safety
-        if target_user['role'] == UserRole.SUPERADMIN.value:
+        if target_user['role'] == UserRole.PLATFORM_OWNER.value:
             raise HTTPException(status_code=400, detail="Cannot delete superadmin users")
         
         # Delete user

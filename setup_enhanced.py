@@ -246,9 +246,9 @@ def seed_initial_data():
         
         # Create default users with hashed passwords
         default_users = [
-            ('ceo', 'ceo@securenet.com', 'superadmin123', 'superadmin'),
-            ('admin', 'admin@securenet.com', 'platform123', 'manager'),
-            ('user', 'user@securenet.com', 'enduser123', 'analyst')
+            ('ceo', 'ceo@securenet.com', 'superadmin123', 'platform_owner'),
+            ('admin', 'admin@securenet.com', 'platform123', 'security_admin'),
+            ('user', 'user@securenet.com', 'enduser123', 'soc_analyst')
         ]
         
         for username, email, password, role in default_users:
@@ -531,9 +531,9 @@ def main():
     print("3. Run the application: ./start_dev.sh")
     print("4. Or use Docker: docker-compose up")
     print("\nDefault login credentials:")
-    print("- Superadmin: ceo / superadmin123")
-    print("- Manager: admin / platform123") 
-    print("- Analyst: user / enduser123")
+    print("- Platform Owner: ceo / superadmin123")
+    print("- Security Admin: admin / platform123") 
+    print("- SOC Analyst: user / enduser123")
     print("\nAPI Documentation: http://localhost:8000/docs")
     
     return True
