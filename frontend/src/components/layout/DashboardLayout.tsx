@@ -336,6 +336,24 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     <div className="hidden sm:block text-left">
                       <p className="text-sm font-medium text-white">{user?.username || 'User'}</p>
                       <p className="text-xs text-gray-400 flex items-center gap-1">
+                        {user?.role === 'platform_owner' && (
+                          <>
+                            <StarIcon className="w-3 h-3 text-yellow-400" />
+                            <span>Platform Owner</span>
+                          </>
+                        )}
+                        {user?.role === 'security_admin' && (
+                          <>
+                            <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
+                            <span>Security Admin</span>
+                          </>
+                        )}
+                        {user?.role === 'soc_analyst' && (
+                          <>
+                            <UserIcon className="w-3 h-3 text-green-400" />
+                            <span>SOC Analyst</span>
+                          </>
+                        )}
                         {user?.role === 'superadmin' && (
                           <>
                             <StarIcon className="w-3 h-3 text-yellow-400" />
@@ -386,6 +404,24 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                             <p className="text-sm font-medium text-white">{user?.username || 'User'}</p>
                             <p className="text-xs text-gray-400">{user?.email || 'user@securenet.com'}</p>
                             <p className="text-xs text-blue-400 mt-1 flex items-center gap-1">
+                              {user?.role === 'platform_owner' && (
+                                <>
+                                  <StarIcon className="w-3 h-3 text-yellow-400" />
+                                  <span>Platform Owner</span>
+                                </>
+                              )}
+                              {user?.role === 'security_admin' && (
+                                <>
+                                  <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
+                                  <span>Security Admin</span>
+                                </>
+                              )}
+                              {user?.role === 'soc_analyst' && (
+                                <>
+                                  <UserIcon className="w-3 h-3 text-green-400" />
+                                  <span>SOC Analyst</span>
+                                </>
+                              )}
                               {user?.role === 'superadmin' && (
                                 <>
                                   <StarIcon className="w-3 h-3 text-yellow-400" />

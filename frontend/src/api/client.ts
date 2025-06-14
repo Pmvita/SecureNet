@@ -63,18 +63,16 @@ export class ApiClient {
     // Request interceptor
     this.client.interceptors.request.use(
       (config) => {
-        // Add auth token if available
         const token = localStorage.getItem('auth_token');
         if (token) {
-          config.headers['Authorization'] = `Bearer ${token}`;
+          config.headers.Authorization = `Bearer ${token}`;
         }
-        // Add API key if available
         if (this.apiKey) {
           config.headers['X-API-Key'] = this.apiKey;
         }
         return config;
       },
-      (error) => Promise.reject(new NetworkError('Failed to send request'))
+      (error) => Promise.reject(error)
     );
 
     // Response interceptor
@@ -109,7 +107,7 @@ export class ApiClient {
           }
           
           // In production mode, be more careful about clearing auth state
-          // Only clear on 401 (unauthorized) or if we don't have an API key and get 403
+          // Only clear on 401 (unauthorized)
           if (error.response?.status === 401) {
             // 401 means the JWT token is invalid/expired
             localStorage.removeItem('auth_token');
@@ -117,30 +115,33 @@ export class ApiClient {
             if (!window.location.pathname.includes('/login')) {
               window.location.href = '/login';
             }
-          } else if (error.response?.status === 403 && !this.apiKey) {
-            // 403 without API key means we need to re-authenticate
-            // But only if we're not currently initializing
-            if (this.isInitialized) {
+          } else if (error.response?.status === 403) {
+            // For 403 errors, only clear auth state if it's NOT the API key endpoint
+            // API key 403 errors are expected for soc_analyst users
+            const isApiKeyRequest = error.config?.url?.includes('/api/get-api-key');
+            if (!isApiKeyRequest && !this.apiKey && this.isInitialized) {
+              // 403 on non-API-key endpoint without API key means we need to re-authenticate
               localStorage.removeItem('auth_token');
               this.clearApiKey();
               if (!window.location.pathname.includes('/login')) {
                 window.location.href = '/login';
               }
             }
+            // If it's an API key request or we have an API key, it's just a permission issue
+            // Don't clear auth state in these cases
           }
-          // If we have an API key and get 403, it might be a permission issue, not auth
-          // Don't clear auth state in this case
         }
         return Promise.reject(error);
       }
     );
   }
 
-  async initialize(): Promise<void> {
-    // Only initialize once successfully
-    if (this.isInitialized && this.apiKey) {
-      console.log('API client already initialized with API key, skipping...');
-      return;
+  async initialize(): Promise<boolean> {
+    // Only initialize once successfully - for users with API keys, check both conditions
+    // For users without API keys (like soc_analyst), just check isInitialized
+    if (this.isInitialized) {
+      console.log('API client already initialized, skipping...');
+      return true;
     }
 
     // In development mode with mock data, set a default API key and token
@@ -154,7 +155,7 @@ export class ApiClient {
       }
       this.isInitialized = true;
       console.log('API client initialized in development mode with dev-api-key');
-      return;
+      return true;
     }
 
     // Check if we have an auth token
@@ -164,7 +165,7 @@ export class ApiClient {
     if (!token) {
       console.log('No auth token found, skipping API key initialization');
       this.isInitialized = false;
-      return;
+      return false;
     }
 
     try {
@@ -177,10 +178,11 @@ export class ApiClient {
         console.log('API key set successfully:', response.data.data.api_key.substring(0, 10) + '...');
         this.isInitialized = true;
         console.log('API client initialization complete with API key');
+        return true;
       } else {
         console.warn('No API key in response:', response);
         this.isInitialized = false;
-        throw new Error('No API key received from server');
+        return false;
       }
     } catch (error) {
       console.error('Failed to get API key:', error);
@@ -188,14 +190,13 @@ export class ApiClient {
       // Check if this is a 403 error (user doesn't have permission for API key)
       const status = (error as { response?: { status?: number } })?.response?.status;
       if (status === 403) {
-        console.log('User does not have API key permissions (analyst role) - continuing without API key');
+        console.log('User does not have API key permissions (soc_analyst role) - continuing without API key');
         this.isInitialized = true; // Allow initialization to succeed for analyst users
-        return;
+        return true; // Return success for 403 errors
       }
       
       this.isInitialized = false;
-      // Throw the error so the caller knows initialization failed
-      throw error;
+      return false;
     }
   }
 
@@ -266,9 +267,13 @@ export const apiClient = new ApiClient();
 // Initialize the API client
 export async function initializeApiClient(): Promise<boolean> {
   try {
-    await apiClient.initialize();
-    console.log('API client initialized successfully');
-    return true;
+    const result = await apiClient.initialize();
+    if (result) {
+      console.log('API client initialized successfully');
+    } else {
+      console.log('API client initialization failed');
+    }
+    return result;
   } catch (error) {
     console.error('Failed to initialize API client:', error);
     console.error('Error details:', {

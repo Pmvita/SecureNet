@@ -306,9 +306,9 @@ class MultiTenantAuthManager:
         # This would typically query the database
         # For demo purposes, using hardcoded values
         test_users = {
-            "ceo": {"id": "1", "role": "superadmin", "password": "superadmin123"},
-            "admin": {"id": "2", "role": "manager", "password": "platform123"},
-            "user": {"id": "3", "role": "analyst", "password": "enduser123"}
+            "ceo": {"id": "1", "role": "platform_owner", "password": "superadmin123"},
+            "admin": {"id": "2", "role": "security_admin", "password": "platform123"},
+            "user": {"id": "3", "role": "soc_analyst", "password": "enduser123"}
         }
         
         if username in test_users:
@@ -328,6 +328,24 @@ class MultiTenantAuthManager:
         """Get permissions for role"""
         
         role_permissions = {
+            "platform_owner": [
+                "admin:read", "admin:write", "admin:delete",
+                "tenant:read", "tenant:write", "tenant:delete",
+                "user:read", "user:write", "user:delete",
+                "scan:read", "scan:write", "scan:execute",
+                "alert:read", "alert:write", "alert:delete"
+            ],
+            "security_admin": [
+                "tenant:read", "tenant:write",
+                "user:read", "user:write",
+                "scan:read", "scan:write", "scan:execute",
+                "alert:read", "alert:write"
+            ],
+            "soc_analyst": [
+                "scan:read", "scan:execute",
+                "alert:read"
+            ],
+            # Legacy role mappings for backward compatibility
             "superadmin": [
                 "admin:read", "admin:write", "admin:delete",
                 "tenant:read", "tenant:write", "tenant:delete",

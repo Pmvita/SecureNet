@@ -1,4 +1,4 @@
-# 🛡️ SecureNet — AI-Powered Cybersecurity SaaS
+# 🛡️ SecureNet
 
 > **Real-time network defense. Enterprise-grade intelligence. One dashboard.**
 

@@ -115,7 +115,7 @@ def setup_database():
         username TEXT UNIQUE NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'analyst',
+        role TEXT NOT NULL DEFAULT 'soc_analyst',
         tenant_id TEXT NOT NULL DEFAULT 'default',
         is_active BOOLEAN DEFAULT 1,
         failed_login_attempts INTEGER DEFAULT 0,

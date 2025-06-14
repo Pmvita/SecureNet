@@ -494,9 +494,9 @@ curl -X GET "http://localhost:8000/api/auth/whoami" \
 ```
 
 **Role Types:**
-- `superadmin`: 👑 Full platform access, tenant management, audit logs
-- `platform_admin`: 🛠 Organization-level admin with advanced controls  
-- `end_user`: 👤 Standard tenant user with dashboard access
+- `platform_owner`: 👑 Full platform access, tenant management, audit logs (formerly superadmin)
+- `security_admin`: 🛠 Organization-level admin with advanced controls (formerly platform_admin/manager)
+- `soc_analyst`: 👤 Standard tenant user with dashboard access (formerly end_user/analyst)
 
 ### **POST /api/auth/logout**
 **User logout with session tracking**

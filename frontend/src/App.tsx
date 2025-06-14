@@ -30,7 +30,7 @@ import {
   GlobeAltIcon,
   ExclamationTriangleIcon,
   Cog6ToothIcon,
-  CrownIcon,
+  StarIcon,
   UsersIcon,
   BuildingOfficeIcon,
   CreditCardIcon,
@@ -56,11 +56,12 @@ const AppRoutes: React.FC = () => {
     ];
 
     // Add admin navigation items for users with system_admin permissions
-    // Check for both 'superadmin' and 'admin' roles (legacy support)
-    if (user?.role === 'superadmin' || user?.role === 'admin') {
+    // Check for both new and legacy roles
+    if (user?.role === 'platform_owner' || user?.role === 'security_admin' || 
+        user?.role === 'superadmin' || user?.role === 'admin' || user?.role === 'manager' || user?.role === 'platform_admin') {
       return [
         ...baseItems,
-        { path: '/admin', label: 'Admin Dashboard', icon: 'CrownIcon' },
+        { path: '/admin', label: 'Admin Dashboard', icon: 'StarIcon' },
         { path: '/admin/users', label: 'Users', icon: 'UsersIcon' },
         { path: '/admin/tenants', label: 'Tenants', icon: 'BuildingOfficeIcon' },
         { path: '/admin/billing', label: 'Billing', icon: 'CreditCardIcon' },

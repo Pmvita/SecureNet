@@ -144,7 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     checkAuth();
-  }, [navigate, location.pathname, showToast]);
+  }, [showToast]);
 
   const login = async (username: string, password: string) => {
     try {

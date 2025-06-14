@@ -97,7 +97,7 @@ export const LoginPage: React.FC = () => {
             >
               <span className="dev-role">
                 <StarIcon className="w-4 h-4 text-yellow-400 inline mr-1" />
-                Super Admin
+                Platform Owner
               </span>
               <span className="dev-username">ceo</span>
             </button>
@@ -109,7 +109,7 @@ export const LoginPage: React.FC = () => {
             >
               <span className="dev-role">
                 <Cog6ToothIcon className="w-4 h-4 text-blue-400 inline mr-1" />
-                Manager
+                Security Admin
               </span>
               <span className="dev-username">admin</span>
             </button>
@@ -121,7 +121,7 @@ export const LoginPage: React.FC = () => {
             >
               <span className="dev-role">
                 <UserIcon className="w-4 h-4 text-green-400 inline mr-1" />
-                Analyst
+                SOC Analyst
               </span>
               <span className="dev-username">user</span>
             </button>

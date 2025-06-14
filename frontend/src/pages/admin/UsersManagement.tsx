@@ -59,7 +59,7 @@ const UsersManagement: React.FC = () => {
     username: '',
     email: '',
     password: '',
-    role: 'analyst'
+    role: 'soc_analyst'
   });
   const [newRole, setNewRole] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
@@ -149,7 +149,7 @@ const UsersManagement: React.FC = () => {
         username: '',
         email: '',
         password: '',
-        role: 'end_user'
+        role: 'soc_analyst'
       });
       
       showToast({ 
@@ -256,6 +256,13 @@ const UsersManagement: React.FC = () => {
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
+      case 'platform_owner':
+        return 'bg-red-100 text-red-800 border border-red-200';
+      case 'security_admin':
+        return 'bg-blue-100 text-blue-800 border border-blue-200';
+      case 'soc_analyst':
+        return 'bg-green-100 text-green-800 border border-green-200';
+      // Legacy role support
       case 'superadmin':
         return 'bg-red-100 text-red-800 border border-red-200';
       case 'manager':
@@ -271,11 +278,14 @@ const UsersManagement: React.FC = () => {
 
   const getRoleIcon = (role: string) => {
     switch (role) {
+      case 'platform_owner':
       case 'superadmin':
         return <StarIcon className="w-4 h-4 text-yellow-400" />;
+      case 'security_admin':
       case 'manager':
       case 'platform_admin':
         return <Cog6ToothIcon className="w-4 h-4 text-blue-400" />;
+      case 'soc_analyst':
       case 'analyst':
       case 'end_user':
         return <UserIcon className="w-4 h-4 text-green-400" />;
@@ -286,23 +296,29 @@ const UsersManagement: React.FC = () => {
 
   const getRoleDisplayName = (role: string) => {
     switch (role) {
+      case 'platform_owner':
+        return 'Platform Owner';
+      case 'security_admin':
+        return 'Security Admin';
+      case 'soc_analyst':
+        return 'SOC Analyst';
       case 'superadmin':
-        return 'Super Admin';
+        return 'Super Admin (Legacy)';
       case 'manager':
-        return 'Manager';
+        return 'Manager (Legacy)';
       case 'platform_admin':
-        return 'Platform Admin';
+        return 'Platform Admin (Legacy)';
       case 'analyst':
-        return 'Analyst';
+        return 'Analyst (Legacy)';
       case 'end_user':
-        return 'End User';
+        return 'End User (Legacy)';
       default:
         return role.replace('_', ' ');
     }
   };
 
   const canDeleteUser = (user: User) => {
-    return user.role !== 'superadmin';
+    return user.role !== 'platform_owner' && user.role !== 'superadmin';
   };
 
   if (loading) {
@@ -379,11 +395,14 @@ const UsersManagement: React.FC = () => {
               className="w-full border border-gray-600 rounded-md px-3 py-2 bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">All Roles</option>
-              <option value="superadmin">Super Admin</option>
-              <option value="manager">Manager</option>
-              <option value="analyst">Analyst</option>
+              <option value="platform_owner">Platform Owner</option>
+              <option value="security_admin">Security Admin</option>
+              <option value="soc_analyst">SOC Analyst</option>
               {/* Legacy role support */}
+              <option value="superadmin">Super Admin (Legacy)</option>
+              <option value="manager">Manager (Legacy)</option>
               <option value="platform_admin">Platform Admin (Legacy)</option>
+              <option value="analyst">Analyst (Legacy)</option>
               <option value="end_user">End User (Legacy)</option>
             </select>
           </div>
@@ -617,9 +636,9 @@ const UsersManagement: React.FC = () => {
                     onChange={(e) => setCreateUserData({ ...createUserData, role: e.target.value })}
                     className="w-full border border-gray-600 rounded-md px-3 py-2 bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="analyst">Analyst</option>
-                    <option value="manager">Manager</option>
-                    <option value="superadmin">Super Admin</option>
+                    <option value="soc_analyst">SOC Analyst</option>
+                    <option value="security_admin">Security Admin</option>
+                    <option value="platform_owner">Platform Owner</option>
                   </select>
                 </div>
               </div>
@@ -721,9 +740,9 @@ const UsersManagement: React.FC = () => {
                   onChange={(e) => setNewRole(e.target.value)}
                   className="w-full border border-gray-600 rounded-md px-3 py-2 bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="analyst">Analyst</option>
-                  <option value="manager">Manager</option>
-                  <option value="superadmin">Super Admin</option>
+                  <option value="soc_analyst">SOC Analyst</option>
+                  <option value="security_admin">Security Admin</option>
+                  <option value="platform_owner">Platform Owner</option>
                 </select>
               </div>
               

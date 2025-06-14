@@ -26,28 +26,19 @@ interface UserProfile {
   id: string;
   username: string;
   email: string;
-  name: string;
-  role: 'superadmin' | 'manager' | 'analyst' | 'platform_admin' | 'end_user' | 'admin' | 'user';
+  name?: string;
+  role: 'platform_owner' | 'security_admin' | 'soc_analyst' | 'superadmin' | 'manager' | 'analyst' | 'platform_admin' | 'end_user' | 'admin' | 'user';
   status: 'active' | 'inactive' | 'suspended';
-  lastLogin: string;
-  createdAt: string;
+  last_login?: string;
+  last_logout?: string;
+  login_count?: number;
+  created_at?: string;
   department?: string;
   title?: string;
   phone?: string;
-  avatar?: string;
-  permissions: string[];
-  activityLog: Array<{
-    id: string;
-    action: string;
-    timestamp: string;
-    ip: string;
-    userAgent: string;
-  }>;
+  two_factor_enabled?: boolean;
   org_id?: string;
   organization_name?: string;
-  login_count?: number;
-  last_logout?: string;
-  two_factor_enabled?: boolean;
 }
 
 interface ChangePasswordModalProps {
@@ -575,66 +566,56 @@ export const ProfilePage: React.FC = () => {
           setIs2FAEnabled(userProfile.two_factor_enabled || false);
         } else {
           // Fallback to user context data if API fails
-          const userProfile: UserProfile = {
-            id: user.id,
+          setProfile({
+            id: user.id.toString(),
             username: user.username,
             email: user.email,
-            name: user.username,
+            name: user.username || '',
             role: user.role,
             status: 'active',
-            lastLogin: user.last_login,
-            createdAt: user.last_login,
+            last_login: user.last_login || '',
+            created_at: user.last_login || '',
             department: '',
             title: '',
             phone: '',
-            permissions: [],
-            activityLog: [],
+            two_factor_enabled: false,
             org_id: user.org_id,
             organization_name: user.organization_name,
-            login_count: user.login_count,
-            last_logout: user.last_logout,
-          };
-          
-          setProfile(userProfile);
+          });
           setEditForm({
-            name: userProfile.name,
-            email: userProfile.email,
-            phone: userProfile.phone || '',
-            department: userProfile.department || '',
-            title: userProfile.title || '',
+            name: user.username || '',
+            email: user.email,
+            phone: '',
+            department: '',
+            title: '',
           });
         }
       } catch (error) {
         console.error('Failed to load profile:', error);
         // Fallback to user context data
         if (user) {
-          const userProfile: UserProfile = {
-            id: user.id,
+          setProfile({
+            id: user.id.toString(),
             username: user.username,
             email: user.email,
-            name: user.username,
+            name: user.username || '',
             role: user.role,
             status: 'active',
-            lastLogin: user.last_login,
-            createdAt: user.last_login,
+            last_login: user.last_login || '',
+            created_at: user.last_login || '',
             department: '',
             title: '',
             phone: '',
-            permissions: [],
-            activityLog: [],
+            two_factor_enabled: false,
             org_id: user.org_id,
             organization_name: user.organization_name,
-            login_count: user.login_count,
-            last_logout: user.last_logout,
-          };
-          
-          setProfile(userProfile);
+          });
           setEditForm({
-            name: userProfile.name,
-            email: userProfile.email,
-            phone: userProfile.phone || '',
-            department: userProfile.department || '',
-            title: userProfile.title || '',
+            name: user.username || '',
+            email: user.email,
+            phone: '',
+            department: '',
+            title: '',
           });
         }
       } finally {
@@ -681,7 +662,7 @@ export const ProfilePage: React.FC = () => {
     if (!profile) return;
     
     setEditForm({
-      name: profile.name,
+      name: profile.name || '',
       email: profile.email,
       phone: profile.phone || '',
       department: profile.department || '',
@@ -754,6 +735,10 @@ export const ProfilePage: React.FC = () => {
 
   const getRoleBadge = (role: string) => {
     const roleConfig = {
+      platform_owner: { label: 'Platform Owner', color: 'bg-red-500', icon: StarIcon },
+      security_admin: { label: 'Security Admin', color: 'bg-blue-500', icon: Cog6ToothIcon },
+      soc_analyst: { label: 'SOC Analyst', color: 'bg-green-500', icon: UserIcon },
+      // Legacy roles
       superadmin: { label: 'Super Admin', color: 'bg-red-500', icon: StarIcon },
       manager: { label: 'Manager', color: 'bg-blue-500', icon: Cog6ToothIcon },
       analyst: { label: 'Analyst', color: 'bg-green-500', icon: UserIcon },
@@ -867,13 +852,13 @@ export const ProfilePage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400">Member since</span>
                   <span className="text-white">
-                    {new Date(profile.createdAt).toLocaleDateString()}
+                    {new Date(profile.created_at || '').toLocaleDateString()}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400">Last login</span>
                   <span className="text-white">
-                    {new Date(profile.lastLogin).toLocaleString()}
+                    {new Date(profile.last_login || '').toLocaleString()}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -1064,27 +1049,11 @@ export const ProfilePage: React.FC = () => {
         </h3>
         
         <div className="space-y-3">
-          {profile.activityLog.length > 0 ? (
-            profile.activityLog.map((activity) => (
-              <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <div>
-                    <p className="text-white font-medium">{activity.action}</p>
-                    <p className="text-sm text-gray-400">
-                      {new Date(activity.timestamp).toLocaleString()} • IP: {activity.ip}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-8">
-              <ClockIcon className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400">No recent activity to display</p>
-              <p className="text-sm text-gray-500">Activity logs will appear here as you use the platform</p>
-            </div>
-          )}
+          <div className="text-center py-8">
+            <ClockIcon className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+            <p className="text-gray-400">No recent activity to display</p>
+            <p className="text-sm text-gray-500">Activity logs will appear here as you use the platform</p>
+          </div>
         </div>
       </div>
 
