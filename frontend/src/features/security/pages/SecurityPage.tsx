@@ -29,6 +29,7 @@ import {
   ChartBarIcon,
   ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
+import { SecurityEventsGrid } from '@/components/grids/SecurityEventsGrid';
 
 // Security level configurations
 const securityLevelConfig = {
@@ -748,6 +749,25 @@ export const SecurityPage: React.FC = () => {
                 )}
               </div>
             </Card>
+          </SecurityErrorBoundary>
+
+          {/* Phase 3: Enterprise Security Events Grid */}
+          <SecurityErrorBoundary context="Enterprise Security Events">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Enterprise Security Events</h2>
+                  <p className="text-sm text-gray-400 mt-1">Advanced security event management and analysis</p>
+                </div>
+                <div className="flex items-center space-x-2 text-xs text-gray-500">
+                  <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">Phase 3</span>
+                  <span>Enterprise Components</span>
+                </div>
+              </div>
+
+              {/* Security Events Grid */}
+              <SecurityEventsGrid height={600} className="w-full" />
+            </div>
           </SecurityErrorBoundary>
 
           {/* Modals */}

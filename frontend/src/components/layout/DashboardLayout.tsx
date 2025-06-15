@@ -26,6 +26,7 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import { useRealTimeNotifications } from '../../hooks/useRealTimeNotifications';
+import { CommandPalette } from '../CommandPalette';
 
 export interface NavigationItem {
   path: string;
@@ -73,6 +74,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const { theme, actualTheme, setTheme } = useTheme();
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -103,6 +105,19 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Command palette keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        event.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   return (
@@ -515,6 +530,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           {children}
         </main>
       </div>
+
+      {/* Command Palette */}
+      <CommandPalette 
+        isOpen={commandPaletteOpen} 
+        onClose={() => setCommandPaletteOpen(false)} 
+      />
     </div>
   );
 }; 

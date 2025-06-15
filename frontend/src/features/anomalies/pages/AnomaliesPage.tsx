@@ -61,6 +61,7 @@ import {
   ChevronUpIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
+import { SimpleSecurityGrid } from '@/components/grids/SimpleSecurityGrid';
 
 // Anomaly configurations
 const severityConfig = {
@@ -973,6 +974,25 @@ export const AnomaliesPage: React.FC = () => {
             </Card>
           </ErrorBoundary>
         )}
+
+        {/* Phase 3: Enterprise Anomaly Events Grid */}
+        <ErrorBoundary FallbackComponent={ErrorFallback}>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white">Enterprise Anomaly Events</h2>
+                <p className="text-sm text-gray-400 mt-1">Advanced anomaly event management and analysis</p>
+              </div>
+              <div className="flex items-center space-x-2 text-xs text-gray-500">
+                <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">Phase 3</span>
+                <span>Enterprise Components</span>
+              </div>
+            </div>
+
+            {/* Simple Security Grid for Anomalies */}
+            <SimpleSecurityGrid height={600} className="w-full" />
+          </div>
+        </ErrorBoundary>
 
         {/* Anomaly Details Modal */}
         <AnomalyDetailsModal

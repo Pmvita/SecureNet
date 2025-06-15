@@ -47,6 +47,7 @@ import {
   ChevronUpIcon,
   ChevronDownIcon,
 } from '@heroicons/react/24/outline';
+import NetworkFlowDiagram from '@/components/network/NetworkFlowDiagram';
 
 // Traffic log interface
 interface TrafficLog {
@@ -715,6 +716,23 @@ export const NetworkPage: React.FC = () => {
             </Card>
           </div>
         )}
+
+        {/* Phase 3: Enterprise Network Visualization */}
+        <div className="space-y-6 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-white">Enterprise Network Topology</h2>
+              <p className="text-sm text-gray-400 mt-1">Interactive network visualization with real-time threat detection</p>
+            </div>
+            <div className="flex items-center space-x-2 text-xs text-gray-500">
+              <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">Phase 3</span>
+              <span>Enterprise Components</span>
+            </div>
+          </div>
+
+          {/* Network Flow Diagram */}
+          <NetworkFlowDiagram height={600} className="w-full" />
+        </div>
 
         {/* Enhanced Traffic Monitoring Section */}
         <ErrorBoundary FallbackComponent={ErrorFallback}>

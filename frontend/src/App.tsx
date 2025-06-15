@@ -40,6 +40,7 @@ import { AppErrorBoundary } from './components/error/AppErrorBoundary';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 
+
 // Development mode bypass
 const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
 
@@ -224,10 +225,10 @@ const App: React.FC = () => {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <ToastProvider>
-            <Router>
-              <AuthProvider>
-                <AppRoutes />
-              </AuthProvider>
+                          <Router>
+                <AuthProvider>
+                  <AppRoutes />
+                </AuthProvider>
             </Router>
           </ToastProvider>
         </ThemeProvider>
