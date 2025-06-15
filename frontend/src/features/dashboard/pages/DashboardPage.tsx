@@ -556,11 +556,14 @@ export function DashboardPage() {
               <ChartBarIcon className="h-5 w-5 text-green-400" />
               Device Distribution
             </h3>
-            <DeviceDistributionPie 
-              data={deviceDistributionData}
-              height={400} 
-              loading={isLoading}
-            />
+            <div className="h-[400px]">
+              <DeviceDistributionPie 
+                data={deviceDistributionData}
+                height={400} 
+                loading={isLoading}
+                hideTitle={true}
+              />
+            </div>
           </div>
         </Card>
         
@@ -570,10 +573,13 @@ export function DashboardPage() {
               <FireIcon className="h-5 w-5 text-red-400" />
               Vulnerability Heatmap
             </h3>
-            <VulnerabilityHeatmap 
-              height={400} 
-              loading={isLoading}
-            />
+            <div className="h-[400px]">
+              <VulnerabilityHeatmap 
+                height={400} 
+                loading={isLoading}
+                hideTitle={true}
+              />
+            </div>
           </div>
         </Card>
       </div>
