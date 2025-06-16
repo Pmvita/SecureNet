@@ -22,7 +22,7 @@ class DatabaseContainer(containers.DeclarativeContainer):
     
     # Database URL provider
     database_url = providers.Factory(
-        lambda config: config.get("url", "sqlite:///data/securenet.db"),
+        lambda config: config.get("url", "postgresql://securenet:securenet@localhost:5432/securenet"),
         config=db_config
     )
 
@@ -150,7 +150,7 @@ def create_container() -> ApplicationContainer:
     
     # Configure sub-containers
     database_container.db_config.from_dict({
-        "url": os.getenv("DATABASE_URL", "sqlite:///data/securenet.db")
+        "url": os.getenv("DATABASE_URL", "postgresql://securenet:securenet@localhost:5432/securenet")
     })
     
     security_container.security_config.from_dict({

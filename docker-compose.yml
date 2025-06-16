@@ -1,0 +1,312 @@
+version: '3.8'
+
+# Enterprise SecureNet Docker Compose Configuration
+# Production-ready multi-service architecture
+
+services:
+  # PostgreSQL Primary Database (Enterprise)
+  postgres:
+    image: postgres:15-alpine
+    container_name: securenet-postgres
+    environment:
+      POSTGRES_DB: securenet
+      POSTGRES_USER: securenet
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init-scripts:/docker-entrypoint-initdb.d
+      - ./database/postgresql.conf:/etc/postgresql/postgresql.conf
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - securenet-backend
+    secrets:
+      - postgres_password
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U securenet -d securenet"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+
+  # Redis Cluster for Caching & Session Storage
+  redis:
+    image: redis:7-alpine
+    container_name: securenet-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - securenet-backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+
+  # SecureNet API Service
+  securenet-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: securenet-api
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql://securenet:${POSTGRES_PASSWORD}@postgres:5432/securenet
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET_FILE=/run/secrets/jwt_secret
+      - ENCRYPTION_KEY_FILE=/run/secrets/encryption_key
+      - SENTRY_DSN=${SENTRY_DSN}
+      - LOG_LEVEL=INFO
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:14268/api/traces
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - api_logs:/app/logs
+      - api_uploads:/app/uploads
+      - prometheus_metrics:/tmp/prometheus_multiproc
+    networks:
+      - securenet-backend
+      - securenet-frontend
+    secrets:
+      - jwt_secret
+      - encryption_key
+      - postgres_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  # Background Task Workers
+  securenet-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: securenet-worker
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql://securenet:${POSTGRES_PASSWORD}@postgres:5432/securenet
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET_FILE=/run/secrets/jwt_secret
+      - ENCRYPTION_KEY_FILE=/run/secrets/encryption_key
+      - C_FORCE_ROOT=1
+    volumes:
+      - api_logs:/app/logs
+    networks:
+      - securenet-backend
+    secrets:
+      - jwt_secret
+      - encryption_key
+      - postgres_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: ["python", "-m", "tasks.rq_service", "worker"]
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  # Nginx Reverse Proxy & Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: securenet-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/logs:/var/log/nginx
+    networks:
+      - securenet-frontend
+    depends_on:
+      - securenet-api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: securenet-prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+      - prometheus_metrics:/tmp/prometheus_multiproc:ro
+    networks:
+      - securenet-monitoring
+      - securenet-backend
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: securenet-grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD_FILE=/run/secrets/grafana_password
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_SECURITY_COOKIE_SECURE=true
+      - GF_SECURITY_STRICT_TRANSPORT_SECURITY=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - securenet-monitoring
+    secrets:
+      - grafana_password
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  # Jaeger Distributed Tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: securenet-jaeger
+    ports:
+      - "16686:16686"  # Web UI
+      - "14268:14268"  # HTTP collector
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    volumes:
+      - jaeger_data:/tmp
+    networks:
+      - securenet-monitoring
+      - securenet-backend
+    restart: unless-stopped
+
+  # MLflow Model Registry & Tracking
+  mlflow:
+    image: python:3.11-slim
+    container_name: securenet-mlflow
+    ports:
+      - "${MLFLOW_PORT:-5000}:5000"
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://securenet:${POSTGRES_PASSWORD}@postgres:5432/mlflow
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+      - ./requirements-mlflow.txt:/tmp/requirements.txt
+    networks:
+      - securenet-backend
+    secrets:
+      - postgres_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    command: >
+      bash -c "
+        pip install -r /tmp/requirements.txt &&
+        mlflow server 
+          --host 0.0.0.0 
+          --port 5000 
+          --backend-store-uri postgresql://securenet:${POSTGRES_PASSWORD}@postgres:5432/mlflow 
+          --default-artifact-root /mlflow/artifacts
+      "
+
+# Networking
+networks:
+  securenet-frontend:
+    driver: bridge
+    name: securenet-frontend
+  securenet-backend:
+    driver: bridge
+    name: securenet-backend
+    internal: true
+  securenet-monitoring:
+    driver: bridge
+    name: securenet-monitoring
+
+# Persistent Volumes
+volumes:
+  postgres_data:
+    driver: local
+    name: securenet-postgres-data
+  redis_data:
+    driver: local
+    name: securenet-redis-data
+  api_logs:
+    driver: local
+    name: securenet-api-logs
+  api_uploads:
+    driver: local
+    name: securenet-api-uploads
+  prometheus_data:
+    driver: local
+    name: securenet-prometheus-data
+  prometheus_metrics:
+    driver: local
+    name: securenet-prometheus-metrics
+  grafana_data:
+    driver: local
+    name: securenet-grafana-data
+  jaeger_data:
+    driver: local
+    name: securenet-jaeger-data
+  mlflow_artifacts:
+    driver: local
+    name: securenet-mlflow-artifacts
+
+# Secrets Management
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  encryption_key:
+    file: ./secrets/encryption_key.txt
+  grafana_password:
+    file: ./secrets/grafana_password.txt 

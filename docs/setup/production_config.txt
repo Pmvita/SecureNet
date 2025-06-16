@@ -14,8 +14,8 @@ DEBUG=false
 HOST=0.0.0.0
 PORT=8000
 
-# Database
-DATABASE_URL=sqlite:///data/securenet.db
+# Database (PostgreSQL for Enterprise)
+DATABASE_URL=postgresql://securenet:your-secure-password@localhost:5432/securenet
 
 # Security & Authentication (GENERATE NEW KEYS!)
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
@@ -31,8 +31,8 @@ LOCKOUT_DURATION_MINUTES=15
 # Redis (for RQ task queue)
 REDIS_URL=redis://localhost:6379/0
 
-# MLflow Tracking
-MLFLOW_TRACKING_URI=sqlite:///data/mlflow.db
+# MLflow Tracking (PostgreSQL for Enterprise)
+MLFLOW_TRACKING_URI=postgresql://securenet:your-secure-password@localhost:5432/mlflow
 # For production MLflow server: MLFLOW_TRACKING_URI=http://your-mlflow-server:5000
 
 # Monitoring & Observability

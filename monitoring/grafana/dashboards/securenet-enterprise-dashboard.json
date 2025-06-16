@@ -1,0 +1,463 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "SecureNet Enterprise Security Dashboard",
+    "tags": ["securenet", "security", "enterprise"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Security Overview",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "securenet_active_threats_total",
+            "legendFormat": "Active Threats"
+          },
+          {
+            "expr": "securenet_blocked_attacks_total",
+            "legendFormat": "Blocked Attacks"
+          },
+          {
+            "expr": "securenet_security_events_total",
+            "legendFormat": "Security Events"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {"displayMode": "list", "orientation": "horizontal"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 10},
+                {"color": "red", "value": 50}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Authentication Events",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "rate(securenet_login_attempts_total[5m])",
+            "legendFormat": "Login Attempts"
+          },
+          {
+            "expr": "rate(securenet_login_failures_total[5m])",
+            "legendFormat": "Failed Logins"
+          },
+          {
+            "expr": "rate(securenet_mfa_challenges_total[5m])",
+            "legendFormat": "MFA Challenges"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "barAlignment": 0,
+              "lineWidth": 1,
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "never",
+              "pointSize": 5,
+              "stacking": {"mode": "none", "group": "A"},
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "scaleDistribution": {"type": "linear"},
+              "hideFrom": {"legend": false, "tooltip": false, "vis": false},
+              "thresholdsStyle": {"mode": "off"}
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            },
+            "unit": "reqps"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "System Performance",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "rate(securenet_http_requests_total[5m])",
+            "legendFormat": "HTTP Requests"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(securenet_http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th Percentile Response Time"
+          },
+          {
+            "expr": "rate(securenet_http_requests_total{status=~\"5..\"}[5m])",
+            "legendFormat": "5xx Errors"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Database Performance",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "securenet_database_connections_active",
+            "legendFormat": "Active Connections"
+          },
+          {
+            "expr": "rate(securenet_database_queries_total[5m])",
+            "legendFormat": "Queries per Second"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(securenet_database_query_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th Percentile Query Time"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Threat Detection",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "rate(securenet_anomalies_detected_total[5m])",
+            "legendFormat": "Anomalies Detected"
+          },
+          {
+            "expr": "rate(securenet_cve_alerts_total[5m])",
+            "legendFormat": "CVE Alerts"
+          },
+          {
+            "expr": "rate(securenet_malware_detected_total[5m])",
+            "legendFormat": "Malware Detected"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Network Security",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "securenet_network_devices_total",
+            "legendFormat": "Total Devices"
+          },
+          {
+            "expr": "securenet_network_devices_vulnerable",
+            "legendFormat": "Vulnerable Devices"
+          },
+          {
+            "expr": "securenet_network_scans_completed_total",
+            "legendFormat": "Scans Completed"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 5},
+                {"color": "red", "value": 20}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Compliance Status",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 24},
+        "targets": [
+          {
+            "expr": "securenet_compliance_score",
+            "legendFormat": "Compliance Score"
+          },
+          {
+            "expr": "securenet_audit_events_total",
+            "legendFormat": "Audit Events"
+          },
+          {
+            "expr": "securenet_policy_violations_total",
+            "legendFormat": "Policy Violations"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 70},
+                {"color": "green", "value": 90}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Resource Utilization",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 24},
+        "targets": [
+          {
+            "expr": "securenet_cpu_usage_percent",
+            "legendFormat": "CPU Usage"
+          },
+          {
+            "expr": "securenet_memory_usage_percent",
+            "legendFormat": "Memory Usage"
+          },
+          {
+            "expr": "securenet_disk_usage_percent",
+            "legendFormat": "Disk Usage"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 70},
+                {"color": "red", "value": 90}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Security Alerts by Severity",
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
+        "targets": [
+          {
+            "expr": "securenet_alerts_total{severity=\"critical\"}",
+            "legendFormat": "Critical"
+          },
+          {
+            "expr": "securenet_alerts_total{severity=\"high\"}",
+            "legendFormat": "High"
+          },
+          {
+            "expr": "securenet_alerts_total{severity=\"medium\"}",
+            "legendFormat": "Medium"
+          },
+          {
+            "expr": "securenet_alerts_total{severity=\"low\"}",
+            "legendFormat": "Low"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "hideFrom": {"legend": false, "tooltip": false, "vis": false}
+            },
+            "mappings": []
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Top Attack Sources",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30},
+        "targets": [
+          {
+            "expr": "topk(10, sum by (source_ip) (rate(securenet_attacks_blocked_total[1h])))",
+            "legendFormat": "{{source_ip}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            },
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 11,
+        "title": "User Activity",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 38},
+        "targets": [
+          {
+            "expr": "securenet_active_users",
+            "legendFormat": "Active Users"
+          },
+          {
+            "expr": "rate(securenet_user_actions_total[5m])",
+            "legendFormat": "User Actions per Second"
+          },
+          {
+            "expr": "securenet_privileged_actions_total",
+            "legendFormat": "Privileged Actions"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Data Protection Metrics",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 46},
+        "targets": [
+          {
+            "expr": "securenet_encrypted_data_percentage",
+            "legendFormat": "Data Encrypted"
+          },
+          {
+            "expr": "securenet_backup_success_rate",
+            "legendFormat": "Backup Success Rate"
+          },
+          {
+            "expr": "securenet_data_retention_compliance",
+            "legendFormat": "Retention Compliance"
+          },
+          {
+            "expr": "securenet_pii_access_events_total",
+            "legendFormat": "PII Access Events"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 80},
+                {"color": "green", "value": 95}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "organization",
+          "type": "query",
+          "query": "label_values(securenet_organizations_total, organization)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "environment",
+          "type": "custom",
+          "options": [
+            {"text": "Production", "value": "production"},
+            {"text": "Staging", "value": "staging"},
+            {"text": "Development", "value": "development"}
+          ],
+          "current": {"text": "Production", "value": "production"}
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Security Incidents",
+          "datasource": "Prometheus",
+          "expr": "ALERTS{alertname=~\"SecurityIncident.*\"}",
+          "titleFormat": "{{alertname}}",
+          "textFormat": "{{description}}",
+          "iconColor": "red"
+        },
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "expr": "securenet_deployment_events",
+          "titleFormat": "Deployment",
+          "textFormat": "Version {{version}} deployed",
+          "iconColor": "blue"
+        }
+      ]
+    },
+    "links": [
+      {
+        "title": "Security Alerts",
+        "url": "/d/security-alerts/security-alerts",
+        "type": "dashboards"
+      },
+      {
+        "title": "Compliance Dashboard",
+        "url": "/d/compliance/compliance-dashboard",
+        "type": "dashboards"
+      },
+      {
+        "title": "Incident Response",
+        "url": "/d/incident-response/incident-response",
+        "type": "dashboards"
+      }
+    ]
+  },
+  "meta": {
+    "type": "db",
+    "canSave": true,
+    "canEdit": true,
+    "canAdmin": true,
+    "canStar": true,
+    "slug": "securenet-enterprise-dashboard",
+    "url": "/d/securenet-enterprise/securenet-enterprise-security-dashboard",
+    "expires": "0001-01-01T00:00:00Z",
+    "created": "2024-12-01T00:00:00Z",
+    "updated": "2024-12-01T00:00:00Z",
+    "updatedBy": "admin",
+    "createdBy": "admin",
+    "version": 1,
+    "hasAcl": false,
+    "isFolder": false,
+    "folderId": 0,
+    "folderTitle": "General",
+    "folderUrl": "",
+    "provisioned": true,
+    "provisionedExternalId": "securenet-enterprise-dashboard.json"
+  }
+} 

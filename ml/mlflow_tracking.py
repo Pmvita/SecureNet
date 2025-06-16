@@ -20,7 +20,7 @@ class SecureNetMLflowTracker:
     """MLflow experiment tracking for SecureNet ML models"""
     
     def __init__(self, tracking_uri: str = None, experiment_name: str = "securenet-ml"):
-        self.tracking_uri = tracking_uri or os.getenv("MLFLOW_TRACKING_URI", "sqlite:///data/mlflow.db")
+        self.tracking_uri = tracking_uri or os.getenv("MLFLOW_TRACKING_URI", "postgresql://securenet:securenet@localhost:5432/mlflow")
         self.experiment_name = experiment_name
         
         # Configure MLflow

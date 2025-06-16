@@ -43,7 +43,7 @@ HOST=0.0.0.0
 PORT=8000
 
 # Database
-DATABASE_URL=sqlite:///data/securenet.db
+DATABASE_URL=postgresql://securenet:securenet@localhost:5432/securenet
 
 # Security
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
@@ -60,7 +60,7 @@ LOCKOUT_DURATION_MINUTES=15
 REDIS_URL=redis://localhost:6379/0
 
 # MLflow
-MLFLOW_TRACKING_URI=sqlite:///data/mlflow.db
+MLFLOW_TRACKING_URI=postgresql://securenet:securenet@localhost:5432/mlflow
 
 # Monitoring
 SENTRY_DSN=your-sentry-dsn-here
@@ -405,19 +405,32 @@ CMD ["python", "app_enhanced.py"]
     docker_compose = """version: '3.8'
 
 services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: securenet
+      POSTGRES_USER: securenet
+      POSTGRES_PASSWORD: securenet
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   securenet:
     build: .
     ports:
       - "8000:8000"
     environment:
       - ENVIRONMENT=production
-      - DATABASE_URL=sqlite:///data/securenet.db
+      - DATABASE_URL=postgresql://securenet:securenet@postgres:5432/securenet
       - REDIS_URL=redis://redis:6379/0
-      - MLFLOW_TRACKING_URI=sqlite:///data/mlflow.db
+      - MLFLOW_TRACKING_URI=postgresql://securenet:securenet@postgres:5432/mlflow
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
     depends_on:
+      - postgres
       - redis
     restart: unless-stopped
 
@@ -457,6 +470,9 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     restart: unless-stopped
+
+volumes:
+  postgres_data:
 """
     
     prometheus_config = """global:

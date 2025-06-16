@@ -118,10 +118,38 @@ fi
 echo ""
 echo "🗄️ Checking Database..."
 
-if [ -f "data/securenet.db" ]; then
-    print_status "Database exists"
+# Check if using PostgreSQL or SQLite
+if grep -q "postgresql://" .env; then
+    print_info "PostgreSQL configuration detected"
+    
+    # Check if PostgreSQL is running
+    if command -v pg_isready >/dev/null 2>&1; then
+        if pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
+            print_status "PostgreSQL is running"
+        else
+            print_error "PostgreSQL is not running. Please start PostgreSQL:"
+            echo "  macOS: brew services start postgresql"
+            echo "  Linux: sudo systemctl start postgresql"
+            exit 1
+        fi
+    else
+        print_warning "pg_isready not found. Assuming PostgreSQL is running."
+    fi
+    
+    # Check if database exists
+    if psql -h localhost -U securenet -d securenet -c '\q' 2>/dev/null; then
+        print_status "PostgreSQL database 'securenet' exists"
+    else
+        print_warning "PostgreSQL database 'securenet' not found."
+        print_info "Run migration script: python scripts/migrate_to_postgresql.py"
+    fi
 else
-    print_warning "Database not found. It will be created on first startup."
+    print_info "SQLite configuration detected"
+    if [ -f "data/securenet.db" ]; then
+        print_status "SQLite database exists"
+    else
+        print_warning "SQLite database not found. It will be created on first startup."
+    fi
 fi
 
 # 5. Security Checks

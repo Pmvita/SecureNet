@@ -6,8 +6,10 @@
 [![Documentation](https://img.shields.io/badge/docs-available-brightgreen)](./docs/installation/INSTALLATION.md)
 [![License](https://img.shields.io/badge/license-Proprietary-red)](./LICENSE.txt)
 [![Status](https://img.shields.io/badge/status-Production%20Ready-success)](./docs/system/SYSTEM-STATUS.md)
+[![SOC 2](https://img.shields.io/badge/SOC%202-In%20Progress-orange)](./docs/compliance/soc2-readiness.md)
+[![ISO 27001](https://img.shields.io/badge/ISO%2027001-Controls%20Implemented-blue)](./docs/compliance/security-hardening.md)
 
-**SecureNet** is a comprehensive AI-powered network security monitoring and management platform designed for cybersecurity professionals, SOC teams, and enterprise security operations. Built with modern SaaS architecture, it provides real-time threat detection, intelligent network discovery, and enterprise-grade security management.
+**SecureNet** is an enterprise-grade AI-powered cybersecurity platform delivering autonomous threat detection, predictive risk assessment, and intelligent security operations management. Engineered for Fortune 500 enterprises, government agencies, and managed security service providers (MSSPs), SecureNet combines advanced machine learning algorithms with real-time network intelligence to provide comprehensive security posture management and compliance automation.
 
 ---
 
@@ -74,6 +76,8 @@
 
 ## 📸 **Platform Screenshots**
 
+*Enterprise-Grade Security Operations Center Interface*
+
 | Dashboard Overview | Log Management | Security Management |
 |:------------------:|:-----------------:|:---------------:|
 | ![Dashboard](screenshots/dashboard.png) | ![Log Management](screenshots/log.png) | ![Alerts](screenshots/security.png) |
@@ -81,6 +85,8 @@
 | Network Monitoring | Anomaly Detection | System Configuration |
 |:---------------:|:----------------:|:-------------------:|
 | ![Network Monitoring](screenshots/Network-monitoring.png) | ![CVE](screenshots/anomalies.png) | ![System Configuration](screenshots/settings.png) |
+
+> **Note**: Screenshots demonstrate production-ready interface with enterprise security features. For complete visual documentation, see [Screenshots Guide](./docs/SCREENSHOTS.md).
 
 ---
 
@@ -103,12 +109,13 @@
 ### **Prerequisites**
 - Python 3.8+ with pip
 - Node.js 16+ with npm
+- PostgreSQL 13+ (for enterprise features) or SQLite (development)
 - Redis (for enhanced features)
 - Git
 
 ### **1. Clone & Setup Backend**
 ```bash
-git clone https://github.com/yourusername/securenet.git
+git clone https://github.com/pmvita/securenet.git
 cd SecureNet
 
 # Create virtual environment
@@ -116,13 +123,43 @@ python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
+# For development (SQLite):
 pip install -r requirements.txt
 
-# Start Redis (for enhanced version)
-redis-server --daemonize yes
+# For enterprise (PostgreSQL + full features):
+pip install -r requirements-enterprise.txt
 ```
 
-### **2. Start Backend Server**
+### **2. Database Setup**
+
+#### **🏢 Enterprise (PostgreSQL)**
+```bash
+# Install PostgreSQL (macOS)
+brew install postgresql
+brew services start postgresql
+
+# Install and setup PostgreSQL
+brew install postgresql                    # macOS
+sudo apt-get install postgresql          # Ubuntu/Debian
+brew services start postgresql           # macOS
+sudo systemctl start postgresql          # Linux
+
+# Create database and user
+createdb securenet
+createuser -s securenet
+psql -c "ALTER USER securenet PASSWORD 'securenet';"
+
+# Run migration to PostgreSQL
+python scripts/migrate_to_postgresql.py
+```
+
+#### **🛠 Development (SQLite)**
+```bash
+# SQLite database will be created automatically at data/securenet.db
+# No additional setup required
+```
+
+### **3. Start Backend Server**
 
 #### **🚀 Production Mode (Recommended)**
 ```bash
@@ -133,21 +170,24 @@ redis-server --daemonize yes
 ./stop_production.sh          # Clean shutdown
 ```
 
-- **🛠 Development Mode**: See [Development Mode Guide](./docs/setup/DEV_MODE_GUIDE.md) for complete dev setup instructions
-- **⚡ Direct Methods**: See [Direct Startup Methods](./docs/setup/START_DIRECT.md) for manual app.py / uvicorn execution
-- **🔧 Enhanced Version**: See [Enhanced Version Guide](./docs/setup/ENHANCED_VERSION_GUIDE.md) for advanced features with monitoring & ML tracking
+- **📚 Complete Setup**: See [Startup Guide](./docs/setup/STARTUP_GUIDE.md) for comprehensive deployment instructions
+- **🏢 Enterprise Deployment**: See [Production Configuration](./docs/setup/production_config.txt) for enterprise environment setup
+- **🔧 Enhanced Features**: See [Enhanced Version Guide](./docs/setup/ENHANCED_VERSION_GUIDE.md) for advanced monitoring & ML capabilities
 
-### **3. Setup Frontend**
+### **4. Setup Frontend**
 ```bash
 # New terminal window
 cd frontend
 npm install
 
-# Start in Enterprise mode (real network scanning)
-npm run Enterprise
+# Start in production mode (real network scanning)
+npm run start:prod
+
+# Alternative: Development mode with mock data
+npm run dev
 ```
 
-### **4. Access SecureNet**
+### **5. Access SecureNet**
 - **🎯 Dashboard**: http://localhost:5173
 - **🔧 API**: http://localhost:8000
 - **📚 API Docs**: http://localhost:8000/docs
@@ -163,16 +203,16 @@ npm run Enterprise
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
 </div>
 
-**Backend**: FastAPI • SQLite • WebSockets • JWT Auth • Pydantic • Asyncio  
+**Backend**: FastAPI • PostgreSQL/SQLite • WebSockets • JWT Auth • Pydantic • Asyncio  
 **Frontend**: React 18 • TypeScript • Vite • Tailwind CSS • Heroicons • Axios  
 **AI/ML**: Custom algorithms • Scikit-learn • MLflow • Pattern recognition • Behavioral analytics  
 **Enhanced**: Redis • RQ • Sentry • Prometheus • Structured logging • Cryptography  
-**Infrastructure**: Docker • Multi-tenant SaaS • Stripe billing • Real-time processing
+**Infrastructure**: Docker • Kubernetes • Multi-tenant SaaS • Stripe billing • Real-time processing
 
 ---
 
@@ -256,7 +296,7 @@ SecureNet now offers **two deployment options** to meet different operational ne
 ```mermaid
 graph TB
     A[🌐 React Frontend] --> B[🔌 FastAPI Backend]
-    B --> C[🗄️ SQLite Database]
+    B --> C[🗄️ PostgreSQL/SQLite Database]
     B --> D[🤖 AI/ML Engine]
     B --> E[🔍 Network Scanner]
     B --> F[🛡️ CVE Intelligence]
@@ -274,6 +314,36 @@ graph TB
 - **Security Engine**: Custom vulnerability assessment and risk scoring
 - **Network Discovery**: Cross-platform device scanning and classification
 - **SaaS Infrastructure**: Multi-tenant architecture with billing integration
+
+---
+
+## ☁️ **Deployment & Hosting Options**
+
+SecureNet supports multiple deployment environments to meet diverse organizational requirements:
+
+### **🏢 On-Premise**
+- **Air-gapped environments** with complete offline operation
+- **Classified-ready** deployment for government and defense contracts
+- **SCIF-compatible** secure hosting for sensitive compartmented information
+- **Hardware security module (HSM)** integration for cryptographic operations
+
+### **☁️ Public Cloud**
+- **Amazon Web Services (AWS)** - EC2, ECS, EKS deployment options
+- **Microsoft Azure** - Container Instances, AKS, Virtual Machines
+- **Google Cloud Platform (GCP)** - Compute Engine, GKE, Cloud Run
+- **Multi-cloud redundancy** for high availability and disaster recovery
+
+### **🔄 Hybrid Cloud**
+- **SOC/Compliance zone** support with data residency controls
+- **Edge deployment** for distributed security operations
+- **Private cloud integration** with VMware vSphere, OpenStack
+- **Seamless data synchronization** between on-premise and cloud components
+
+### **🔒 SCIF-Ready Secure Hosting**
+- **TS/SCI clearance** environment compatibility
+- **TEMPEST-certified** hardware deployment options
+- **Cross-domain solutions (CDS)** integration capability
+- **FISMA High/Moderate** authorization boundary support
 
 ---
 
@@ -353,7 +423,7 @@ Built for cybersecurity professionals, SOC teams, and enterprise security operat
 
 ### ✅ Phase 1: Core Infrastructure - **COMPLETE**
 - [x] Backend API with FastAPI
-- [x] SQLite database with proper schema
+- [x] Database layer (SQLite for development, PostgreSQL for enterprise)
 - [x] Authentication system (JWT)
 - [x] Basic network scanning capabilities
 - [x] Security vulnerability detection
@@ -379,3 +449,39 @@ Built for cybersecurity professionals, SOC teams, and enterprise security operat
 - [x] **Real-time Updates** - Live network topology and event streaming
 - [x] **Professional UI/UX** - Consistent dark theme across all components
 - [x] **Export Capabilities** - CSV export for compliance reporting
+
+## 🔒 **Compliance & Security Frameworks**
+
+SecureNet maintains adherence to industry-leading security and compliance standards:
+
+• **SOC 2 Type II** — Audit readiness in progress, target Q3 2025 certification with independent assessment
+• **ISO/IEC 27001** — Information security management controls implemented for production environments
+• **GDPR / CCPA** — Multi-tenant data isolation, privacy-by-design architecture, and comprehensive data protection tools
+• **OWASP / NIST** — Secure coding practices following OWASP Top 10 and NIST Cybersecurity Framework with integrated penetration testing
+• **Audit Log Compliance** — HIPAA, NIST SP 800-53, and FISMA-compliant audit trails with tamper-evident logging
+• **FedRAMP Ready** — Cloud security assessment and authorization framework preparation for government cloud deployments
+• **PCI DSS** — Payment card data security standards for billing and subscription management components
+
+**Compliance Documentation**: Complete security control matrices, risk assessments, and audit preparation materials available in [`docs/compliance/`](./docs/compliance/).
+
+## 👥 **Project Governance**
+
+### **Ownership Structure**
+- **Founder & CEO**: Pierre Mvita (60% equity via SecureNet Holdings)
+- **Corporate Structure**: Proprietary software owned by SecureNet Holdings with comprehensive IP portfolio
+
+### **Development Entities**
+- **SecureNet Labs** — Core platform development and AI/ML research
+- **SecureNet Reserve** — Enterprise security consulting and implementation services  
+- **SecureNet Real Estate** — Secure facility management and SCIF-certified hosting operations
+
+### **Licensing & Intellectual Property**
+- **Proprietary License**: All rights reserved, confidential and proprietary software
+- **Enterprise Licensing**: Available for Fortune 500 and government contracts
+- **Technology Transfer**: Available for qualified defense and intelligence partnerships
+- **Patent Portfolio**: AI threat detection algorithms and security automation processes
+
+### **Quality Assurance & Certifications**
+- **ISO 9001** quality management system implementation
+- **CMMI Level 3** process maturity for government contracts
+- **Security clearance** eligible development team for classified projects
