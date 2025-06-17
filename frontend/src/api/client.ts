@@ -240,6 +240,16 @@ export class ApiClient {
     return { status: 'success', data: response.data as T, timestamp: new Date().toISOString() };
   }
 
+  async patch<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    const response = await this.client.patch<ApiResponse<T>>(url, data, config);
+    // Handle the backend's wrapped response format
+    if (response.data && typeof response.data === "object" && "status" in response.data && "data" in response.data) {
+      return response.data as ApiResponse<T>;
+    }
+    // Fallback for unexpected response format
+    return { status: 'success', data: response.data as T, timestamp: new Date().toISOString() };
+  }
+
   async loginRequest(username: string, password: string): Promise<{ status: string; data: { token: string; user: any }; timestamp: string }> {
     // Special method for login that returns the raw axios response
     const response = await this.client.post('/api/auth/login', { username, password });

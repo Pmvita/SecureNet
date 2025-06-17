@@ -42,7 +42,7 @@ from src.security import (
     SECRET_KEY,
     ALGORITHM
 )
-from database import Database
+from database_factory import db, Database
 from jose import JWTError, jwt
 from cve_integration import CVEIntegration
 
@@ -219,7 +219,7 @@ async def get_anomalies_list(
     api_key: APIKey = Depends(get_api_key)
 ):
     try:
-        db = Database()
+        # Use global db instance
         anomalies = await db.get_anomalies(
             page=page,
             page_size=page_size,
@@ -257,7 +257,7 @@ async def get_anomalies_stats(
     api_key: APIKey = Depends(get_api_key)
 ):
     try:
-        db = Database()
+        # Use global db instance
         stats = await db.get_anomalies_stats()
         return {
             "status": "success",
@@ -276,7 +276,7 @@ async def analyze_anomalies(
 ):
     """Run real-time anomaly analysis on network data"""
     try:
-        db = Database()
+        # Use global db instance
         
         # Get recent network devices and traffic for analysis
         devices = await db.get_network_devices()
@@ -777,7 +777,7 @@ def update_db_schema():
         conn.commit()
 
 # Initialize database
-db = Database()
+# Use global db instance
 
 # Initialize database schema on startup
 async def startup_event():
@@ -894,7 +894,7 @@ async def login(request: LoginRequest):
         
         # Update login tracking with new session management
         try:
-            db = Database()
+            # Use global db instance
             user_id = user.get('id') or user.get('user_id')
             if user_id:
                 await db.update_user_login(user_id)
@@ -917,7 +917,7 @@ async def login(request: LoginRequest):
         
         # Get user's organization information (handle gracefully if none)
         try:
-            db = Database()
+            # Use global db instance
             user_id = user.get('id') or user.get('user_id')
             if user_id:
                 user_orgs = await db.get_user_organizations(user_id)
@@ -978,7 +978,7 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
     """Get current authenticated user information with session data."""
     try:
         # Get updated user info with session data
-        db = Database()
+        # Use global db instance
         user_with_session = await db.get_user_with_session_info(current_user['id'])
         
         if user_with_session:
@@ -1020,7 +1020,7 @@ async def whoami(current_user: dict = Depends(get_current_user)):
     """Get comprehensive current user information including role, organization, and session data."""
     try:
         # Get updated user info with session data
-        db = Database()
+        # Use global db instance
         user_with_session = await db.get_user_with_session_info(current_user['id'])
         
         # Get user's organization information (handle gracefully if none)
@@ -1081,7 +1081,7 @@ async def logout(current_user: dict = Depends(get_current_user)):
     """Logout the current user with session tracking."""
     try:
         # Update logout tracking
-        db = Database()
+        # Use global db instance
         user_id = current_user.get('id') or current_user.get('user_id')
         if not user_id:
             logger.error(f"No user ID found in current_user: {current_user}")
@@ -1131,7 +1131,7 @@ async def get_logs(
     api_key: APIKey = Depends(get_api_key)
 ):
     try:
-        db = Database()
+        # Use global db instance
         logs = await db.get_logs(
             page=page,
             page_size=page_size,
@@ -1175,7 +1175,7 @@ async def get_logs_stats(
     api_key: APIKey = Depends(get_api_key)
 ):
     try:
-        db = Database()
+        # Use global db instance
         stats = await db.get_logs_stats(start_date=start_date, end_date=end_date)
         return {
             "status": "success",
@@ -1193,7 +1193,7 @@ async def get_security_status(
     api_key: APIKey = Depends(get_api_key)
 ):
     try:
-        db = Database()
+        # Use global db instance
         metrics = await db.get_security_metrics()
         recent_scans = await db.get_recent_scans(limit=5)
         active_scans = [scan for scan in recent_scans if scan['status'] == 'running']
@@ -1220,7 +1220,7 @@ async def get_network_status(
     api_key: APIKey = Depends(get_api_key)
 ):
     try:
-        db = Database()
+        # Use global db instance
         devices = await db.get_network_devices()
         connections = await db.get_network_connections()
         traffic = await db.get_network_traffic(limit=100)
@@ -1281,7 +1281,7 @@ async def get_api_key_endpoint(request: Request, current_user: dict = Depends(ge
 async def get_settings(request: Request, api_key: APIKey = Depends(get_api_key)):
     """Get application settings"""
     try:
-        db = Database()
+        # Use global db instance
         settings = await db.get_settings()
         return {
             "status": "success",
@@ -1297,7 +1297,7 @@ async def get_settings(request: Request, api_key: APIKey = Depends(get_api_key))
 async def update_settings(request: Request, settings: dict, api_key: APIKey = Depends(get_api_key)):
     """Update application settings"""
     try:
-        db = Database()
+        # Use global db instance
         await db.update_settings(settings)
         logger.info(f"Settings updated successfully: {list(settings.keys())}")
         return {
@@ -1366,7 +1366,7 @@ async def start_network_scan(request: Request, api_key: APIKey = Depends(get_api
 async def start_security_scan(request: Request, api_key: APIKey = Depends(get_api_key)):
     """Start a real security scan on discovered network devices"""
     try:
-        db = Database()
+        # Use global db instance
         
         # Get real network devices for security scanning
         devices = await db.get_network_devices()
@@ -2197,7 +2197,7 @@ class UserProfileResponse(BaseModel):
 async def get_user_profile(current_user: dict = Depends(get_current_user)):
     """Get current user's profile information."""
     try:
-        db = Database()
+        # Use global db instance
         
         # Get user with session info
         user_data = await db.get_user_with_session_info(current_user['id'])
@@ -2264,7 +2264,7 @@ async def update_user_profile(
 ):
     """Update current user's profile information."""
     try:
-        db = Database()
+        # Use global db instance
         
         # Prepare update data
         update_data = {}
@@ -2311,7 +2311,7 @@ async def change_password(
 ):
     """Change user's password."""
     try:
-        db = Database()
+        # Use global db instance
         
         # Get current user data
         user_data = db.get_user_by_username(current_user['username'])
@@ -2358,7 +2358,7 @@ async def enable_2fa(
 ):
     """Enable two-factor authentication for user."""
     try:
-        db = Database()
+        # Use global db instance
         
         # For now, we'll just mark 2FA as enabled
         # In a real implementation, you would:
@@ -2395,7 +2395,7 @@ async def enable_2fa(
 async def disable_2fa(current_user: dict = Depends(get_current_user)):
     """Disable two-factor authentication for user."""
     try:
-        db = Database()
+        # Use global db instance
         
         success = await db.update_user_2fa_status(current_user['id'], False)
         if not success:
@@ -2425,7 +2425,7 @@ async def disable_2fa(current_user: dict = Depends(get_current_user)):
 async def get_user_api_keys(current_user: dict = Depends(get_current_user)):
     """Get user's API keys."""
     try:
-        db = Database()
+        # Use global db instance
         
         api_keys = await db.get_user_api_keys(current_user['id'])
         
@@ -2456,7 +2456,7 @@ async def create_user_api_key(
 ):
     """Create a new API key for user."""
     try:
-        db = Database()
+        # Use global db instance
         
         # Generate new API key
         api_key = f"sk_{secrets.token_urlsafe(32)}"
@@ -2506,7 +2506,7 @@ async def delete_user_api_key(
 ):
     """Delete user's API key."""
     try:
-        db = Database()
+        # Use global db instance
         
         success = await db.delete_user_api_key(current_user['id'], key_id)
         if not success:
@@ -2536,7 +2536,7 @@ async def delete_user_api_key(
 async def get_user_sessions(current_user: dict = Depends(get_current_user)):
     """Get user's active sessions."""
     try:
-        db = Database()
+        # Use global db instance
         
         sessions = await db.get_user_sessions(current_user['id'])
         
@@ -2569,7 +2569,7 @@ async def terminate_user_session(
 ):
     """Terminate a user session."""
     try:
-        db = Database()
+        # Use global db instance
         
         success = await db.terminate_user_session(current_user['id'], session_id)
         if not success:
@@ -2602,7 +2602,7 @@ async def get_user_activity(
 ):
     """Get user's activity log."""
     try:
-        db = Database()
+        # Use global db instance
         
         activity_log = await db.get_user_activity_log(current_user['id'], limit=limit)
         

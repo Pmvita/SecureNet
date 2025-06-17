@@ -46,6 +46,9 @@ def run_migrations_offline() -> None:
     # Override with environment variable if available
     if os.getenv("DATABASE_URL"):
         url = os.getenv("DATABASE_URL")
+        # Convert async URL to sync for Alembic
+        if url.startswith("postgresql+asyncpg://"):
+            url = url.replace("postgresql+asyncpg://", "postgresql://")
     
     context.configure(
         url=url,
@@ -68,7 +71,11 @@ def run_migrations_online() -> None:
     configuration = config.get_section(config.config_ini_section, {})
     # Override with environment variable if available
     if os.getenv("DATABASE_URL"):
-        configuration["sqlalchemy.url"] = os.getenv("DATABASE_URL")
+        url = os.getenv("DATABASE_URL")
+        # Convert async URL to sync for Alembic
+        if url.startswith("postgresql+asyncpg://"):
+            url = url.replace("postgresql+asyncpg://", "postgresql://")
+        configuration["sqlalchemy.url"] = url
     
     connectable = engine_from_config(
         configuration,

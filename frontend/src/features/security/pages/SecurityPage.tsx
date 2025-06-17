@@ -1,5 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { useSecurity, type SecurityScan, type ThreatAlert } from '../api/useSecurity';
+import { Progress } from '@/components/common/Progress';
+import { useSecurity } from '../api/useSecurity';
+
+// Temporary type definitions
+type SecurityScan = any;
+type ThreatAlert = any;
 import { SecurityErrorBoundary } from '../../../components/error/SecurityErrorBoundary';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
@@ -249,7 +254,7 @@ const ThreatDetailsModal: React.FC<ThreatDetailsModalProps> = ({ threat, isOpen,
             )}
             
             <div className="flex gap-3">
-              <Button variant="primary" className="flex-1">
+              <Button variant="default" className="flex-1">
                 <DocumentTextIcon className="h-4 w-4 mr-2" />
                 Generate Report
               </Button>
@@ -361,7 +366,7 @@ const ScanDetailsModal: React.FC<ScanDetailsModalProps> = ({ scan, isOpen, onClo
                 <Progress 
                   value={scan.progress || 0} 
                   className="w-full"
-                  variant="primary"
+                  variant="default"
                 />
                 <p className="text-sm text-gray-400 mt-1">
                   {scan.progress || 0}% complete
@@ -370,7 +375,7 @@ const ScanDetailsModal: React.FC<ScanDetailsModalProps> = ({ scan, isOpen, onClo
             )}
             
             <div className="flex gap-3">
-              <Button variant="primary" className="flex-1">
+              <Button variant="default" className="flex-1">
                 <DocumentTextIcon className="h-4 w-4 mr-2" />
                 Export Results
               </Button>
@@ -484,7 +489,7 @@ export const SecurityPage: React.FC = () => {
             <p className="text-gray-400 mb-4">
               {error.message || 'Failed to load security information'}
             </p>
-            <Button onClick={() => refetch()} variant="primary">
+            <Button onClick={() => refetch()} variant="default">
               <ArrowPathIcon className="h-4 w-4 mr-2" />
               Retry
             </Button>
@@ -531,7 +536,7 @@ export const SecurityPage: React.FC = () => {
                 </Button>
                 <Button 
                   onClick={() => handleStartScan('vulnerability', 'all')}
-                  variant="primary"
+                  variant="default"
                   disabled={isStartingScan}
                 >
                   <PlayIcon className="h-4 w-4 mr-2" />
@@ -692,7 +697,7 @@ export const SecurityPage: React.FC = () => {
                     <p className="text-gray-400 mb-4">Start your first security scan to analyze system vulnerabilities.</p>
                     <Button
                       onClick={() => handleStartScan('vulnerability', 'all')}
-                      variant="primary"
+                      variant="default"
                       disabled={isStartingScan}
                     >
                       <PlayIcon className="h-4 w-4 mr-2" />

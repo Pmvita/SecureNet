@@ -486,7 +486,7 @@ export const NetworkPage: React.FC = () => {
           return (
             <div className="flex items-center space-x-3">
               <DeviceIcon className="h-5 w-5 text-gray-400" />
-              <span className="font-medium text-white">{getValue()}</span>
+              <span className="font-medium text-white">{String(getValue() || "")}</span>
             </div>
           );
         },
@@ -495,14 +495,14 @@ export const NetworkPage: React.FC = () => {
         accessorKey: 'ipAddress',
         header: 'IP Address',
         cell: ({ getValue }) => (
-          <span className="font-mono text-gray-300">{getValue() || 'N/A'}</span>
+          <span className="font-mono text-gray-300">{String(getValue() || "N/A")}</span>
         ),
       },
       {
         accessorKey: 'type',
         header: 'Type',
         cell: ({ getValue }) => (
-          <span className="capitalize text-gray-300">{getValue()}</span>
+          <span className="capitalize text-gray-300">{String(getValue() || "")}</span>
         ),
       },
       {
@@ -515,7 +515,7 @@ export const NetworkPage: React.FC = () => {
           return (
             <Badge variant={statusInfo?.variant || 'default'} className="flex items-center gap-1">
               <StatusIcon className="h-3 w-3" />
-              {status}
+              {String(status || "")}
             </Badge>
           );
         },
@@ -525,7 +525,7 @@ export const NetworkPage: React.FC = () => {
         header: 'Last Seen',
         cell: ({ getValue }) => (
           <div className="text-sm text-gray-400">
-            {formatDistanceToNow(new Date(getValue()))} ago
+            {formatDistanceToNow(new Date(String(getValue() || "")))} ago
           </div>
         ),
       },
