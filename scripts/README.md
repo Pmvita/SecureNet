@@ -1,264 +1,246 @@
 # SecureNet Scripts Directory
 
-This directory contains utility scripts for SecureNet deployment, migration, and maintenance.
+This directory contains operational scripts and utilities for SecureNet deployment and maintenance.
 
-## 📁 Available Scripts
+## Directory Structure
 
-### 🔄 `migrate_to_postgresql.py`
-**Purpose**: Automated migration from SQLite to PostgreSQL for enterprise deployment.
-
-#### Usage
-```bash
-# Basic migration (recommended)
-python scripts/migrate_to_postgresql.py
-
-# Test connection only (no migration)
-python scripts/migrate_to_postgresql.py --test-only
-
-# Verbose output
-python scripts/migrate_to_postgresql.py --verbose
-
-# Custom database URL
-DATABASE_URL=postgresql://user:pass@host:port/db python scripts/migrate_to_postgresql.py
+```
+scripts/
+├── ops/                    # Operational scripts
+│   ├── seed_users.py      # Database user seeding
+│   └── test_production_boot.py  # Production readiness testing
+├── fix_env_postgresql.py  # Environment configuration fixes
+├── force_init_db.py       # Database initialization
+├── init_db.py            # Standard database setup
+└── README.md             # This file
 ```
 
-#### What it does
-1. **Connection Testing**: Verifies PostgreSQL connectivity
-2. **Schema Creation**: Runs Alembic migrations to create database schema
-3. **Default Organization**: Creates default organization with API key
-4. **Default Users**: Creates platform owner, security admin, and SOC analyst users
-5. **Sample Data**: Populates database with sample devices, scans, and findings
-6. **Environment Update**: Updates .env file with PostgreSQL configuration
+## Operational Scripts (`scripts/ops/`)
 
-#### Default Credentials (Change in Production!)
-- **Platform Owner**: `ceo` / `superadmin123`
-- **Security Admin**: `admin` / `platform123`
-- **SOC Analyst**: `user` / `enduser123`
+### `seed_users.py`
+Seeds the database with default users for role-based access testing.
 
-#### Prerequisites
+**Usage:**
 ```bash
-# Install PostgreSQL
-brew install postgresql  # macOS
-sudo apt install postgresql  # Ubuntu
-
-# Start PostgreSQL
-brew services start postgresql  # macOS
-sudo systemctl start postgresql  # Linux
-
-# Create database
-createdb securenet
-createuser -s securenet
-psql -c "ALTER USER securenet PASSWORD 'securenet';"
-
-# Install dependencies
-pip install -r requirements-enterprise.txt
+cd /path/to/SecureNet
+python scripts/ops/seed_users.py
 ```
 
-#### Troubleshooting
-- **Connection Failed**: Ensure PostgreSQL is running and accessible
-- **Permission Denied**: Check user permissions and database ownership
-- **Migration Failed**: Verify Alembic configuration and database schema
-- **Import Errors**: Ensure all dependencies are installed
+**What it does:**
+- Creates default organization "SecureNet Enterprise"
+- Seeds 3 users with proper RBAC roles:
+  - `ceo` (platform_owner) - Full platform access
+  - `admin` (security_admin) - Organization admin access  
+  - `user` (soc_analyst) - Standard user access
+- Uses database_factory for automatic PostgreSQL/SQLite selection
+- Handles password hashing with argon2
 
-### 🔧 Future Scripts (Planned)
+**Requirements:**
+- PostgreSQL running and configured
+- Environment variables loaded (.env)
+- argon2-cffi installed
 
-#### `backup_database.py` (Coming Soon)
-Automated database backup and recovery utilities.
+### `test_production_boot.py`
+Comprehensive production environment validation.
 
-#### `performance_tuning.py` (Coming Soon)
-Database performance analysis and optimization recommendations.
-
-#### `security_audit.py` (Coming Soon)
-Security configuration audit and compliance checking.
-
-#### `data_migration.py` (Coming Soon)
-Advanced data migration utilities for complex scenarios.
-
-## 🚀 Quick Start Examples
-
-### Complete PostgreSQL Setup
+**Usage:**
 ```bash
-# 1. Install PostgreSQL
-brew install postgresql
-brew services start postgresql
-
-# 2. Create database
-createdb securenet
-createuser -s securenet
-psql -c "ALTER USER securenet PASSWORD 'securenet';"
-
-# 3. Install dependencies
-pip install -r requirements-enterprise.txt
-
-# 4. Run migration
-python scripts/migrate_to_postgresql.py
-
-# 5. Start SecureNet
-./start_production.sh
+cd /path/to/SecureNet
+python scripts/ops/test_production_boot.py
 ```
 
-### Docker Environment Setup
+**Tests performed:**
+- ✅ Environment configuration validation
+- ✅ PostgreSQL database connectivity
+- ✅ User seeding verification
+- ✅ Frontend build status
+- ✅ FastAPI app import validation
+
+**Exit codes:**
+- `0` - All tests passed, production ready
+- `1` - One or more tests failed
+
+## Database Scripts
+
+### `init_db.py`
+Standard database initialization script.
+
+**Usage:**
 ```bash
-# 1. Start PostgreSQL in Docker
-docker run --name securenet-postgres \
-  -e POSTGRES_DB=securenet \
-  -e POSTGRES_USER=securenet \
-  -e POSTGRES_PASSWORD=securenet \
-  -p 5432:5432 \
-  -d postgres:15-alpine
-
-# 2. Wait for startup
-sleep 10
-
-# 3. Run migration
-python scripts/migrate_to_postgresql.py
-
-# 4. Start application
-./start_production.sh
+python scripts/init_db.py
 ```
 
-### Production Migration
+### `force_init_db.py`
+Force database reinitialization (destructive).
+
+**Usage:**
 ```bash
-# 1. Backup existing SQLite database
-cp data/securenet.db data/securenet.db.backup
-
-# 2. Set production database URL
-export DATABASE_URL="postgresql://securenet_app:secure_password@db.company.com:5432/securenet_prod"
-
-# 3. Run migration with production settings
-python scripts/migrate_to_postgresql.py
-
-# 4. Verify migration
-psql $DATABASE_URL -c "SELECT count(*) FROM organizations;"
-
-# 5. Start production environment
-./start_production.sh
+python scripts/force_init_db.py
 ```
 
-## 🔒 Security Considerations
+### `fix_env_postgresql.py`
+Converts SQLite configuration to PostgreSQL.
 
-### Database Security
-- **Change Default Passwords**: Update all default user passwords immediately
-- **Use Strong Credentials**: Generate secure passwords for production
-- **Enable SSL**: Configure SSL/TLS for database connections
-- **Restrict Access**: Limit database access to authorized users only
-
-### Environment Security
+**Usage:**
 ```bash
-# Generate secure keys for production
-SECRET_KEY=$(openssl rand -hex 32)
-JWT_SECRET=$(openssl rand -hex 32)
-ENCRYPTION_KEY=$(openssl rand -hex 32)
-MASTER_KEY_MATERIAL=$(openssl rand -hex 64)
-
-# Update .env file with secure values
-echo "SECRET_KEY=$SECRET_KEY" >> .env
-echo "JWT_SECRET=$JWT_SECRET" >> .env
-echo "ENCRYPTION_KEY=$ENCRYPTION_KEY" >> .env
-echo "MASTER_KEY_MATERIAL=$MASTER_KEY_MATERIAL" >> .env
+python scripts/fix_env_postgresql.py
 ```
 
-### Production Checklist
-- [ ] Change all default passwords
-- [ ] Generate new encryption keys
-- [ ] Configure SSL/TLS for database
-- [ ] Set up database backups
-- [ ] Configure monitoring and alerting
-- [ ] Review security settings
-- [ ] Test disaster recovery procedures
+## Usage Patterns
 
-## 📊 Monitoring & Maintenance
-
-### Database Health Check
+### 1. Fresh Production Setup
 ```bash
-# Test database connection
-python -c "
-import asyncio
-from database_postgresql import db
-async def test():
-    await db.initialize()
-    print('✅ Database connection successful')
-asyncio.run(test())
-"
+# 1. Fix environment configuration
+python scripts/fix_env_postgresql.py
 
-# Check database size
-psql -h localhost -U securenet -d securenet -c "
-SELECT pg_size_pretty(pg_database_size('securenet')) as database_size;
-"
+# 2. Initialize database
+python scripts/init_db.py
 
-# Monitor active connections
-psql -h localhost -U securenet -d securenet -c "
-SELECT count(*) as active_connections FROM pg_stat_activity WHERE state = 'active';
-"
+# 3. Seed users
+python scripts/ops/seed_users.py
+
+# 4. Validate production readiness
+python scripts/ops/test_production_boot.py
+
+# 5. Start production server
+python start_backend.py --prod
 ```
 
-### Performance Monitoring
+### 2. Development Setup
 ```bash
-# Check slow queries
-psql -h localhost -U securenet -d securenet -c "
-SELECT query, calls, total_time, mean_time 
-FROM pg_stat_statements 
-ORDER BY mean_time DESC LIMIT 10;
-"
+# 1. Initialize database
+python scripts/init_db.py
 
-# Analyze table sizes
-psql -h localhost -U securenet -d securenet -c "
-SELECT schemaname, tablename, 
-       pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
-FROM pg_tables 
-WHERE schemaname = 'public' 
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
-"
+# 2. Seed users
+python scripts/ops/seed_users.py
+
+# 3. Start development server
+python start_backend.py --dev
 ```
 
-## 🆘 Support & Troubleshooting
+### 3. Production Health Check
+```bash
+# Quick validation
+python scripts/ops/test_production_boot.py
+
+# If tests pass, system is ready for deployment
+```
+
+### 4. Database Reset (Development)
+```bash
+# Force reinitialize database
+python scripts/force_init_db.py
+
+# Reseed users
+python scripts/ops/seed_users.py
+```
+
+## Environment Requirements
+
+All scripts require:
+- Python 3.8+
+- Virtual environment activated
+- `.env` file configured
+- PostgreSQL running (for production)
+
+## Error Handling
+
+Scripts include comprehensive error handling and logging:
+- Clear success/failure indicators (✅/❌)
+- Detailed error messages with context
+- Graceful degradation where possible
+- Proper exit codes for automation
+
+## CI/CD Integration & Health Checks
+
+### **Production Health Check Endpoints**
+
+SecureNet provides comprehensive health monitoring for CI/CD and production environments:
+
+#### **Primary Health Check**
+```bash
+# Main production validation (CI-friendly exit codes)
+python scripts/ops/test_production_boot.py
+# Exit code 0: All systems operational
+# Exit code 1: One or more systems failed
+```
+
+#### **API Health Endpoints** (when backend is running)
+- **`GET /health`** - Basic health status
+- **`GET /system/status`** - Detailed system information
+- **`GET /api/v1/health`** - API-specific health check
+- **`GET /docs`** - API documentation availability
+
+#### **Component-Specific Checks**
+```bash
+# Database connectivity
+python -c "from database_factory import get_database; db = get_database(); print('✅ Database OK')"
+
+# Frontend build validation
+cd frontend && npm run build && echo "✅ Frontend Build OK"
+
+# Backend app import
+python -c "from app import app; print(f'✅ FastAPI app loaded with {len(app.routes)} routes')"
+```
+
+### **CI/CD Pipeline Integration**
+
+The `test_production_boot.py` script is designed for CI/CD integration:
+
+```yaml
+# Example GitHub Actions step
+- name: Validate Production Readiness
+  run: python scripts/ops/test_production_boot.py
+  
+# Example Docker health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD python scripts/ops/test_production_boot.py || exit 1
+```
+
+### **Independent Deployment Support**
+
+Frontend and backend can be deployed independently:
+
+#### **Backend Only**
+```bash
+# Backend production deployment
+python start_backend.py --prod --check
+# Health check: curl http://localhost:8000/health
+```
+
+#### **Frontend Only**
+```bash
+# Frontend production build and serve
+cd frontend && npm run build && npm run preview
+# Health check: curl http://localhost:5173
+```
+
+#### **Microservice Architecture**
+- Backend API: Port 8000 (FastAPI)
+- Frontend SPA: Port 5173 (Vite preview)
+- Database: PostgreSQL (configurable port)
+- Cache: Redis (optional, configurable port)
+
+## Troubleshooting
 
 ### Common Issues
 
-#### Script Execution Errors
-```bash
-# Permission denied
-chmod +x scripts/migrate_to_postgresql.py
+1. **Database Connection Failed**
+   - Ensure PostgreSQL is running
+   - Check DATABASE_URL in .env
+   - Verify credentials
 
-# Python path issues
-export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+2. **User Seeding Failed**
+   - Run `python scripts/ops/test_production_boot.py` first
+   - Check database permissions
+   - Ensure argon2-cffi is installed
 
-# Missing dependencies
-pip install -r requirements-enterprise.txt
-```
+3. **Frontend Build Missing**
+   - Run `cd frontend && npm run build`
+   - Check for TypeScript errors
 
-#### Database Connection Issues
-```bash
-# Check PostgreSQL status
-sudo systemctl status postgresql
+4. **Environment Variables Missing**
+   - Copy `.env.example` to `.env`
+   - Run `python scripts/fix_env_postgresql.py`
 
-# Test connection manually
-psql -h localhost -U securenet -d securenet -c "SELECT version();"
-
-# Check firewall settings
-sudo ufw status
-```
-
-#### Migration Issues
-```bash
-# Reset Alembic state
-alembic stamp head
-
-# Recreate database
-dropdb securenet
-createdb securenet
-
-# Run migration again
-python scripts/migrate_to_postgresql.py
-```
-
-### Getting Help
-- **Documentation**: [docs/setup/POSTGRESQL_SETUP.md](../docs/setup/POSTGRESQL_SETUP.md)
-- **Quick Guide**: [docs/setup/POSTGRESQL_GUIDE.md](../docs/setup/POSTGRESQL_GUIDE.md)
-- **Issues**: GitHub Issues
-- **Community**: SecureNet Community Forum
-- **Enterprise Support**: Contact SecureNet Enterprise Support
-
----
-
-**Note**: Always test scripts in a development environment before running in production. Ensure you have proper backups before performing any migration operations. 
+For additional support, check the main project documentation in `/docs/`. 

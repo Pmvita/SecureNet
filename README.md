@@ -166,8 +166,19 @@ python scripts/migrate_to_postgresql.py
 # Complete production environment (backend + frontend)
 ./start_production.sh         # Full production setup with security checks
 
+# Alternative: Manual production startup
+python start_backend.py --prod --check
+
 # Stop production services
 ./stop_production.sh          # Clean shutdown
+```
+
+#### **🔍 Production Validation**
+```bash
+# Validate production readiness
+python scripts/ops/test_production_boot.py
+
+# Expected output: ✅ ALL VALIDATIONS PASSED (5/5)
 ```
 
 - **📚 Complete Setup**: See [Startup Guide](./docs/setup/STARTUP_GUIDE.md) for comprehensive deployment instructions
@@ -180,8 +191,11 @@ python scripts/migrate_to_postgresql.py
 cd frontend
 npm install
 
-# Start in production mode (real network scanning)
-npm run start:prod
+# Build for production
+npm run build
+
+# Start production preview
+npm run preview
 
 # Alternative: Development mode with mock data
 npm run dev
