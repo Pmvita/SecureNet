@@ -1,4 +1,4 @@
-# 🏢 SecureNet Holdings Enterprise Platform v2.2.0-enterprise
+# 🏢 SecureNet v2.2.0-enterprise
 
 > **AI-Powered Network Defense. Enterprise-Grade Intelligence. Global-Scale Operations.**
 
