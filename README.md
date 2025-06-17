@@ -16,7 +16,7 @@
 
 <div align="center">
 
-[⭐ **Star this repo**](https://github.com/yourusername/securenet) • [📖 **View Documentation**](./docs/installation/INSTALLATION.md) • [🚀 **System Status**](./docs/system/SYSTEM-STATUS.md) • [🔥 **CVE Integration**](./docs/features/CVE-INTEGRATION-SUMMARY.md)
+[⭐ **Star this repo**](https://github.com/yourusername/securenet) • [📖 **View Documentation**](./docs/installation/INSTALLATION.md) • [🚀 **System Status**](./docs/system/SYSTEM-STATUS.md) • [🎯 **Launch Roadmap**](./docs/project/PRODUCTION_LAUNCH_ROADMAP.md)
 
 </div>
 
@@ -356,6 +356,13 @@ SecureNet now offers **two deployment options** to meet different operational ne
 | **[🚀 Development Roadmap](./docs/project/DEVELOPMENT_ROADMAP.md)** | Complete 3-phase development cycle and future plans | ✅ Ready |
 | **[👥 Project Governance](./docs/project/PROJECT_GOVERNANCE.md)** | Ownership, licensing, IP portfolio, and corporate structure | ✅ Ready |
 
+### **🎯 Production Launch Preparation (Phase 3.5)**
+| Documentation | Description | Status |
+|---------------|-------------|--------|
+| **[🚀 Production Launch Roadmap](./docs/project/PRODUCTION_LAUNCH_ROADMAP.md)** | 8-10 week sprint plan for production launch preparation | 🚧 **ACTIVE** |
+| **[📅 Sprint Planning Guide](./docs/project/SPRINT_PLANNING.md)** | Immediate actionable sprint tasks and daily breakdowns | 🚧 **ACTIVE** |
+| **[📋 Production Launch Checklist](./docs/setup/PRODUCTION_LAUNCH_CHECKLIST.md)** | Go/No-Go launch validation criteria and executive scorecard | 🚧 **ACTIVE** |
+
 ### **🧪 Audit & Validation Reports**
 | Documentation | Description | Status |
 |---------------|-------------|--------|
@@ -391,7 +398,7 @@ docs/
 ├── 📊 system/                      # System status and monitoring
 ├── 🧪 testing/                     # Testing procedures and guides
 ├── 🤝 contributing/                # Contribution guidelines
-├── 📋 project/                     # Project management and governance
+├── 📋 project/                     # Project management, governance, and launch planning
 └── 🔧 integration/                 # Integration guides and tooling
 ```
 

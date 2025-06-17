@@ -112,4 +112,9 @@ Thumbs.db
 .DS_Store
 *.bak
 *.tmp
-*.temp 
+*.temp
+
+# Confidential business documents
+docs/project/SECURENET_EMPIRE_ROADMAP.md
+*_EMPIRE_*.md
+*CONFIDENTIAL*.md 
