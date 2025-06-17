@@ -1,6 +1,6 @@
-# SecureNet Scripts Directory
+# SecureNet Enterprise Scripts Directory v2.2.0-enterprise
 
-This directory contains operational scripts and utilities for SecureNet deployment and maintenance.
+This directory contains enterprise-grade operational scripts and utilities for SecureNet Holdings deployment, validation, and maintenance across global operations.
 
 ## Directory Structure
 
@@ -41,24 +41,31 @@ python scripts/ops/seed_users.py
 - argon2-cffi installed
 
 ### `test_production_boot.py`
-Comprehensive production environment validation.
+Comprehensive enterprise production environment validation for SecureNet Holdings.
 
 **Usage:**
 ```bash
 cd /path/to/SecureNet
-python scripts/ops/test_production_boot.py
+python scripts/ops/test_production_boot.py                 # Full test suite
+python scripts/ops/test_production_boot.py --quick         # Skip server startup
+python scripts/ops/test_production_boot.py --enterprise-only # Enterprise tests only
 ```
 
-**Tests performed:**
-- ✅ Environment configuration validation
-- ✅ PostgreSQL database connectivity
-- ✅ User seeding verification
-- ✅ Frontend build status
-- ✅ FastAPI app import validation
+**Enterprise Tests Performed:**
+- ✅ start_enterprise.py entrypoint validation
+- ✅ Enterprise structure validation (Holdings, Labs, Reserve, Real Estate)
+- ✅ Enterprise role validation (CISO, SOC Manager, Analysts)
+- ✅ Compliance audit (SOC 2 Type II, ISO 27001, CSE CIRA)
+- ✅ PostgreSQL Enterprise database connectivity
+- ✅ TypeScript configuration validation
+- ✅ Frontend production build validation
+- ✅ Documentation compliance verification
+- ✅ Health endpoints functionality
+- ✅ Production server startup testing
 
 **Exit codes:**
-- `0` - All tests passed, production ready
-- `1` - One or more tests failed
+- `0` - All enterprise validations passed, production ready
+- `1` - One or more enterprise validations failed
 
 ## Database Scripts
 
@@ -88,22 +95,18 @@ python scripts/fix_env_postgresql.py
 
 ## Usage Patterns
 
-### 1. Fresh Production Setup
+### 1. Enterprise Production Setup (Official)
 ```bash
-# 1. Fix environment configuration
-python scripts/fix_env_postgresql.py
+# 1. Enterprise validation and startup (Official entrypoint)
+python start_enterprise.py --check                    # Validation only
+python start_enterprise.py                           # Full enterprise startup
 
-# 2. Initialize database
-python scripts/init_db.py
-
-# 3. Seed users
-python scripts/ops/seed_users.py
-
-# 4. Validate production readiness
-python scripts/ops/test_production_boot.py
-
-# 5. Start production server
-python start_backend.py --prod
+# Alternative: Legacy production setup
+python scripts/fix_env_postgresql.py                 # Fix environment configuration
+python scripts/init_db.py                           # Initialize database
+python scripts/ops/seed_users.py                    # Seed users
+python scripts/ops/test_production_boot.py          # Validate production readiness
+python start_backend.py --prod                      # Start production server
 ```
 
 ### 2. Development Setup

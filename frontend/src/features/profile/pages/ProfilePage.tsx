@@ -735,15 +735,30 @@ export const ProfilePage: React.FC = () => {
 
   const getRoleBadge = (role: string) => {
     const roleConfig = {
-      platform_owner: { label: 'Platform Owner', color: 'bg-red-500', icon: StarIcon },
-      security_admin: { label: 'Security Admin', color: 'bg-blue-500', icon: Cog6ToothIcon },
-      soc_analyst: { label: 'SOC Analyst', color: 'bg-green-500', icon: UserIcon },
+      platform_owner: { 
+        label: '🏢 Platform Owner (CISO)', 
+        color: 'bg-red-500', 
+        icon: StarIcon,
+        description: 'Strategic oversight, compliance management, global tenant administration'
+      },
+      security_admin: { 
+        label: '🛡️ Security Admin (SOC Manager)', 
+        color: 'bg-blue-500', 
+        icon: Cog6ToothIcon,
+        description: 'SOC management, user provisioning, security policy enforcement'
+      },
+      soc_analyst: { 
+        label: '🔍 SOC Analyst (Security Analyst)', 
+        color: 'bg-green-500', 
+        icon: UserIcon,
+        description: 'Threat monitoring, incident response, security event analysis'
+      },
       // Legacy roles
-      superadmin: { label: 'Super Admin', color: 'bg-red-500', icon: StarIcon },
-      manager: { label: 'Manager', color: 'bg-blue-500', icon: Cog6ToothIcon },
-      analyst: { label: 'Analyst', color: 'bg-green-500', icon: UserIcon },
-      platform_admin: { label: 'Platform Admin', color: 'bg-blue-500', icon: Cog6ToothIcon },
-      end_user: { label: 'End User', color: 'bg-green-500', icon: UserIcon },
+      superadmin: { label: 'Super Admin (Legacy)', color: 'bg-red-500', icon: StarIcon },
+      manager: { label: 'Manager (Legacy)', color: 'bg-blue-500', icon: Cog6ToothIcon },
+      analyst: { label: 'Analyst (Legacy)', color: 'bg-green-500', icon: UserIcon },
+      platform_admin: { label: 'Platform Admin (Legacy)', color: 'bg-blue-500', icon: Cog6ToothIcon },
+      end_user: { label: 'End User (Legacy)', color: 'bg-green-500', icon: UserIcon },
       admin: { label: 'Administrator', color: 'bg-red-500', icon: StarIcon },
       user: { label: 'User', color: 'bg-green-500', icon: UserIcon },
     };

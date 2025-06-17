@@ -223,38 +223,45 @@ export const useNetwork = (options: UseNetworkOptions = {}) => {
   console.log('useNetwork: ResponseData type =', typeof responseData);
   console.log('useNetwork: ResponseData keys =', responseData ? Object.keys(responseData) : 'none');
   
-  const devices = responseData?.devices?.map((device: NetworkResponseData['devices'][0]) => ({
-    id: device.id.toString(),
-    name: device.name,
-    type: device.type as NetworkDevice['type'],
-    status: (device.status === 'active' ? 'online' : device.status === 'inactive' ? 'offline' : 'warning') as NetworkDevice['status'],
-    ipAddress: (device.metadata as { ip?: string })?.ip || '', // Get IP from metadata
-    macAddress: (device.metadata as { mac?: string })?.mac || '', // Get MAC from metadata
-    lastSeen: device.last_seen,
-    metrics: {
-      latency: Math.random() * 100, // Generate sample metrics
-      packetLoss: Math.random() * 5,
-      bandwidth: Math.random() * 1000
-    }
-  })) ?? [];
+  // Add safety checks to ensure devices is always an array
+  const devices = (responseData?.devices && Array.isArray(responseData.devices)) 
+    ? responseData.devices.map((device: NetworkResponseData['devices'][0]) => ({
+        id: device.id.toString(),
+        name: device.name,
+        type: device.type as NetworkDevice['type'],
+        status: (device.status === 'active' ? 'online' : device.status === 'inactive' ? 'offline' : 'warning') as NetworkDevice['status'],
+        ipAddress: (device.metadata as { ip?: string })?.ip || '', // Get IP from metadata
+        macAddress: (device.metadata as { mac?: string })?.mac || '', // Get MAC from metadata
+        lastSeen: device.last_seen,
+        metrics: {
+          latency: Math.random() * 100, // Generate sample metrics
+          packetLoss: Math.random() * 5,
+          bandwidth: Math.random() * 1000
+        }
+      }))
+    : [];
 
-  // Map connections from API response
-  const connections: NetworkConnection[] = responseData?.connections?.map((conn) => ({
-    id: conn.id,
-    sourceDevice: conn.source_device,
-    targetDevice: conn.target_device,
-    protocol: conn.protocol,
-    status: conn.status as NetworkConnection['status'],
-    lastSeen: conn.last_seen,
-    metrics: {
-      bytesTransferred: (conn.metadata?.bytes_transferred as number) || 0,
-      packetsTransferred: 0, // Not available in current API
-      latency: Math.random() * 50 // Generate sample latency
-    }
-  })) ?? [];
+  // Map connections from API response with safety checks
+  const connections: NetworkConnection[] = (responseData?.connections && Array.isArray(responseData.connections))
+    ? responseData.connections.map((conn) => ({
+        id: conn.id,
+        sourceDevice: conn.source_device,
+        targetDevice: conn.target_device,
+        protocol: conn.protocol,
+        status: conn.status as NetworkConnection['status'],
+        lastSeen: conn.last_seen,
+        metrics: {
+          bytesTransferred: (conn.metadata?.bytes_transferred as number) || 0,
+          packetsTransferred: 0, // Not available in current API
+          latency: Math.random() * 50 // Generate sample latency
+        }
+      }))
+    : [];
 
-  // Calculate metrics from the response data
-  const trafficData = responseData?.traffic ?? [];
+  // Calculate metrics from the response data with safety checks
+  const trafficData = (responseData?.traffic && Array.isArray(responseData.traffic)) 
+    ? responseData.traffic 
+    : [];
   const totalTrafficBytes = trafficData.reduce((sum: number, traffic: any) => 
     sum + traffic.bytes_in + traffic.bytes_out, 0
   );
@@ -288,7 +295,8 @@ export const useNetwork = (options: UseNetworkOptions = {}) => {
     bandwidthUsage: bandwidthMbps,
     packetLoss: packetLossPercentage,
     protocols: Object.fromEntries(
-      (responseData?.protocols ?? []).map((p: NetworkResponseData['protocols'][0]) => [p.name, p.count])
+      (responseData?.protocols && Array.isArray(responseData.protocols) ? responseData.protocols : [])
+        .map((p: NetworkResponseData['protocols'][0]) => [p.name, p.count])
     ),
     traffic: trafficData // Include real traffic data
   };

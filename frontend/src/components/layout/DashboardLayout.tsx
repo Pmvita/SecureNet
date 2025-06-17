@@ -354,19 +354,19 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                         {user?.role === 'platform_owner' && (
                           <>
                             <StarIcon className="w-3 h-3 text-yellow-400" />
-                            <span>Platform Owner</span>
+                            <span>🏢 Platform Owner (CISO)</span>
                           </>
                         )}
                         {user?.role === 'security_admin' && (
                           <>
                             <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
-                            <span>Security Admin</span>
+                            <span>🛡️ Security Admin (SOC Manager)</span>
                           </>
                         )}
                         {user?.role === 'soc_analyst' && (
                           <>
                             <UserIcon className="w-3 h-3 text-green-400" />
-                            <span>SOC Analyst</span>
+                            <span>🔍 SOC Analyst (Security Analyst)</span>
                           </>
                         )}
                         {user?.role === 'superadmin' && (
@@ -422,19 +422,19 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                               {user?.role === 'platform_owner' && (
                                 <>
                                   <StarIcon className="w-3 h-3 text-yellow-400" />
-                                  <span>Platform Owner</span>
+                                  <span>🏢 Platform Owner (CISO)</span>
                                 </>
                               )}
                               {user?.role === 'security_admin' && (
                                 <>
                                   <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
-                                  <span>Security Admin</span>
+                                  <span>🛡️ Security Admin (SOC Manager)</span>
                                 </>
                               )}
                               {user?.role === 'soc_analyst' && (
                                 <>
                                   <UserIcon className="w-3 h-3 text-green-400" />
-                                  <span>SOC Analyst</span>
+                                  <span>🔍 SOC Analyst (Security Analyst)</span>
                                 </>
                               )}
                               {user?.role === 'superadmin' && (
