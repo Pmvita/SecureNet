@@ -134,6 +134,92 @@ SecureNet Enterprise has completed its core development phases and is ready for 
 - ✅ Payment form validation functional
 - ✅ Billing dashboard shows real data
 
+#### **👥 Multi-Tenant Licensing System** | Priority: CRITICAL | 6 days
+**Assignee**: Backend Developer + Frontend Developer
+
+**Tasks**:
+- [ ] **License-Based User System** (3 days)
+  ```python
+  # New license structure in api_billing.py
+  LICENSE_TIERS = {
+    "executive": {
+      "price": 499.0,
+      "name": "Executive User",
+      "max_users_per_license": 1,
+      "features": ["full_org_access", "user_provisioning", "compliance_reports", "billing_access"]
+    },
+    "soc_analyst": {
+      "price": 149.0, 
+      "name": "SOC Analyst",
+      "max_users_per_license": 1,
+      "features": [
+        "security_monitoring", 
+        "incident_response", 
+        "threat_analysis",
+        "alert_management",
+        "security_dashboard_full_access",
+        "vulnerability_assessment",
+        "log_analysis",
+        "basic_user_invitation" // Can invite Basic Users only
+      ],
+      "data_access": "full_security_data_own_org", // All security data for their org
+      "permissions": [
+        "view_all_security_events",
+        "manage_incidents", 
+        "run_security_scans",
+        "generate_security_reports",
+        "configure_alert_rules"
+      ]
+    },
+    "basic_user": {
+      "price": 49.0,
+      "name": "Basic User", 
+      "max_users_per_license": 1,
+      "features": ["read_only_access", "basic_alerts", "dashboard_view"]
+    }
+  }
+  ```
+
+- [ ] **Platform Owner Account Setup** (2 days)
+  ```python
+  # Update default admin user
+  PLATFORM_OWNER = {
+    "username": "PierreMvita",
+    "role": "platform_owner",
+    "permissions": [
+      "company_wide_oversight",
+      "billing_management_all_tenants", 
+      "system_administration",
+      "multi_tenant_management",
+      "strategic_business_intelligence",
+      "documentation_access_all"
+    ]
+  }
+  ```
+
+- [ ] **Customer Executive User Role** (1 day)
+  ```python
+  # Customer organization admin role
+  EXECUTIVE_USER = {
+    "role": "executive_user",
+    "license_cost": 499.0,
+    "max_users_per_org": 10,  # Suggested limit
+    "permissions": [
+      "organization_scoped_access",
+      "security_management_own_org",
+      "user_provisioning_own_org", 
+      "compliance_reporting_own_org",
+      "billing_visibility_own_subscription"
+    ]
+  }
+  ```
+
+**Success Metrics**:
+- ✅ License-based billing system functional
+- ✅ Platform Owner (PierreMvita) has god-mode access
+- ✅ Executive Users have org-scoped admin access
+- ✅ User provisioning limits enforced per license
+
 ### **Backend Optimization & Scalability**
 
 #### **🗄️ Database Performance** | Priority: CRITICAL | 3 days
@@ -200,41 +286,764 @@ SecureNet Enterprise has completed its core development phases and is ready for 
 - ✅ Redis memory usage optimized
 - ✅ Cache invalidation working correctly
 
-#### **💳 Payment Processing Implementation** | Priority: CRITICAL | 6 days
-**Assignee**: Backend Developer + DevOps Engineer
+#### **⚖️ Legal & Compliance Framework** | Priority: CRITICAL | 3 days
+**Assignee**: Legal Counsel + Compliance Officer
 
 **Tasks**:
-- [ ] **Stripe Integration** (3 days)
-  ```python
-  # billing/stripe_service.py
-  class StripeService:
-      async def create_customer(self, organization_id: str, email: str)
-      async def create_subscription(self, customer_id: str, price_id: str)
-      async def handle_webhook(self, payload: dict, signature: str)
-      async def update_payment_method(self, customer_id: str, payment_method: str)
+- [ ] **Privacy Policy & Terms of Service** (1 day)
+  ```typescript
+  // Required legal documents
+  - Privacy Policy (GDPR/CCPA compliant)
+  - Terms of Service (SaaS specific)
+  - Data Processing Agreement (DPA) template
+  - Service Level Agreement (SLA) template
   ```
 
-- [ ] **Billing Workflow Integration** (2 days)
-  - Real subscription creation and management
-  - Payment method validation and storage
-  - Failed payment handling and retry logic
-  - Invoice generation and delivery
-
-- [ ] **Webhook Processing** (1 day)
-  ```python
-  # Handle Stripe events:
-  # - invoice.payment_succeeded
-  # - invoice.payment_failed
-  # - customer.subscription.updated
-  # - customer.subscription.deleted
+- [ ] **GDPR/CCPA Compliance Implementation** (2 days)
+  ```typescript
+  // features/privacy/components/
+  ├── ConsentManager.tsx      // Cookie consent management
+  ├── DataSubjectRights.tsx   // Access, deletion, portability
+  ├── PrivacySettings.tsx     // User privacy controls
+  └── CookiePolicy.tsx        // Cookie disclosure
   ```
 
 **Success Metrics**:
-- ❌ **Payment processing not implemented**
-- ❌ **Real customer billing not functional**
-- ✅ Webhook signature verification working
-- ✅ Payment failure handling implemented
-- ✅ Subscription lifecycle management functional
+- ✅ All legal documents published and accessible
+- ✅ GDPR consent management functional
+- ✅ Data subject rights portal operational
+- ✅ Legal review and approval completed
+
+#### **💳 Payment Processing Implementation** | Priority: CRITICAL | 8 days
+**Assignee**: Backend Developer + DevOps Engineer
+
+>## 📖 **For detailed step-by-step setup instructions, see [Payment Setup Guide](./PAYMENT_SETUP_GUIDE.md)**
+
+### **STRIPE PAYMENT SETUP - Complete Instructions**
+
+#### **Step 1: Stripe Account Creation & Setup** (1 day)
+
+**1.1 Create Stripe Account**
+```bash
+# Go to https://stripe.com and create account
+# Business Information Required:
+- Business Name: "SecureNet Holdings" or "Pierre Mvita"
+- Business Type: Software/SaaS
+- Country: Canada (or your location)
+- Industry: Computer Software
+- Website: securenet.ai (when ready)
+```
+
+**1.2 Complete Account Verification**
+```bash
+# Stripe will require:
+- Government-issued ID (driver's license/passport)
+- Business registration documents (if incorporated)
+- Bank account information for payouts
+- Tax identification number (SSN/EIN)
+- Phone number verification
+```
+
+**1.3 Get API Keys**
+```bash
+# In Stripe Dashboard > Developers > API Keys
+# Copy these to your .env file:
+
+# Test Keys (for development)
+STRIPE_PUBLISHABLE_KEY_TEST=pk_test_51...
+STRIPE_SECRET_KEY_TEST=sk_test_51...
+
+# Live Keys (for production - get after account verification)
+STRIPE_PUBLISHABLE_KEY_LIVE=pk_live_51...
+STRIPE_SECRET_KEY_LIVE=sk_live_51...
+
+# Webhook Secret (create webhook endpoint first)
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+#### **Step 2: Stripe Product & Price Setup** (1 day)
+
+**2.1 Create Products in Stripe Dashboard**
+```bash
+# Go to Stripe Dashboard > Products
+# Create these 3 products:
+
+Product 1:
+- Name: "Executive User License"
+- Description: "Full organization access, user provisioning, compliance reports"
+- Price: $499/month
+- Billing: Recurring monthly
+- Price ID: price_executive_monthly
+
+Product 2:
+- Name: "SOC Analyst License"  
+- Description: "Security monitoring, incident response, threat analysis"
+- Price: $149/month
+- Billing: Recurring monthly
+- Price ID: price_soc_analyst_monthly
+
+Product 3:
+- Name: "Basic User License"
+- Description: "Read-only access, basic alerts, dashboard view"
+- Price: $49/month
+- Billing: Recurring monthly
+- Price ID: price_basic_user_monthly
+```
+
+**2.2 Copy Price IDs to Configuration**
+```python
+# Add to api_billing.py
+STRIPE_PRICE_IDS = {
+    "executive_user": "price_executive_monthly",
+    "soc_analyst": "price_soc_analyst_monthly", 
+    "basic_user": "price_basic_user_monthly"
+}
+```
+
+#### **Step 3: Stripe Integration Implementation** (3 days)
+
+**3.1 Install Stripe Dependencies**
+```bash
+# Backend
+pip install stripe
+
+# Frontend  
+cd frontend
+npm install @stripe/stripe-js @stripe/react-stripe-js
+```
+
+**3.2 Backend Stripe Service Implementation**
+```python
+# billing/stripe_service.py
+import stripe
+import os
+from typing import Dict, Optional
+import logging
+
+logger = logging.getLogger(__name__)
+
+class StripeService:
+    def __init__(self):
+        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+        self.webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+    
+    async def create_customer(self, organization_id: str, email: str, name: str) -> str:
+        """Create Stripe customer for organization"""
+        try:
+            customer = stripe.Customer.create(
+                email=email,
+                name=name,
+                metadata={
+                    "organization_id": organization_id,
+                    "platform": "securenet"
+                }
+            )
+            logger.info(f"Created Stripe customer: {customer.id}")
+            return customer.id
+        except stripe.error.StripeError as e:
+            logger.error(f"Stripe customer creation failed: {e}")
+            raise
+    
+    async def create_subscription(self, customer_id: str, price_id: str) -> Dict:
+        """Create subscription for customer"""
+        try:
+            subscription = stripe.Subscription.create(
+                customer=customer_id,
+                items=[{"price": price_id}],
+                payment_behavior="default_incomplete",
+                payment_settings={"save_default_payment_method": "on_subscription"},
+                expand=["latest_invoice.payment_intent"]
+            )
+            return {
+                "subscription_id": subscription.id,
+                "client_secret": subscription.latest_invoice.payment_intent.client_secret,
+                "status": subscription.status
+            }
+        except stripe.error.StripeError as e:
+            logger.error(f"Subscription creation failed: {e}")
+            raise
+    
+    async def handle_webhook(self, payload: bytes, signature: str) -> Dict:
+        """Handle Stripe webhook events"""
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, signature, self.webhook_secret
+            )
+            
+            if event["type"] == "invoice.payment_succeeded":
+                await self._handle_payment_succeeded(event["data"]["object"])
+            elif event["type"] == "invoice.payment_failed":
+                await self._handle_payment_failed(event["data"]["object"])
+            elif event["type"] == "customer.subscription.deleted":
+                await self._handle_subscription_cancelled(event["data"]["object"])
+            
+            return {"status": "success"}
+        except ValueError as e:
+            logger.error(f"Invalid webhook payload: {e}")
+            raise
+        except stripe.error.SignatureVerificationError as e:
+            logger.error(f"Invalid webhook signature: {e}")
+            raise
+    
+    async def _handle_payment_succeeded(self, invoice):
+        """Handle successful payment"""
+        subscription_id = invoice["subscription"]
+        customer_id = invoice["customer"]
+        # Update organization status to active
+        # Send payment confirmation email
+    
+    async def _handle_payment_failed(self, invoice):
+        """Handle failed payment"""
+        subscription_id = invoice["subscription"]
+        customer_id = invoice["customer"]
+        # Update organization status to past_due
+        # Send payment failure notification
+    
+    async def _handle_subscription_cancelled(self, subscription):
+        """Handle subscription cancellation"""
+        customer_id = subscription["customer"]
+        # Downgrade organization to free plan
+        # Send cancellation confirmation
+```
+
+**3.3 Frontend Stripe Integration**
+```typescript
+// features/billing/components/PaymentSetup.tsx
+import React, { useState } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements
+} from '@stripe/react-stripe-js';
+
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY!);
+
+const PaymentForm: React.FC<{ priceId: string; onSuccess: () => void }> = ({
+  priceId,
+  onSuccess
+}) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    
+    if (!stripe || !elements) return;
+    
+    setIsLoading(true);
+    setError(null);
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) return;
+
+    try {
+      // Create subscription
+      const response = await fetch('/api/billing/create-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({ price_id: priceId })
+      });
+
+      const { client_secret } = await response.json();
+
+      // Confirm payment
+      const { error: confirmError } = await stripe.confirmCardPayment(client_secret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: {
+            name: 'Customer Name', // Get from form
+          },
+        }
+      });
+
+      if (confirmError) {
+        setError(confirmError.message || 'Payment failed');
+      } else {
+        onSuccess();
+      }
+    } catch (err) {
+      setError('Payment setup failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="p-4 border rounded-lg">
+        <CardElement
+          options={{
+            style: {
+              base: {
+                fontSize: '16px',
+                color: '#424770',
+                '::placeholder': {
+                  color: '#aab7c4',
+                },
+              },
+            },
+          }}
+        />
+      </div>
+      
+      {error && (
+        <div className="text-red-600 text-sm">{error}</div>
+      )}
+      
+      <button
+        type="submit"
+        disabled={!stripe || isLoading}
+        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg disabled:opacity-50"
+      >
+        {isLoading ? 'Processing...' : 'Subscribe'}
+      </button>
+    </form>
+  );
+};
+
+export const PaymentSetup: React.FC<{ priceId: string }> = ({ priceId }) => {
+  return (
+    <Elements stripe={stripePromise}>
+      <PaymentForm priceId={priceId} onSuccess={() => window.location.reload()} />
+    </Elements>
+  );
+};
+```
+
+#### **Step 4: Webhook Setup** (1 day)
+
+**4.1 Create Webhook Endpoint in Stripe**
+```bash
+# In Stripe Dashboard > Developers > Webhooks
+# Add endpoint: https://yourdomain.com/api/billing/webhook/stripe
+# Select these events:
+- invoice.payment_succeeded
+- invoice.payment_failed  
+- customer.subscription.updated
+- customer.subscription.deleted
+- payment_method.attached
+```
+
+**4.2 Implement Webhook Handler**
+```python
+# In api_billing.py - add this route
+@router.post("/webhook/stripe")
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    signature = request.headers.get("stripe-signature")
+    
+    try:
+        stripe_service = StripeService()
+        result = await stripe_service.handle_webhook(payload, signature)
+        return result
+    except Exception as e:
+        logger.error(f"Webhook error: {e}")
+        raise HTTPException(status_code=400, detail="Webhook processing failed")
+```
+
+### **CRYPTO PAYMENT SETUP - Complete Instructions**
+
+#### **Step 1: Choose Crypto Payment Processor** (1 day)
+
+**Option A: Coinbase Commerce (Recommended)**
+```bash
+# Benefits:
+- Easy integration
+- Supports Bitcoin, Ethereum, Litecoin, Bitcoin Cash
+- Automatic conversion to USD
+- Good for beginners
+
+# Setup:
+1. Go to https://commerce.coinbase.com
+2. Create business account
+3. Complete KYC verification
+4. Get API key and webhook secret
+```
+
+**Option B: BitPay**
+```bash
+# Benefits:  
+- Lower fees (1% vs Coinbase's 1.49%)
+- More cryptocurrency options
+- Better for high volume
+
+# Setup:
+1. Go to https://bitpay.com
+2. Create merchant account
+3. Complete business verification
+4. Get API tokens
+```
+
+**Option C: CoinPayments**
+```bash
+# Benefits:
+- Supports 100+ cryptocurrencies
+- Lowest fees (0.5%)
+- Most flexible
+
+# Setup:
+1. Go to https://www.coinpayments.net
+2. Create merchant account
+3. Get API keys and IPN secret
+```
+
+#### **Step 2: Coinbase Commerce Integration** (2 days)
+
+**2.1 Install Dependencies**
+```bash
+pip install coinbase-commerce-python
+npm install @coinbase/commerce-sdk
+```
+
+**2.2 Backend Crypto Service**
+```python
+# billing/crypto_service.py
+from coinbase_commerce_python.client import Client
+from coinbase_commerce_python.models import Charge, Checkout
+import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+class CryptoPaymentService:
+    def __init__(self):
+        self.client = Client(api_key=os.getenv("COINBASE_COMMERCE_API_KEY"))
+        self.webhook_secret = os.getenv("COINBASE_WEBHOOK_SECRET")
+    
+    async def create_crypto_charge(self, organization_id: str, amount_usd: float, license_type: str) -> Dict:
+        """Create crypto payment charge"""
+        try:
+            charge_data = {
+                "name": f"SecureNet {license_type} License",
+                "description": f"Monthly subscription for {license_type}",
+                "local_price": {
+                    "amount": str(amount_usd),
+                    "currency": "USD"
+                },
+                "pricing_type": "fixed_price",
+                "metadata": {
+                    "organization_id": organization_id,
+                    "license_type": license_type,
+                    "platform": "securenet"
+                }
+            }
+            
+            charge = self.client.charge.create(**charge_data)
+            
+            return {
+                "charge_id": charge.id,
+                "hosted_url": charge.hosted_url,
+                "payment_addresses": charge.addresses,
+                "expires_at": charge.expires_at
+            }
+        except Exception as e:
+            logger.error(f"Crypto charge creation failed: {e}")
+            raise
+    
+    async def verify_webhook(self, payload: bytes, signature: str) -> bool:
+        """Verify Coinbase webhook signature"""
+        import hmac
+        import hashlib
+        
+        expected_signature = hmac.new(
+            self.webhook_secret.encode(),
+            payload,
+            hashlib.sha256
+        ).hexdigest()
+        
+        return hmac.compare_digest(signature, expected_signature)
+    
+    async def handle_crypto_webhook(self, payload: Dict) -> Dict:
+        """Handle crypto payment webhook"""
+        try:
+            event_type = payload.get("event", {}).get("type")
+            charge_data = payload.get("event", {}).get("data")
+            
+            if event_type == "charge:confirmed":
+                await self._handle_crypto_payment_confirmed(charge_data)
+            elif event_type == "charge:failed":
+                await self._handle_crypto_payment_failed(charge_data)
+            elif event_type == "charge:delayed":
+                await self._handle_crypto_payment_delayed(charge_data)
+            
+            return {"status": "success"}
+        except Exception as e:
+            logger.error(f"Crypto webhook error: {e}")
+            raise
+    
+    async def _handle_crypto_payment_confirmed(self, charge):
+        """Handle confirmed crypto payment"""
+        organization_id = charge["metadata"]["organization_id"]
+        license_type = charge["metadata"]["license_type"]
+        
+        # Activate subscription
+        # Send confirmation email
+        # Update organization status
+        
+    async def _handle_crypto_payment_failed(self, charge):
+        """Handle failed crypto payment"""
+        organization_id = charge["metadata"]["organization_id"]
+        
+        # Send payment failure notification
+        # Keep organization in trial/suspended state
+```
+
+**2.3 Frontend Crypto Payment Component**
+```typescript
+// features/billing/components/CryptoPayment.tsx
+import React, { useState, useEffect } from 'react';
+
+interface CryptoPaymentProps {
+  licenseType: string;
+  amount: number;
+  onSuccess: () => void;
+}
+
+export const CryptoPayment: React.FC<CryptoPaymentProps> = ({
+  licenseType,
+  amount,
+  onSuccess
+}) => {
+  const [chargeData, setChargeData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'confirmed' | 'failed'>('pending');
+
+  const initiateCryptoPayment = async () => {
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch('/api/billing/crypto/create-charge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({
+          license_type: licenseType,
+          amount_usd: amount
+        })
+      });
+
+      const data = await response.json();
+      setChargeData(data);
+      
+      // Open Coinbase Commerce hosted page
+      window.open(data.hosted_url, '_blank');
+      
+      // Start polling for payment status
+      pollPaymentStatus(data.charge_id);
+    } catch (error) {
+      console.error('Crypto payment initiation failed:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const pollPaymentStatus = async (chargeId: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/billing/crypto/status/${chargeId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          }
+        });
+        
+        const status = await response.json();
+        
+        if (status.payment_status === 'confirmed') {
+          setPaymentStatus('confirmed');
+          clearInterval(pollInterval);
+          onSuccess();
+        } else if (status.payment_status === 'failed') {
+          setPaymentStatus('failed');
+          clearInterval(pollInterval);
+        }
+      } catch (error) {
+        console.error('Payment status check failed:', error);
+      }
+    }, 5000); // Check every 5 seconds
+
+    // Stop polling after 30 minutes
+    setTimeout(() => clearInterval(pollInterval), 30 * 60 * 1000);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/20 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-4">
+          Pay with Cryptocurrency
+        </h3>
+        
+        <div className="space-y-3">
+          <div className="flex justify-between">
+            <span className="text-gray-300">License Type:</span>
+            <span className="text-white font-medium">{licenseType}</span>
+          </div>
+          
+          <div className="flex justify-between">
+            <span className="text-gray-300">Amount:</span>
+            <span className="text-white font-medium">${amount}/month</span>
+          </div>
+          
+          <div className="flex justify-between">
+            <span className="text-gray-300">Accepted Currencies:</span>
+            <div className="flex space-x-2">
+              <span className="text-orange-400">BTC</span>
+              <span className="text-blue-400">ETH</span>
+              <span className="text-gray-400">LTC</span>
+              <span className="text-green-400">BCH</span>
+            </div>
+          </div>
+        </div>
+
+        {!chargeData ? (
+          <button
+            onClick={initiateCryptoPayment}
+            disabled={isLoading}
+            className="w-full mt-4 bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 disabled:opacity-50"
+          >
+            {isLoading ? 'Creating Payment...' : 'Pay with Crypto'}
+          </button>
+        ) : (
+          <div className="mt-4 space-y-3">
+            <div className="text-center">
+              <div className="text-yellow-400 mb-2">⏳ Payment Pending</div>
+              <p className="text-sm text-gray-300">
+                Complete your payment in the opened window
+              </p>
+            </div>
+            
+            {paymentStatus === 'confirmed' && (
+              <div className="text-center text-green-400">
+                ✅ Payment Confirmed!
+              </div>
+            )}
+            
+            {paymentStatus === 'failed' && (
+              <div className="text-center text-red-400">
+                ❌ Payment Failed
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+```
+
+#### **Step 3: Environment Configuration** (1 day)
+
+**3.1 Add Environment Variables**
+```bash
+# Add to .env file
+
+# Stripe Configuration
+STRIPE_PUBLISHABLE_KEY_TEST=pk_test_51...
+STRIPE_SECRET_KEY_TEST=sk_test_51...
+STRIPE_PUBLISHABLE_KEY_LIVE=pk_live_51...
+STRIPE_SECRET_KEY_LIVE=sk_live_51...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Coinbase Commerce Configuration  
+COINBASE_COMMERCE_API_KEY=your_api_key_here
+COINBASE_WEBHOOK_SECRET=your_webhook_secret_here
+
+# Payment Processing Settings
+PAYMENT_METHODS_ENABLED=stripe,crypto
+DEFAULT_PAYMENT_METHOD=stripe
+CRYPTO_PAYMENT_TIMEOUT_MINUTES=30
+```
+
+**3.2 Frontend Environment Variables**
+```bash
+# Add to frontend/.env
+REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_test_51...
+REACT_APP_CRYPTO_PAYMENTS_ENABLED=true
+REACT_APP_PAYMENT_METHODS=stripe,crypto
+```
+
+#### **Step 4: Payment Method Selection UI** (1 day)
+
+```typescript
+// features/billing/components/PaymentMethodSelector.tsx
+import React, { useState } from 'react';
+import { PaymentSetup } from './PaymentSetup';
+import { CryptoPayment } from './CryptoPayment';
+
+interface PaymentMethodSelectorProps {
+  licenseType: string;
+  amount: number;
+  onSuccess: () => void;
+}
+
+export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
+  licenseType,
+  amount,
+  onSuccess
+}) => {
+  const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'crypto'>('stripe');
+
+  return (
+    <div className="space-y-6">
+      {/* Payment Method Selection */}
+      <div className="grid grid-cols-2 gap-4">
+        <button
+          onClick={() => setSelectedMethod('stripe')}
+          className={`p-4 border rounded-lg text-center transition-colors ${
+            selectedMethod === 'stripe'
+              ? 'border-blue-500 bg-blue-500/10 text-blue-400'
+              : 'border-gray-600 text-gray-300 hover:border-gray-500'
+          }`}
+        >
+          <div className="text-lg font-medium">💳 Credit Card</div>
+          <div className="text-sm mt-1">Visa, Mastercard, Amex</div>
+        </button>
+
+        <button
+          onClick={() => setSelectedMethod('crypto')}
+          className={`p-4 border rounded-lg text-center transition-colors ${
+            selectedMethod === 'crypto'
+              ? 'border-orange-500 bg-orange-500/10 text-orange-400'
+              : 'border-gray-600 text-gray-300 hover:border-gray-500'
+          }`}
+        >
+          <div className="text-lg font-medium">₿ Cryptocurrency</div>
+          <div className="text-sm mt-1">Bitcoin, Ethereum, etc.</div>
+        </button>
+      </div>
+
+      {/* Payment Form */}
+      {selectedMethod === 'stripe' && (
+        <PaymentSetup priceId={`price_${licenseType}_monthly`} />
+      )}
+
+      {selectedMethod === 'crypto' && (
+        <CryptoPayment
+          licenseType={licenseType}
+          amount={amount}
+          onSuccess={onSuccess}
+        />
+      )}
+    </div>
+  );
+};
+```
+
+**Success Metrics**:
+- ✅ **Stripe integration functional with real payments**
+- ✅ **Crypto payments working with major currencies**
+- ✅ **Webhook processing implemented for both payment methods**
+- ✅ **Payment failure handling and retry logic**
+- ✅ **Subscription lifecycle management functional**
+- ✅ **Customer can choose between credit card and crypto**
 
 ### **Security Hardening & Compliance**
 
@@ -298,7 +1107,7 @@ SecureNet Enterprise has completed its core development phases and is ready for 
 
 ### **User Onboarding Excellence**
 
-#### **🎯 Interactive Product Tour** | Priority: HIGH | 5 days
+#### **🎯 Interactive Product Tour & Onboarding** | Priority: HIGH | 7 days
 **Assignee**: Frontend Developer + UX Designer
 
 **Tasks**:
@@ -313,21 +1122,28 @@ SecureNet Enterprise has completed its core development phases and is ready for 
   }
   ```
 
-- [ ] **Role-Based Tours** (2 days)
-  - Platform Owner tour (executive overview)
-  - Security Admin tour (SOC operations)
-  - SOC Analyst tour (daily workflows)
+- [ ] **Role-Based Tours** (3 days)
+  - **Platform Owner tour** (PierreMvita): Multi-tenant overview, billing management, system admin
+  - **Executive User tour**: Organization setup, user provisioning, compliance reporting
+  - **SOC Analyst tour**: Security monitoring, incident response workflows
+  - **Basic User tour**: Dashboard navigation, alert management
 
-- [ ] **Tour Analytics** (1 day)
-  - Track tour completion rates
-  - Identify drop-off points
-  - A/B test tour effectiveness
+- [ ] **Professional Onboarding Frontend** (2 days)
+  ```typescript
+  // features/onboarding/components/
+  ├── LicenseSelection.tsx      // Choose Executive/SOC/Basic licenses
+  ├── OrganizationSetup.tsx     // Company details and configuration
+  ├── UserProvisioning.tsx      // Add team members with license limits
+  ├── SecurityConfiguration.tsx // Network setup and security policies
+  └── BillingSetup.tsx         // Payment method and subscription
+  ```
 
 **Success Metrics**:
 - ✅ Tour completion rate >80%
 - ✅ User activation rate +25%
 - ✅ Time to first value <10 minutes
-- ✅ User satisfaction score >4.5/5
+- ✅ License selection accuracy >95%
+- ✅ Onboarding completion rate >90%
 
 #### **🧙 Setup Wizards** | Priority: HIGH | 6 days
 **Assignee**: Frontend Developer + Backend Developer
@@ -358,6 +1174,92 @@ SecureNet Enterprise has completed its core development phases and is ready for 
 - ✅ Setup time <15 minutes average
 - ✅ Configuration accuracy >98%
 - ✅ Zero setup-related support tickets
+
+#### **📞 Enterprise Support Infrastructure** | Priority: HIGH | 5 days
+**Assignee**: Customer Success Manager + Frontend Developer
+
+**Tasks**:
+- [ ] **Support Ticketing System** (2 days)
+  ```typescript
+  // features/support/components/
+  ├── TicketCreation.tsx      // Customer ticket submission
+  ├── TicketTracking.tsx      // Real-time ticket status
+  ├── KnowledgeBase.tsx       // Self-service help center
+  └── LiveChat.tsx            // Real-time support chat
+  ```
+
+- [ ] **SLA & Escalation Framework** (2 days)
+  ```python
+  # Support tier definitions
+  SUPPORT_TIERS = {
+    "executive_user": {
+      "sla_response": "1 hour",
+      "escalation_path": ["l2_support", "engineering", "cto"],
+      "support_channels": ["phone", "email", "chat", "dedicated_slack"]
+    },
+    "soc_analyst": {
+      "sla_response": "4 hours", 
+      "escalation_path": ["l2_support", "engineering"],
+      "support_channels": ["email", "chat", "knowledge_base"]
+    },
+    "basic_user": {
+      "sla_response": "24 hours",
+      "escalation_path": ["l2_support"],
+      "support_channels": ["email", "knowledge_base"]
+    }
+  }
+  ```
+
+- [ ] **Customer Training Materials** (1 day)
+  - Video tutorials for each license type
+  - Interactive product walkthroughs
+  - Best practices documentation
+  - Webinar scheduling system
+
+**Success Metrics**:
+- ✅ 24/7 support system operational
+- ✅ SLA response times met >95%
+- ✅ Customer satisfaction score >4.5/5
+- ✅ Self-service resolution rate >60%
+
+#### **📚 Platform Owner Documentation System** | Priority: HIGH | 4 days
+**Assignee**: Frontend Developer + Technical Writer
+
+**Tasks**:
+- [ ] **Documentation Frontend Portal** (2 days)
+  ```typescript
+  // features/documentation/components/
+  ├── DocumentationHub.tsx      // Main docs navigation
+  ├── DocumentationViewer.tsx   // Markdown/MDX renderer
+  ├── DocumentationSearch.tsx   // Full-text search
+  └── DocumentationTOC.tsx      // Table of contents
+  ```
+
+- [ ] **Documentation Access Control** (1 day)
+  ```python
+  # Only Platform Owner (PierreMvita) can access ALL docs
+  @router.get("/api/documentation/all")
+  async def get_all_documentation(user: Dict = Depends(verify_platform_owner)):
+    # Return complete documentation tree including:
+    # - Production Launch Roadmap
+    # - Empire Roadmap (if authorized)  
+    # - Technical documentation
+    # - API documentation
+    # - Business intelligence reports
+  ```
+
+- [ ] **High-Standard Documentation UI** (1 day)
+  - Professional documentation theme matching SecureNet design
+  - Syntax highlighting for code blocks
+  - Interactive API documentation
+  - Responsive design for all screen sizes
+  - Advanced search with filtering
+
+**Success Metrics**:
+- ✅ Platform Owner has access to ALL documentation
+- ✅ Documentation UI meets high project standards
+- ✅ Search functionality working across all docs  
+- ✅ Customer users cannot access internal documentation
 
 ### **Testing Infrastructure & Quality Assurance**
 
@@ -508,6 +1410,98 @@ SecureNet Enterprise has completed its core development phases and is ready for 
 - ✅ Security documentation complete
 - ✅ Compliance requirements met
 
+#### **🏢 Enterprise Integration Suite** | Priority: HIGH | 4 days
+**Assignee**: Integration Engineer + Backend Developer
+
+**Tasks**:
+- [ ] **Single Sign-On (SSO) Implementation** (2 days)
+  ```python
+  # SSO provider integrations
+  SSO_PROVIDERS = {
+    "saml": {
+      "providers": ["okta", "azure_ad", "google_workspace"],
+      "features": ["auto_provisioning", "group_mapping", "attribute_mapping"]
+    },
+    "oauth2": {
+      "providers": ["microsoft", "google", "github"],
+      "scopes": ["profile", "email", "groups"]
+    },
+    "oidc": {
+      "providers": ["auth0", "keycloak", "ping_identity"],
+      "claims": ["sub", "email", "groups", "roles"]
+    }
+  }
+  ```
+
+- [ ] **SCIM User Provisioning** (1 day)
+  ```python
+  # Automated user lifecycle management
+  @router.post("/scim/v2/Users")
+  async def create_user_scim(user_data: SCIMUser):
+    # Auto-provision users from enterprise directory
+  
+  @router.put("/scim/v2/Users/{user_id}")  
+  async def update_user_scim(user_id: str, user_data: SCIMUser):
+    # Sync user changes from enterprise directory
+  ```
+
+- [ ] **SIEM Integration Connectors** (1 day)
+  ```python
+  # Real-time security event forwarding
+  SIEM_CONNECTORS = {
+    "splunk": {"format": "cef", "transport": "tcp_syslog"},
+    "qradar": {"format": "leef", "transport": "udp_syslog"},
+    "sentinel": {"format": "json", "transport": "log_analytics_api"},
+    "elastic": {"format": "ecs", "transport": "elasticsearch_api"}
+  }
+  ```
+
+**Success Metrics**:
+- ✅ SSO authentication working for major providers
+- ✅ SCIM provisioning functional with test directory
+- ✅ SIEM integration tested with sample events
+- ✅ Enterprise integration documentation complete
+
+#### **🚨 Disaster Recovery & Business Continuity** | Priority: CRITICAL | 3 days
+**Assignee**: DevOps Engineer + SRE
+
+**Tasks**:
+- [ ] **Automated Backup & Recovery** (1 day)
+  ```yaml
+  # Multi-region backup strategy
+  backup_strategy:
+    database:
+      frequency: "every_6_hours"
+      retention: "30_days_hot_90_days_cold"
+      encryption: "aes_256_customer_managed_keys"
+    files:
+      frequency: "continuous_replication"
+      retention: "point_in_time_recovery_7_days"
+  ```
+
+- [ ] **Disaster Recovery Procedures** (1 day)
+  ```python
+  # DR automation and runbooks
+  DR_TARGETS = {
+    "rto": "4_hours",  # Recovery Time Objective
+    "rpo": "1_hour",   # Recovery Point Objective
+    "regions": ["primary_us_east", "dr_us_west", "dr_eu_west"],
+    "failover": "automated_with_manual_approval"
+  }
+  ```
+
+- [ ] **Business Continuity Planning** (1 day)
+  - Incident response playbooks
+  - Communication templates for outages
+  - Customer notification procedures
+  - Vendor contingency plans
+
+**Success Metrics**:
+- ✅ DR failover tested successfully
+- ✅ Backup recovery verified <4 hours
+- ✅ Business continuity plan documented
+- ✅ Incident response procedures validated
+
 #### **⚡ Performance Validation** | Priority: CRITICAL | 3 days
 **Assignee**: Performance Engineer
 
@@ -564,27 +1558,28 @@ SecureNet Enterprise has completed its core development phases and is ready for 
 - **Rapid7 InsightVM**: $2.59/asset/month (~$130-650/mo)
 
 **Tasks**:
-- [ ] **Pricing Structure Update** (1 day)
+- [ ] **License-Based Pricing Structure Update** (1 day)
   ```typescript
-  // Update SUBSCRIPTION_PLANS in api_billing.py
-  SUBSCRIPTION_PLANS = {
-    "starter": {
-      price_monthly: 49.0,    // Was: $29
-      price_yearly: 490.0,    // Was: $290
-      device_limit: 10,       // Was: 5
-      name: "Starter"
+  // Update to per-user licensing model in api_billing.py
+  LICENSE_PRICING = {
+    "executive_user": {
+      price_monthly: 499.0,
+      name: "Executive User License",
+      max_users_per_license: 1,
+      max_users_per_org: 10,    // Suggested limit per organization
+      features: ["full_org_access", "user_provisioning", "compliance_reports", "billing_access"]
     },
-    "professional": {
-      price_monthly: 149.0,   // Was: $99
-      price_yearly: 1490.0,   // Was: $990
-      device_limit: 100,      // Was: 50
-      name: "Professional"
+    "soc_analyst": {
+      price_monthly: 149.0,
+      name: "SOC Analyst License", 
+      max_users_per_license: 1,
+      features: ["security_monitoring", "incident_response", "threat_analysis"]
     },
-    "enterprise": {
-      price_monthly: 499.0,   // Was: $299
-      price_yearly: 4990.0,   // Was: $2990
-      device_limit: 1000,     // Was: 1000
-      name: "Enterprise"
+    "basic_user": {
+      price_monthly: 49.0,
+      name: "Basic User License",
+      max_users_per_license: 1, 
+      features: ["read_only_access", "basic_alerts", "dashboard_view"]
     }
   }
   ```
@@ -605,17 +1600,18 @@ SecureNet Enterprise has completed its core development phases and is ready for 
   # Create upgrade incentive workflows
   ```
 
-**Pricing Strategy Rationale**:
-| Plan | Current | **New Price** | **Justification** |
-|------|---------|---------------|-------------------|
-| **Starter** | $29/mo | **$49/mo** | Still 60% below CrowdStrike, reflects AI value |
-| **Professional** | $99/mo | **$149/mo** | Competitive with Qualys/Rapid7 mid-tier |
-| **Enterprise** | $299/mo | **$499/mo** | 50% below Wiz, premium positioning |
+**License-Based Pricing Strategy Rationale**:
+| License Type | **Price** | **Target User** | **Justification** |
+|--------------|-----------|-----------------|-------------------|
+| **Executive User** | **$499/mo** | CEOs, CISOs, IT Directors | Premium pricing for full org access, compliance reporting |
+| **SOC Analyst** | **$149/mo** | Security analysts, SOC operators | Competitive with enterprise security tools per analyst |
+| **Basic User** | **$49/mo** | End users, basic monitoring | Entry-level access, read-only dashboards |
 
-**Revenue Impact Projection**:
-- **Current Monthly Revenue**: $427
-- **Projected Monthly Revenue**: $1,986 (+365% potential increase)
-- **Market Position**: Premium but accessible alternative to enterprise-only solutions
+**Revenue Model Benefits**:
+- **Scalable**: Revenue grows with team size per organization
+- **Flexible**: Organizations can mix license types based on needs
+- **Competitive**: Executive licenses competitive with CrowdStrike per-endpoint pricing
+- **Predictable**: Per-user monthly recurring revenue model
 
 **Implementation Phases**:
 1. **Phase 1 (Weeks 9-10)**: New pricing for new customers only

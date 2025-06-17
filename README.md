@@ -8,7 +8,7 @@
 [![CSE CIRA](https://img.shields.io/badge/CSE%20CIRA-Certified-red)](./docs/compliance/COMPLIANCE_FRAMEWORKS.md)
 [![License](https://img.shields.io/badge/license-Proprietary-red)](./LICENSE.txt)
 
-**SecureNet** is an AI-powered cybersecurity platform delivers autonomous threat detection, predictive risk assessment, and intelligent security operations management for Fortune 500 enterprises, government agencies, and managed security service providers (MSSPs) worldwide.
+**SecureNet** is an AI-powered cybersecurity platform delivers autonomous threat detection, predictive risk assessment, and intelligent security operations management. It empowers organizations to efficiently manage network security, detect threats, and protect against cyber attacks, ensuring a secure and resilient network environment.
 
 ---
 
