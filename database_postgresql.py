@@ -765,6 +765,13 @@ class PostgreSQLDatabase:
                 for model in models
             ]
 
+    async def update_db_schema(self):
+        """Update database schema - for PostgreSQL, this is handled by the initialize method"""
+        # In PostgreSQL version, schema updates are handled by SQLAlchemy models
+        # and the initialize method already creates all tables
+        logger.info("PostgreSQL schema is managed by SQLAlchemy models")
+        pass
+
 # Global database instance
 db = PostgreSQLDatabase()
 

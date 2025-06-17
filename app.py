@@ -785,7 +785,7 @@ async def startup_event():
     try:
         logger.info("Starting SecureNet services...")
         # Initialize database and create default admin user
-        await db.initialize_db()
+        await db.initialize()
         logger.info("Database initialized successfully")
         # Update database schema
         await db.update_db_schema()

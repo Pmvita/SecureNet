@@ -231,7 +231,7 @@ async def start_server(host="127.0.0.1", port=8000, dev_mode=True, skip_validati
         logger.info(f"API Docs: http://{host}:{port}/docs")
         
         # Start the server
-        uvicorn.run(
+        config = uvicorn.Config(
             "app:app",
             host=host,
             port=port,
@@ -239,6 +239,8 @@ async def start_server(host="127.0.0.1", port=8000, dev_mode=True, skip_validati
             log_level="info" if dev_mode else "warning",
             access_log=dev_mode
         )
+        server = uvicorn.Server(config)
+        await server.serve()
         
     except KeyboardInterrupt:
         logger.info("Server shutdown requested by user")
