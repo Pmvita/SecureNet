@@ -19,6 +19,7 @@ import os
 from datetime import datetime, timezone
 import uuid
 from dataclasses import dataclass
+import time
 
 from database.enterprise_models import (
     Base, Organization, User, NetworkDevice, SecurityFinding, 
@@ -54,6 +55,25 @@ class DatabaseConfig:
     ssl_cert: Optional[str] = None
     ssl_key: Optional[str] = None
     ssl_ca: Optional[str] = None
+
+# Enhanced connection pool configuration for production
+PRODUCTION_POOL_CONFIG = {
+    "min_connections": 10,
+    "max_connections": 100,
+    "max_idle": 30,  # Maximum idle time in seconds
+    "retry_attempts": 3,
+    "retry_delay": 1.0,  # Seconds between retries
+    "connection_timeout": 10,  # Connection timeout in seconds
+    "command_timeout": 30,  # SQL command timeout in seconds
+}
+
+# Performance monitoring configuration
+PERFORMANCE_MONITORING = {
+    "slow_query_threshold": 50,  # Log queries slower than 50ms
+    "enable_query_stats": True,
+    "log_connections": True,
+    "log_disconnections": True,
+}
 
 class PostgreSQLAdapter:
     """Enterprise PostgreSQL database adapter"""
@@ -528,4 +548,114 @@ async def initialize_database():
     adapter = get_database_adapter()
     await adapter.initialize()
     await adapter.create_schema()
-    return adapter 
+    return adapter
+
+# Day 1 Performance Optimization Implementation
+async def create_optimized_connection_pool():
+    """
+    Create an optimized connection pool for production workloads
+    Implements Day 1 Sprint 1 connection pool optimization
+    """
+    logger = logging.getLogger(__name__)
+    
+    pool_config = PRODUCTION_POOL_CONFIG.copy()
+    
+    try:
+        # Create connection pool with optimized settings
+        pool = await asyncpg.create_pool(
+            host=os.getenv("DB_HOST", "localhost"),
+            port=int(os.getenv("DB_PORT", 5432)),
+            user=os.getenv("DB_USER", "securenet"),
+            password=os.getenv("DB_PASSWORD", "securenet"),
+            database=os.getenv("DB_NAME", "securenet"),
+            min_size=pool_config["min_connections"],
+            max_size=pool_config["max_connections"],
+            command_timeout=pool_config["command_timeout"],
+            server_settings={
+                'application_name': 'SecureNet-Production',
+                'timezone': 'UTC',
+            }
+        )
+        
+        # Test pool connectivity
+        async with pool.acquire() as connection:
+            start_time = time.time()
+            await connection.fetchval("SELECT 1")
+            connection_time = (time.time() - start_time) * 1000
+            
+            logger.info(f"Database pool initialized successfully")
+            logger.info(f"Connection test: {connection_time:.2f}ms")
+            logger.info(f"Pool size: {pool_config['min_connections']}-{pool_config['max_connections']}")
+        
+        return pool
+        
+    except Exception as e:
+        logger.error(f"Failed to create optimized connection pool: {e}")
+        raise
+
+async def execute_performance_optimization():
+    """
+    Execute Day 1 database performance optimization script
+    """
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Read the optimization SQL script
+        with open("database/performance_optimization.sql", "r") as f:
+            optimization_sql = f.read()
+        
+        # Split into individual statements
+        statements = [stmt.strip() for stmt in optimization_sql.split(';') if stmt.strip()]
+        
+        # Execute each statement
+        pool = await create_optimized_connection_pool()
+        async with pool.acquire() as connection:
+            for i, statement in enumerate(statements):
+                if statement.startswith('--') or not statement:
+                    continue
+                
+                try:
+                    start_time = time.time()
+                    await connection.execute(statement)
+                    execution_time = (time.time() - start_time) * 1000
+                    
+                    logger.info(f"Executed optimization {i+1}: {execution_time:.2f}ms")
+                    
+                except Exception as e:
+                    logger.warning(f"Optimization statement {i+1} failed: {e}")
+        
+        await pool.close()
+        logger.info("Database performance optimization completed successfully")
+        
+    except Exception as e:
+        logger.error(f"Performance optimization failed: {e}")
+        raise
+
+# Performance monitoring utilities
+async def get_query_performance_stats(pool):
+    """
+    Get current query performance statistics
+    """
+    async with pool.acquire() as connection:
+        # Check slow queries
+        slow_queries = await connection.fetch("""
+            SELECT query, calls, total_time, mean_time, rows
+            FROM pg_stat_statements
+            WHERE mean_time > $1
+            ORDER BY mean_time DESC
+            LIMIT 10
+        """, PERFORMANCE_MONITORING["slow_query_threshold"])
+        
+        # Check index usage
+        index_usage = await connection.fetch("""
+            SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read
+            FROM pg_stat_user_indexes
+            WHERE idx_scan < 100  -- Potentially unused indexes
+            ORDER BY idx_scan ASC
+            LIMIT 10
+        """)
+        
+        return {
+            "slow_queries": [dict(record) for record in slow_queries],
+            "low_usage_indexes": [dict(record) for record in index_usage]
+        } 
