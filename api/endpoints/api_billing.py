@@ -10,7 +10,7 @@ from typing import List, Dict, Optional
 from datetime import datetime
 import logging
 
-from database import Database, PlanType
+from database.database import Database, PlanType
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer()

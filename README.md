@@ -409,6 +409,92 @@ docs/
 
 ---
 
+## 📁 **Project Structure**
+
+SecureNet is organized into logical directories for better maintainability and development workflow:
+
+```
+SecureNet/
+├── 🚀 src/                         # Application source code
+│   └── apps/                       # Main application implementations
+│       ├── app.py                  # Primary FastAPI application (119KB)
+│       ├── enterprise_app.py       # Enterprise-specific features (22KB)
+│       ├── app_enhanced.py         # Enhanced application features (13KB)
+│       └── setup_enhanced.py       # Advanced configuration management (15KB)
+│
+├── 📡 api/                         # API layer organization
+│   ├── endpoints/                  # RESTful API endpoint implementations
+│   │   ├── api_admin.py           # Admin management endpoints (21KB)
+│   │   ├── api_billing.py         # Billing and subscription endpoints (10KB)
+│   │   ├── api_insights.py        # Analytics and insights endpoints (21KB)
+│   │   ├── api_metrics.py         # Performance metrics endpoints (14KB)
+│   │   └── api_user_groups.py     # User groups management endpoints (5KB)
+│   ├── services/                  # Business logic services
+│   └── middleware/                # API middleware components
+│
+├── 🗃️ database/                    # Database layer organization
+│   ├── database.py                # Main database implementation (213KB)
+│   ├── database_postgresql.py     # PostgreSQL-specific adapter (44KB)
+│   ├── database_factory.py        # Database factory pattern (2.8KB)
+│   ├── models.py                  # Core data models (15KB)
+│   ├── enterprise_models.py       # Enterprise-specific models (20KB)
+│   └── postgresql_adapter.py      # PostgreSQL connection adapter (26KB)
+│
+├── 🔒 security/                    # Security and scanning components
+│   ├── cve_integration.py         # CVE intelligence integration (27KB)
+│   ├── network_scanner.py         # Network device scanning (15KB)
+│   └── secrets_management.py      # Secrets and encryption management (18KB)
+│
+├── 🧪 tests/                       # Testing framework
+│   ├── unit/                      # Unit tests
+│   └── integration/               # Integration tests
+│
+├── 📊 reports/                     # Generated reports and analytics
+│   ├── validation/                # Sprint validation results
+│   ├── performance/               # Performance testing results
+│   ├── compliance/                # Compliance audit reports
+│   └── security/                  # Security assessment reports
+│
+├── 📜 scripts/                     # Organized script management
+│   ├── validation/                # Sprint validation and testing scripts
+│   ├── migrations/                # Database migration scripts
+│   ├── deployment/                # Production deployment scripts
+│   ├── monitoring/                # System monitoring scripts
+│   └── [implementation scripts]   # Core feature implementation scripts
+│
+├── 🌐 frontend/                    # React frontend application
+│   ├── src/                       # Frontend source code
+│   │   ├── components/            # Reusable UI components
+│   │   ├── pages/                 # Application pages and routes
+│   │   └── utils/                 # Frontend utilities and helpers
+│   └── public/                    # Static assets and resources
+│
+├── 📚 docs/                        # Comprehensive documentation
+│   ├── api/                       # API documentation
+│   ├── deployment/                # Deployment guides
+│   ├── security/                  # Security documentation
+│   └── [documentation categories] # Complete documentation structure
+│
+├── ⚙️ config/                      # Configuration management
+├── 📝 logs/                        # Application logs
+├── 🔐 auth/                        # Authentication services
+├── 🔍 monitoring/                  # Monitoring and alerting
+├── 🐳 k8s/                         # Kubernetes deployment configs
+├── 🐋 docker-compose.yml           # Docker orchestration
+├── 📦 requirements.txt             # Python dependencies
+└── 🚀 start_enterprise.py          # Enterprise production startup
+```
+
+### **🎯 Key Directory Benefits**
+
+- **🔍 Easy Navigation**: Logical organization makes finding files intuitive
+- **🛠️ Maintainability**: Clear separation of concerns reduces complexity
+- **👥 Team Collaboration**: Consistent structure improves developer productivity
+- **📈 Scalability**: Organized structure supports project growth
+- **🔧 Development Workflow**: Streamlined development and testing processes
+
+---
+
 ## 🏗️ **Architecture Overview**
 
 ```mermaid

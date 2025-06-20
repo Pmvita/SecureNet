@@ -12,7 +12,7 @@ import logging
 import os
 from jose import JWTError, jwt
 
-from database import Database, UserRole
+from database.database import Database, UserRole
 from src.security import SECRET_KEY, ALGORITHM
 
 logger = logging.getLogger(__name__)

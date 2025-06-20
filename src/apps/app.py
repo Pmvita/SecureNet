@@ -42,15 +42,15 @@ from src.security import (
     SECRET_KEY,
     ALGORITHM
 )
-from database_factory import db, Database
+from database.database_factory import db, Database
 from jose import JWTError, jwt
-from cve_integration import CVEIntegration
+from security.cve_integration import CVEIntegration
 
 # Import new API modules for multi-tenant SaaS
-from api_billing import router as billing_router
-from api_metrics import router as metrics_router
-from api_insights import router as insights_router
-from api_admin import router as admin_router
+from api.endpoints.api_billing import router as billing_router
+from api.endpoints.api_metrics import router as metrics_router
+from api.endpoints.api_insights import router as insights_router
+from api.endpoints.api_admin import router as admin_router
 
 # Import new Week 2 Day 2 performance modules
 from utils.week2_day2_performance import (

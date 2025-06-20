@@ -53,18 +53,18 @@ def get_database() -> DatabaseWrapper:
     if database_url.startswith("postgresql"):
         # Use PostgreSQL database
         try:
-            from database_postgresql import PostgreSQLDatabase
+            from database.database_postgresql import PostgreSQLDatabase
             logger.info("Using PostgreSQL database backend")
             return DatabaseWrapper(PostgreSQLDatabase())
         except ImportError as e:
             logger.error(f"Failed to import PostgreSQL database: {e}")
             logger.warning("Falling back to SQLite database")
-            from database import Database
+            from database.database import Database
             return DatabaseWrapper(Database())
     else:
         # Use SQLite database (default/fallback)
         try:
-            from database import Database
+            from database.database import Database
             logger.info("Using SQLite database backend")
             return DatabaseWrapper(Database())
         except ImportError as e:
@@ -77,10 +77,10 @@ db = get_database()
 # For backward compatibility, export the Database class
 try:
     if os.getenv("DATABASE_URL", "").startswith("postgresql"):
-        from database_postgresql import PostgreSQLDatabase as Database
+        from database.database_postgresql import PostgreSQLDatabase as Database
     else:
-        from database import Database
+        from database.database import Database
 except ImportError:
-    from database import Database
+    from database.database import Database
 
 __all__ = ['db', 'Database', 'get_database', 'DatabaseWrapper'] 

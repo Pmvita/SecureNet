@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import logging
 import json
 
-from database import Database
+from database.database import Database
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer()

@@ -6,7 +6,7 @@ Demonstrates basic CVE functionality
 
 import asyncio
 import json
-from cve_integration import CVEIntegration
+from security.cve_integration import CVEIntegration
 
 async def simple_cve_test():
     """Simple test of CVE integration"""

@@ -1,249 +1,170 @@
-# SecureNet Enterprise Scripts Directory v2.2.0-enterprise
+# SecureNet Scripts Directory
 
-This directory contains enterprise-grade operational scripts and utilities for SecureNet Holdings deployment, validation, and maintenance across global operations.
+> **Organized Scripts for SecureNet Production Launch**  
+> *Modular script organization for better maintainability*
 
-## Directory Structure
+---
+
+## 📁 **Directory Structure**
 
 ```
 scripts/
-├── ops/                    # Operational scripts
-│   ├── seed_users.py      # Database user seeding
-│   └── test_production_boot.py  # Production readiness testing
-├── fix_env_postgresql.py  # Environment configuration fixes
-├── force_init_db.py       # Database initialization
-├── init_db.py            # Standard database setup
-└── README.md             # This file
+├── validation/          # Sprint validation and testing scripts
+├── migrations/          # Database migration and schema scripts  
+├── deployment/          # Production deployment and CI/CD scripts
+├── monitoring/          # System monitoring and health check scripts
+├── utils/              # Utility functions and helpers
+├── ops/                # Operations and maintenance scripts
+├── create_*.py         # Core feature implementation scripts
+└── *.py               # Database initialization and core scripts
 ```
 
-## Operational Scripts (`scripts/ops/`)
+---
 
-### `seed_users.py`
-Seeds the database with default users for role-based access testing.
+## 🚀 **Core Implementation Scripts**
 
-**Usage:**
+These scripts implement the main features and functionality:
+
+| Script | Purpose | Phase |
+|--------|---------|-------|
+| `create_dynamic_group_rules.py` | Dynamic group assignment rules engine | Week 5 Day 1 |
+| `create_advanced_permissions.py` | Advanced permission management system | Week 5 Day 1 |
+| `create_compliance_reports.py` | Compliance reporting automation | Week 5 Day 1 |
+| `create_user_groups_migration.py` | User groups database migration | Week 4 Day 4 |
+
+---
+
+## 📋 **Subdirectory Overview**
+
+### **validation/** - Sprint Validation Scripts
+- **Purpose**: Automated validation of sprint deliverables
+- **Usage**: `python scripts/validation/week5_day1_validation.py`
+- **Coverage**: All sprint weeks and days with comprehensive testing
+
+### **migrations/** - Database Migration Scripts  
+- **Purpose**: Database schema changes and data migrations
+- **Usage**: `python scripts/migrations/[migration_script].py`
+- **Safety**: Includes rollback procedures and data validation
+
+### **deployment/** - Production Deployment Scripts
+- **Purpose**: CI/CD, blue-green deployment, and production automation
+- **Usage**: Integrated with GitHub Actions and deployment pipelines
+- **Features**: Zero-downtime deployment and automated rollback
+
+### **monitoring/** - System Monitoring Scripts
+- **Purpose**: Health checks, performance monitoring, and alerting
+- **Usage**: Background jobs and scheduled monitoring tasks
+- **Coverage**: User management, system health, and compliance monitoring
+
+---
+
+## 🔧 **Usage Guidelines**
+
+### **Running Validation Scripts**
 ```bash
-cd /path/to/SecureNet
-python scripts/ops/seed_users.py
+# Run specific week validation
+python scripts/validation/week5_day1_validation.py
+
+# Run all validations (if available)
+python scripts/validation/run_all_validations.py
 ```
 
-**What it does:**
-- Creates default organization "SecureNet Enterprise"
-- Seeds 3 users with proper RBAC roles:
-  - `ceo` (platform_owner) - Full platform access
-  - `admin` (security_admin) - Organization admin access  
-  - `user` (soc_analyst) - Standard user access
-- Uses database_factory for automatic PostgreSQL/SQLite selection
-- Handles password hashing with argon2
-
-**Requirements:**
-- PostgreSQL running and configured
-- Environment variables loaded (.env)
-- argon2-cffi installed
-
-### `test_production_boot.py`
-Comprehensive enterprise production environment validation for SecureNet Holdings.
-
-**Usage:**
+### **Database Operations**
 ```bash
-cd /path/to/SecureNet
-python scripts/ops/test_production_boot.py                 # Full test suite
-python scripts/ops/test_production_boot.py --quick         # Skip server startup
-python scripts/ops/test_production_boot.py --enterprise-only # Enterprise tests only
-```
-
-**Enterprise Tests Performed:**
-- ✅ start_enterprise.py entrypoint validation
-- ✅ Enterprise structure validation (Holdings, Labs, Reserve, Real Estate)
-- ✅ Enterprise role validation (CISO, SOC Manager, Analysts)
-- ✅ Compliance audit (SOC 2 Type II, ISO 27001, CSE CIRA)
-- ✅ PostgreSQL Enterprise database connectivity
-- ✅ TypeScript configuration validation
-- ✅ Frontend production build validation
-- ✅ Documentation compliance verification
-- ✅ Health endpoints functionality
-- ✅ Production server startup testing
-
-**Exit codes:**
-- `0` - All enterprise validations passed, production ready
-- `1` - One or more enterprise validations failed
-
-## Database Scripts
-
-### `init_db.py`
-Standard database initialization script.
-
-**Usage:**
-```bash
-python scripts/init_db.py
-```
-
-### `force_init_db.py`
-Force database reinitialization (destructive).
-
-**Usage:**
-```bash
-python scripts/force_init_db.py
-```
-
-### `fix_env_postgresql.py`
-Converts SQLite configuration to PostgreSQL.
-
-**Usage:**
-```bash
-python scripts/fix_env_postgresql.py
-```
-
-## Usage Patterns
-
-### 1. Enterprise Production Setup (Official)
-```bash
-# 1. Enterprise validation and startup (Official entrypoint)
-python start_enterprise.py --check                    # Validation only
-python start_enterprise.py                           # Full enterprise startup
-
-# Alternative: Legacy production setup
-python scripts/fix_env_postgresql.py                 # Fix environment configuration
-python scripts/init_db.py                           # Initialize database
-python scripts/ops/seed_users.py                    # Seed users
-python scripts/ops/test_production_boot.py          # Validate production readiness
-python start_backend.py --prod                      # Start production server
-```
-
-### 2. Development Setup
-```bash
-# 1. Initialize database
+# Initialize database
 python scripts/init_db.py
 
-# 2. Seed users
-python scripts/ops/seed_users.py
+# Run migrations
+python scripts/migrations/[specific_migration].py
 
-# 3. Start development server
-python start_backend.py --dev
+# Update database schema
+python scripts/update_db.py
 ```
 
-### 3. Production Health Check
+### **Feature Implementation**
 ```bash
-# Quick validation
-python scripts/ops/test_production_boot.py
+# Implement new features
+python scripts/create_[feature_name].py
 
-# If tests pass, system is ready for deployment
+# Monitor system health
+python scripts/monitoring/[monitoring_script].py
 ```
 
-### 4. Database Reset (Development)
-```bash
-# Force reinitialize database
-python scripts/force_init_db.py
+---
 
-# Reseed users
-python scripts/ops/seed_users.py
-```
+## 📊 **Script Categories**
 
-## Environment Requirements
+### **🎯 Implementation Scripts**
+- Core feature development
+- New functionality implementation
+- System enhancement scripts
 
-All scripts require:
-- Python 3.8+
-- Virtual environment activated
-- `.env` file configured
-- PostgreSQL running (for production)
+### **✅ Validation Scripts**  
+- Sprint deliverable validation
+- Quality assurance testing
+- Performance benchmarking
 
-## Error Handling
+### **🔄 Migration Scripts**
+- Database schema changes
+- Data transformation scripts
+- System upgrade procedures
 
-Scripts include comprehensive error handling and logging:
-- Clear success/failure indicators (✅/❌)
-- Detailed error messages with context
-- Graceful degradation where possible
-- Proper exit codes for automation
+### **🚀 Deployment Scripts**
+- Production deployment automation
+- CI/CD pipeline integration
+- Environment configuration
 
-## CI/CD Integration & Health Checks
+### **📈 Monitoring Scripts**
+- System health monitoring
+- Performance tracking
+- Alert generation and management
 
-### **Production Health Check Endpoints**
+---
 
-SecureNet provides comprehensive health monitoring for CI/CD and production environments:
+## 🛡️ **Security & Best Practices**
 
-#### **Primary Health Check**
-```bash
-# Main production validation (CI-friendly exit codes)
-python scripts/ops/test_production_boot.py
-# Exit code 0: All systems operational
-# Exit code 1: One or more systems failed
-```
+### **Script Execution Safety**
+- All scripts include error handling and logging
+- Database operations are transaction-safe
+- Rollback procedures available for critical operations
 
-#### **API Health Endpoints** (when backend is running)
-- **`GET /health`** - Basic health status
-- **`GET /system/status`** - Detailed system information
-- **`GET /api/v1/health`** - API-specific health check
-- **`GET /docs`** - API documentation availability
+### **Environment Management**
+- Scripts detect and adapt to environment (dev/staging/prod)
+- Configuration management through environment variables
+- Secure credential handling and API key management
 
-#### **Component-Specific Checks**
-```bash
-# Database connectivity
-python -c "from database_factory import get_database; db = get_database(); print('✅ Database OK')"
+### **Logging & Auditing**
+- Comprehensive logging for all script operations
+- Audit trails for compliance and debugging
+- Performance metrics collection and analysis
 
-# Frontend build validation
-cd frontend && npm run build && echo "✅ Frontend Build OK"
+---
 
-# Backend app import
-python -c "from app import app; print(f'✅ FastAPI app loaded with {len(app.routes)} routes')"
-```
+## 📚 **Documentation Links**
 
-### **CI/CD Pipeline Integration**
+| Resource | Description | Link |
+|----------|-------------|------|
+| **Sprint Planning** | Daily implementation tasks | [📅 Sprint Planning](../docs/project/SPRINT_PLANNING.md) |
+| **Production Roadmap** | Strategic implementation plan | [📋 Roadmap](../docs/project/PRODUCTION_LAUNCH_ROADMAP.md) |
+| **API Documentation** | Technical API reference | [🔧 API Docs](../docs/api/API-DOCUMENTATION.md) |
+| **User Management** | Enterprise user management guide | [🏢 User Management](../docs/reference/ENTERPRISE_USER_MANAGEMENT.md) |
 
-The `test_production_boot.py` script is designed for CI/CD integration:
+---
 
-```yaml
-# Example GitHub Actions step
-- name: Validate Production Readiness
-  run: python scripts/ops/test_production_boot.py
-  
-# Example Docker health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD python scripts/ops/test_production_boot.py || exit 1
-```
+## 🚨 **Important Notes**
 
-### **Independent Deployment Support**
+### **Before Running Scripts**
+1. **Environment Setup**: Ensure proper virtual environment activation
+2. **Database Backup**: Always backup database before migration scripts
+3. **Configuration Check**: Verify environment variables and configuration
+4. **Dependency Install**: Run `pip install -r requirements.txt`
 
-Frontend and backend can be deployed independently:
+### **Production Considerations**
+- **Test First**: Always test scripts in development/staging first
+- **Rollback Plan**: Have rollback procedures ready for critical changes
+- **Monitoring**: Monitor system health during and after script execution
+- **Documentation**: Update documentation after successful script execution
 
-#### **Backend Only**
-```bash
-# Backend production deployment
-python start_backend.py --prod --check
-# Health check: curl http://localhost:8000/health
-```
+---
 
-#### **Frontend Only**
-```bash
-# Frontend production build and serve
-cd frontend && npm run build && npm run preview
-# Health check: curl http://localhost:5173
-```
-
-#### **Microservice Architecture**
-- Backend API: Port 8000 (FastAPI)
-- Frontend SPA: Port 5173 (Vite preview)
-- Database: PostgreSQL (configurable port)
-- Cache: Redis (optional, configurable port)
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Database Connection Failed**
-   - Ensure PostgreSQL is running
-   - Check DATABASE_URL in .env
-   - Verify credentials
-
-2. **User Seeding Failed**
-   - Run `python scripts/ops/test_production_boot.py` first
-   - Check database permissions
-   - Ensure argon2-cffi is installed
-
-3. **Frontend Build Missing**
-   - Run `cd frontend && npm run build`
-   - Check for TypeScript errors
-
-4. **Environment Variables Missing**
-   - Copy `.env.example` to `.env`
-   - Run `python scripts/fix_env_postgresql.py`
-
-For additional support, check the main project documentation in `/docs/`. 
+*This directory structure supports SecureNet's production launch with organized, maintainable, and scalable script management.* 

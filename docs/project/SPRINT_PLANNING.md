@@ -886,16 +886,16 @@ Based on [Enterprise User Management](../reference/ENTERPRISE_USER_MANAGEMENT.md
 **Daily Tasks**:
 ```bash
 # Dynamic Group Assignment Rules Engine
-python -m scripts.create_dynamic_group_rules.py
-python -m scripts.test_group_assignment_engine.py
+python scripts/create_dynamic_group_rules.py
 
 # Advanced Permission Management System  
-python -m scripts.create_advanced_permissions.py
-python -m scripts.test_permission_inheritance.py
+python scripts/create_advanced_permissions.py
 
 # Compliance Reporting Automation
-python -m scripts.create_compliance_reports.py
-python -m scripts.test_compliance_automation.py
+python scripts/create_compliance_reports.py
+
+# Validation and Testing
+python scripts/validation/week5_day1_validation.py
 ```
 
 **Key Deliverables**:
