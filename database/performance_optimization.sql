@@ -67,10 +67,29 @@ ORDER BY mean_time DESC;
 -- work_mem = 4MB
 -- maintenance_work_mem = 64MB
 
+-- Day 2 Sprint 1: Additional performance indexes
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_cve_data_severity_published
+ON cve_data(severity, published_date DESC);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_network_traffic_timestamp_source
+ON network_traffic(timestamp DESC, source_ip);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_threat_intelligence_severity_created
+ON threat_intelligence(severity, created_at DESC);
+
+-- Performance monitoring indexes for Day 2
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_api_requests_timestamp_endpoint
+ON api_request_logs(timestamp DESC, endpoint);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_system_metrics_timestamp_metric_type
+ON system_metrics(timestamp DESC, metric_type);
+
 -- Vacuum and analyze for updated statistics
 ANALYZE security_findings;
 ANALYZE network_devices;
 ANALYZE security_events;
 ANALYZE alerts;
 ANALYZE users;
-ANALYZE user_sessions; 
+ANALYZE user_sessions;
+ANALYZE cve_data;
+ANALYZE network_traffic; 

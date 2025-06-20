@@ -1,0 +1,27 @@
+notification_channels:
+- slack://devops-alerts
+- email://ops-team@securenet.com
+- pagerduty://production-incidents
+rollback_steps:
+- Stop traffic to new deployment
+- Switch traffic back to previous version
+- Scale down new deployment
+- Verify rollback health checks
+- Send rollback notifications
+triggers:
+- action: immediate_rollback
+  condition: health_check_success_rate < 95%
+  name: health_check_failure
+  timeout: 300
+- action: gradual_rollback
+  condition: error_rate > 5%
+  name: error_rate_spike
+  timeout: 180
+- action: immediate_rollback
+  condition: avg_response_time > 2000ms
+  name: response_time_degradation
+  timeout: 240
+- action: cancel_and_rollback
+  condition: deployment_time > 600s
+  name: deployment_timeout
+  timeout: 60

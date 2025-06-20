@@ -1,0 +1,46 @@
+alerts:
+- condition: deployment_success_rate < 0.95
+  duration: 5m
+  message: Deployment failure rate is above threshold
+  name: DeploymentFailureRate
+  severity: critical
+- condition: deployment_duration > 600
+  duration: 1m
+  message: Deployment taking longer than expected
+  name: DeploymentDurationHigh
+  severity: warning
+- condition: rollback_frequency > 0.1
+  duration: 10m
+  message: Rollback frequency is unusually high
+  name: FrequentRollbacks
+  severity: warning
+dashboards:
+- name: CI/CD Pipeline Overview
+  panels:
+  - Deployment Success Rate
+  - Average Deployment Duration
+  - Rollback Frequency
+  - Security Scan Results
+- name: Blue-Green Deployment Status
+  panels:
+  - Active Environment
+  - Traffic Split
+  - Health Check Status
+  - Deployment Timeline
+metrics:
+- name: deployment_success_rate
+  query: sum(rate(deployment_success_total[5m])) / sum(rate(deployment_total[5m]))
+  severity: critical
+  threshold: 0.95
+- name: deployment_duration
+  query: histogram_quantile(0.95, deployment_duration_seconds)
+  severity: warning
+  threshold: 600
+- name: rollback_frequency
+  query: sum(rate(rollback_total[1h]))
+  severity: warning
+  threshold: 0.1
+- name: health_check_success_rate
+  query: sum(rate(health_check_success_total[5m])) / sum(rate(health_check_total[5m]))
+  severity: critical
+  threshold: 0.98

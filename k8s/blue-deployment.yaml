@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: securenet
+    environment: production
+    version: blue
+  name: securenet-blue
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: securenet
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: securenet
+        version: blue
+    spec:
+      containers:
+      - env:
+        - name: ENVIRONMENT
+          value: production
+        - name: VERSION
+          value: blue
+        image: ghcr.io/securenet-enterprise:latest
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        name: securenet
+        ports:
+        - containerPort: 8000
+        readinessProbe:
+          httpGet:
+            path: /api/ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5

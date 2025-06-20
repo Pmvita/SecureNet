@@ -1,0 +1,134 @@
+{
+  "validation_complete": true,
+  "total_score": 100,
+  "max_score": 100,
+  "percentage": 100.0,
+  "duration": "3.02s",
+  "components": {
+    "deployment_automation": {
+      "score": 25,
+      "max_score": 25,
+      "tests": [
+        {
+          "test": "Deployment Automation Initialization",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "Production Manifest Creation",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "Blue-Green Deployment Strategy",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "Deployment Health Validation",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "Rollback Strategy Implementation",
+          "passed": true,
+          "score": 5
+        }
+      ]
+    },
+    "api_gateway": {
+      "score": 25,
+      "max_score": 25,
+      "tests": [
+        {
+          "test": "API Gateway Initialization",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "Rate Limiting Implementation",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "Security Policies Configuration",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "API Gateway Metrics",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "Endpoint Protection Rules",
+          "passed": true,
+          "score": 5
+        }
+      ]
+    },
+    "monitoring_alerting": {
+      "score": 25,
+      "max_score": 25,
+      "tests": [
+        {
+          "test": "Monitoring System Initialization",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "System Metrics Collection",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "Alert Configuration",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "Alert Evaluation",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "Monitoring Dashboard",
+          "passed": true,
+          "score": 5
+        }
+      ]
+    },
+    "launch_readiness": {
+      "score": 25,
+      "max_score": 25,
+      "tests": [
+        {
+          "test": "Launch Assessment Initialization",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "Readiness Checks Configuration",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "Comprehensive Assessment",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "Category-based Evaluation",
+          "passed": true,
+          "score": 5
+        },
+        {
+          "test": "Launch Recommendations",
+          "passed": true,
+          "score": 5
+        }
+      ]
+    }
+  },
+  "timestamp": "2025-06-19T22:10:26.997481+00:00"
+}

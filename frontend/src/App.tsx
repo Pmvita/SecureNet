@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -8,20 +8,24 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { DashboardLayout } from './components/layout/DashboardLayout';
-import { DashboardPage } from './features/dashboard/pages/DashboardPage';
-import LogsPage from './features/logs/pages/LogsPage';
-import { SecurityPage } from './features/security/pages/SecurityPage';
-import { NetworkPage } from './features/network/pages/NetworkPage';
-import { AnomaliesPage } from './features/anomalies/pages/AnomaliesPage';
-import { SettingsPage } from './features/settings/pages/SettingsPage';
-import { ProfilePage } from './features/profile/pages/ProfilePage';
-import { PreferencesPage } from './features/preferences/pages/PreferencesPage';
-import { NotificationsPage } from './features/notifications/pages/NotificationsPage';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import UsersManagement from './pages/admin/UsersManagement';
-import TenantsManagement from './pages/admin/TenantsManagement';
-import BillingManagement from './pages/admin/BillingManagement';
-import AuditLogs from './pages/admin/AuditLogs';
+
+// Day 2 Sprint 1: Lazy loading for code splitting
+const DashboardPage = React.lazy(() => import('./features/dashboard/pages/DashboardPage').then(module => ({ default: module.DashboardPage })));
+const LogsPage = React.lazy(() => import('./features/logs/pages/LogsPage'));
+const SecurityPage = React.lazy(() => import('./features/security/pages/SecurityPage').then(module => ({ default: module.SecurityPage })));
+const NetworkPage = React.lazy(() => import('./features/network/pages/NetworkPage').then(module => ({ default: module.NetworkPage })));
+const AnomaliesPage = React.lazy(() => import('./features/anomalies/pages/AnomaliesPage').then(module => ({ default: module.AnomaliesPage })));
+const SettingsPage = React.lazy(() => import('./features/settings/pages/SettingsPage').then(module => ({ default: module.SettingsPage })));
+const ProfilePage = React.lazy(() => import('./features/profile/pages/ProfilePage').then(module => ({ default: module.ProfilePage })));
+const PreferencesPage = React.lazy(() => import('./features/preferences/pages/PreferencesPage').then(module => ({ default: module.PreferencesPage })));
+const NotificationsPage = React.lazy(() => import('./features/notifications/pages/NotificationsPage').then(module => ({ default: module.NotificationsPage })));
+
+// Admin pages - separate chunk
+const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
+const UsersManagement = React.lazy(() => import('./pages/admin/UsersManagement'));
+const TenantsManagement = React.lazy(() => import('./pages/admin/TenantsManagement'));
+const BillingManagement = React.lazy(() => import('./pages/admin/BillingManagement'));
+const AuditLogs = React.lazy(() => import('./pages/admin/AuditLogs'));
 import LoadingSpinner from './components/LoadingSpinner';
 import {
   ChartBarIcon,
@@ -38,8 +42,6 @@ import {
 } from '@heroicons/react/24/outline';
 import { AppErrorBoundary } from './components/error/AppErrorBoundary';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
-
 
 // Development mode bypass
 const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
@@ -104,11 +106,31 @@ const AppRoutes: React.FC = () => {
           <ProtectedRoute>
             <DashboardLayout navigationItems={getNavigationItems()}>
               <Routes>
-                <Route index element={<DashboardPage />} />
-                <Route path="logs" element={<LogsPage />} />
-                <Route path="security" element={<SecurityPage />} />
-                <Route path="network" element={<NetworkPage />} />
-                <Route path="anomalies" element={<AnomaliesPage />} />
+                <Route index element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <DashboardPage />
+                  </Suspense>
+                } />
+                <Route path="logs" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <LogsPage />
+                  </Suspense>
+                } />
+                <Route path="security" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <SecurityPage />
+                  </Suspense>
+                } />
+                <Route path="network" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <NetworkPage />
+                  </Suspense>
+                } />
+                <Route path="anomalies" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AnomaliesPage />
+                  </Suspense>
+                } />
                 <Route
                   path="settings"
                   element={
@@ -225,10 +247,10 @@ const App: React.FC = () => {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <ToastProvider>
-                          <Router>
-                <AuthProvider>
-                  <AppRoutes />
-                </AuthProvider>
+            <Router>
+              <AuthProvider>
+                <AppRoutes />
+              </AuthProvider>
             </Router>
           </ToastProvider>
         </ThemeProvider>

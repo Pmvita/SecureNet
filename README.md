@@ -351,12 +351,14 @@ SecureNet now offers **two deployment options** to meet different operational ne
 ### **🏢 Enterprise Documentation**
 | Documentation | Description | Status |
 |---------------|-------------|--------|
+| **[👥 Enterprise User Management](./docs/reference/ENTERPRISE_USER_MANAGEMENT.md)** | Complete user groups, account expiration, and access control guide | ✅ Ready |
 | **[🏢 Enterprise Audit Report](./docs/enterprise/ENTERPRISE-AUDIT-REPORT.md)** | Enterprise audit details and assessment | ✅ Ready |
 | **[📋 Enterprise Readiness Summary](./docs/enterprise/ENTERPRISE-READINESS-SUMMARY.md)** | Readiness assessment for enterprise deployment | ✅ Ready |
 | **[🚀 Development Roadmap](./docs/project/DEVELOPMENT_ROADMAP.md)** | Complete 3-phase development cycle and future plans | ✅ Ready |
 | **[👥 Project Governance](./docs/project/PROJECT_GOVERNANCE.md)** | Ownership, licensing, IP portfolio, and corporate structure | ✅ Ready |
 
 ### **🎯 Production Launch Preparation (Phase 3.5)**
+
 | Documentation | Description | Status |
 |---------------|-------------|--------|
 | **[🚀 Production Launch Roadmap](./docs/project/PRODUCTION_LAUNCH_ROADMAP.md)** | 8-10 week sprint plan for production launch preparation | 🚧 **ACTIVE** |
@@ -399,6 +401,7 @@ docs/
 ├── 🧪 testing/                     # Testing procedures and guides
 ├── 🤝 contributing/                # Contribution guidelines
 ├── 📋 project/                     # Project management, governance, and launch planning
+├── 📚 reference/                   # Reference documentation and user management
 └── 🔧 integration/                 # Integration guides and tooling
 ```
 

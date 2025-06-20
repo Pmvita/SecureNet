@@ -1,0 +1,260 @@
+{
+  "validation_summary": {
+    "total_score": 100,
+    "max_score": 100,
+    "percentage": 100.0,
+    "status": "OUTSTANDING",
+    "duration_seconds": 2.08,
+    "production_ready": true
+  },
+  "component_scores": {
+    "business_intelligence": {
+      "score": 25,
+      "max_score": 25,
+      "percentage": 100.0
+    },
+    "custom_reporting": {
+      "score": 25,
+      "max_score": 25,
+      "percentage": 100.0
+    },
+    "advanced_visualization": {
+      "score": 25,
+      "max_score": 25,
+      "percentage": 100.0
+    },
+    "real_time_analytics": {
+      "score": 25,
+      "max_score": 25,
+      "percentage": 100.0
+    }
+  },
+  "detailed_results": [
+    {
+      "component": "business_intelligence",
+      "test": "Executive dashboard creation",
+      "passed": true,
+      "points_earned": 6,
+      "max_points": 6,
+      "details": "Dashboard ID: exec_dashboard_test_org",
+      "timestamp": "2025-06-18T20:07:38.724184"
+    },
+    {
+      "component": "business_intelligence",
+      "test": "SOC analyst dashboard creation",
+      "passed": true,
+      "points_earned": 6,
+      "max_points": 6,
+      "details": "Dashboard ID: soc_dashboard_test_analyst",
+      "timestamp": "2025-06-18T20:07:38.724232"
+    },
+    {
+      "component": "business_intelligence",
+      "test": "Dashboard data retrieval",
+      "passed": true,
+      "points_earned": 5,
+      "max_points": 5,
+      "details": "Retrieved dashboard: True",
+      "timestamp": "2025-06-18T20:07:38.724241"
+    },
+    {
+      "component": "business_intelligence",
+      "test": "Real-time metrics update",
+      "passed": true,
+      "points_earned": 4,
+      "max_points": 4,
+      "details": "Metrics updated: True",
+      "timestamp": "2025-06-18T20:07:38.724263"
+    },
+    {
+      "component": "business_intelligence",
+      "test": "Dashboard configuration validation",
+      "passed": true,
+      "points_earned": 4,
+      "max_points": 4,
+      "details": "Executive refresh: 300s, SOC refresh: 30s",
+      "timestamp": "2025-06-18T20:07:38.724272"
+    },
+    {
+      "component": "custom_reporting",
+      "test": "Security summary report generation",
+      "passed": true,
+      "points_earned": 7,
+      "max_points": 7,
+      "details": "Report ID: security_summary_test_org_20250618_200738",
+      "timestamp": "2025-06-18T20:07:38.724308"
+    },
+    {
+      "component": "custom_reporting",
+      "test": "Compliance audit report generation",
+      "passed": true,
+      "points_earned": 7,
+      "max_points": 7,
+      "details": "Framework: SOC2, Score: 91.5",
+      "timestamp": "2025-06-18T20:07:38.724335"
+    },
+    {
+      "component": "custom_reporting",
+      "test": "Custom analytics report creation",
+      "passed": [
+        "Security incidents have decreased by 15% compared to the previous period",
+        "Network traffic anomalies detected during peak hours require investigation",
+        "Compliance score has improved across all frameworks"
+      ],
+      "points_earned": 6,
+      "max_points": 6,
+      "details": "Visualizations: 1, Insights: 3",
+      "timestamp": "2025-06-18T20:07:38.739909"
+    },
+    {
+      "component": "custom_reporting",
+      "test": "Report retrieval and listing",
+      "passed": true,
+      "points_earned": 3,
+      "max_points": 3,
+      "details": "Reports for org: 2",
+      "timestamp": "2025-06-18T20:07:38.740066"
+    },
+    {
+      "component": "custom_reporting",
+      "test": "Async report generation",
+      "passed": "test_custom_report",
+      "points_earned": 2,
+      "max_points": 2,
+      "details": "Async report generated: test_custom_report",
+      "timestamp": "2025-06-18T20:07:40.743762"
+    },
+    {
+      "component": "advanced_visualization",
+      "test": "Security heatmap creation",
+      "passed": true,
+      "points_earned": 8,
+      "max_points": 8,
+      "details": "Heatmap ID: security_heatmap_20250618_200740",
+      "timestamp": "2025-06-18T20:07:40.744647"
+    },
+    {
+      "component": "advanced_visualization",
+      "test": "Network topology graph creation",
+      "passed": true,
+      "points_earned": 8,
+      "max_points": 8,
+      "details": "Nodes: 8, Edges: 7",
+      "timestamp": "2025-06-18T20:07:40.744735"
+    },
+    {
+      "component": "advanced_visualization",
+      "test": "Threat intelligence Sankey diagram",
+      "passed": [
+        {
+          "source": 0,
+          "target": 2,
+          "value": 45
+        },
+        {
+          "source": 0,
+          "target": 3,
+          "value": 35
+        },
+        {
+          "source": 0,
+          "target": 4,
+          "value": 25
+        },
+        {
+          "source": 1,
+          "target": 5,
+          "value": 15
+        },
+        {
+          "source": 2,
+          "target": 5,
+          "value": 30
+        },
+        {
+          "source": 3,
+          "target": 6,
+          "value": 25
+        },
+        {
+          "source": 4,
+          "target": 6,
+          "value": 20
+        },
+        {
+          "source": 4,
+          "target": 7,
+          "value": 10
+        }
+      ],
+      "points_earned": 6,
+      "max_points": 6,
+      "details": "Sankey nodes: 8",
+      "timestamp": "2025-06-18T20:07:40.744803"
+    },
+    {
+      "component": "advanced_visualization",
+      "test": "Visualization retrieval",
+      "passed": true,
+      "points_earned": 2,
+      "max_points": 2,
+      "details": "Retrieved: True",
+      "timestamp": "2025-06-18T20:07:40.744820"
+    },
+    {
+      "component": "advanced_visualization",
+      "test": "Visualization configuration validation",
+      "passed": true,
+      "points_earned": 1,
+      "max_points": 1,
+      "details": "Configurations valid: True",
+      "timestamp": "2025-06-18T20:07:40.744833"
+    },
+    {
+      "component": "real_time_analytics",
+      "test": "Security metrics stream initialization",
+      "passed": true,
+      "points_earned": 8,
+      "max_points": 8,
+      "details": "Stream ID: security_stream_test_org, Metrics: 5",
+      "timestamp": "2025-06-18T20:07:40.744897"
+    },
+    {
+      "component": "real_time_analytics",
+      "test": "Real-time data processing",
+      "passed": true,
+      "points_earned": 8,
+      "max_points": 8,
+      "details": "Processed metrics: 6",
+      "timestamp": "2025-06-18T20:07:40.745110"
+    },
+    {
+      "component": "real_time_analytics",
+      "test": "Alert generation and monitoring",
+      "passed": true,
+      "points_earned": 5,
+      "max_points": 5,
+      "details": "Alerts: 0, Threat trend: increasing",
+      "timestamp": "2025-06-18T20:07:40.745135"
+    },
+    {
+      "component": "real_time_analytics",
+      "test": "Stream management",
+      "passed": true,
+      "points_earned": 2,
+      "max_points": 2,
+      "details": "Stream stopped: True",
+      "timestamp": "2025-06-18T20:07:40.745179"
+    },
+    {
+      "component": "real_time_analytics",
+      "test": "Analytics engine integration",
+      "passed": true,
+      "points_earned": 2,
+      "max_points": 2,
+      "details": "Active streams: 2",
+      "timestamp": "2025-06-18T20:07:40.745192"
+    }
+  ],
+  "timestamp": "2025-06-18T20:07:40.745233"
+}
