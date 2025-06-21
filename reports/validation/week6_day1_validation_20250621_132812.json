@@ -1,0 +1,86 @@
+{
+  "timestamp": "2025-06-21T13:28:12.673341",
+  "week": 6,
+  "day": 1,
+  "focus": "User Onboarding Refinement",
+  "total_score": 52,
+  "max_score": 52,
+  "success_rate": 100.0,
+  "overall_status": "EXCELLENT",
+  "validation_results": {
+    "database_schema": {
+      "status": "passed",
+      "score": 12,
+      "max_score": 12,
+      "existing_tables": [
+        "help_articles",
+        "onboarding_steps",
+        "user_feedback",
+        "demo_configurations",
+        "user_onboarding_progress",
+        "help_article_views"
+      ],
+      "missing_tables": []
+    },
+    "help_system": {
+      "status": "passed",
+      "score": 10,
+      "max_score": 10,
+      "article_count": 6,
+      "categories": [
+        "getting_started",
+        "navigation",
+        "security",
+        "administration",
+        "compliance",
+        "troubleshooting"
+      ],
+      "difficulty_levels": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ]
+    },
+    "demo_mode": {
+      "status": "passed",
+      "score": 10,
+      "max_score": 10,
+      "config_count": 4,
+      "demo_types": [
+        "security_events",
+        "user_data",
+        "compliance_data",
+        "analytics_data"
+      ]
+    },
+    "onboarding_flow": {
+      "status": "passed",
+      "score": 10,
+      "max_score": 10,
+      "steps_count": 11,
+      "required_count": 7,
+      "optional_count": 4,
+      "avg_completion_rate": 83.6
+    },
+    "feedback_system": {
+      "status": "passed",
+      "score": 10,
+      "max_score": 10,
+      "feedback_count": 6,
+      "feedback_types": [
+        "feature_request",
+        "bug_report",
+        "general_feedback",
+        "usability"
+      ],
+      "feature_areas": [
+        "dashboard",
+        "threat_detection",
+        "onboarding",
+        "interface",
+        "compliance"
+      ],
+      "avg_rating": 4.2
+    }
+  }
+}
