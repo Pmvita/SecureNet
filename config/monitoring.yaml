@@ -1,0 +1,349 @@
+# Advanced Monitoring Configuration
+# Week 5 Day 2: DevOps Team - Monitoring & Alerting
+# SecureNet Enterprise Monitoring System
+
+# System Health Monitoring
+system_monitoring:
+  enabled: true
+  check_interval_seconds: 60
+  metrics:
+    cpu_threshold: 80.0
+    memory_threshold: 85.0
+    disk_threshold: 90.0
+    query_response_threshold_ms: 1000.0
+    concurrent_users_threshold: 200
+    error_rate_threshold: 5.0
+  
+  # Node-specific monitoring
+  nodes:
+    primary:
+      enabled: true
+      weight: 1.0
+    secondary:
+      enabled: false
+      weight: 0.5
+
+# Directory Synchronization Monitoring
+directory_sync:
+  enabled: true
+  sync_interval_seconds: 300
+  timeout_seconds: 30
+  retry_attempts: 3
+  
+  # Supported directory services
+  services:
+    active_directory:
+      enabled: true
+      priority: 1
+      health_check_interval: 120
+    
+    ldap:
+      enabled: true
+      priority: 2
+      health_check_interval: 180
+    
+    azure_ad:
+      enabled: true
+      priority: 1
+      health_check_interval: 120
+    
+    okta:
+      enabled: true
+      priority: 2
+      health_check_interval: 300
+  
+  # Sync thresholds
+  thresholds:
+    max_sync_duration_ms: 10000
+    max_error_rate_percent: 10.0
+    min_success_rate_percent: 95.0
+
+# Compliance Monitoring
+compliance_monitoring:
+  enabled: true
+  check_interval_seconds: 3600
+  
+  # Supported compliance frameworks
+  frameworks:
+    - SOC2
+    - ISO27001
+    - GDPR
+    - HIPAA
+    - FedRAMP
+  
+  # Alert thresholds (compliance scores)
+  alert_thresholds:
+    critical: 70    # Below 70% = Critical
+    warning: 80     # Below 80% = Warning
+    info: 90        # Below 90% = Info
+  
+  # Audit scheduling
+  audit_schedule:
+    SOC2:
+      frequency_months: 6
+      next_audit_warning_days: 30
+    
+    ISO27001:
+      frequency_months: 12
+      next_audit_warning_days: 60
+    
+    GDPR:
+      frequency_months: 3
+      next_audit_warning_days: 14
+    
+    HIPAA:
+      frequency_months: 6
+      next_audit_warning_days: 30
+    
+    FedRAMP:
+      frequency_months: 3
+      next_audit_warning_days: 21
+
+# Performance Monitoring
+performance_monitoring:
+  enabled: true
+  check_interval_seconds: 120
+  
+  # Performance thresholds
+  thresholds:
+    query_time_ms: 500
+    concurrent_users: 200
+    cache_hit_ratio: 80.0
+    error_rate_percent: 5.0
+    memory_usage_percent: 85.0
+    cpu_usage_percent: 80.0
+    disk_usage_percent: 90.0
+  
+  # Database performance monitoring
+  database:
+    slow_query_threshold_ms: 1000
+    connection_pool_threshold: 80
+    lock_timeout_threshold_ms: 5000
+    deadlock_detection: true
+  
+  # Application performance monitoring
+  application:
+    response_time_threshold_ms: 2000
+    throughput_threshold_rps: 100
+    error_rate_threshold_percent: 2.0
+    memory_leak_detection: true
+
+# Alerting Configuration
+alerting:
+  enabled: true
+  
+  # Notification channels
+  channels:
+    - database
+    - log
+    - webhook
+    - email
+  
+  # Webhook configuration
+  webhook:
+    url: null  # Set to your webhook URL
+    timeout_seconds: 10
+    retry_attempts: 3
+    headers:
+      Content-Type: "application/json"
+      User-Agent: "SecureNet-Monitoring/1.0"
+  
+  # Email notifications
+  email:
+    enabled: false
+    smtp_server: null
+    smtp_port: 587
+    username: null
+    password: null
+    from_address: "monitoring@securenet.local"
+    to_addresses: []
+  
+  # Alert severity levels
+  severity_levels:
+    critical:
+      immediate_notification: true
+      escalation_minutes: 5
+      max_notifications_per_hour: 10
+    
+    warning:
+      immediate_notification: true
+      escalation_minutes: 15
+      max_notifications_per_hour: 6
+    
+    info:
+      immediate_notification: false
+      escalation_minutes: 60
+      max_notifications_per_hour: 2
+  
+  # Alert suppression rules
+  suppression:
+    enabled: true
+    duplicate_alert_window_minutes: 30
+    maintenance_mode: false
+    quiet_hours:
+      enabled: false
+      start_time: "22:00"
+      end_time: "06:00"
+      timezone: "UTC"
+
+# Dashboard Configuration
+dashboard:
+  enabled: true
+  refresh_interval_seconds: 30
+  
+  # Dashboard widgets
+  widgets:
+    system_health:
+      enabled: true
+      priority: 1
+      refresh_interval_seconds: 60
+    
+    performance_metrics:
+      enabled: true
+      priority: 2
+      refresh_interval_seconds: 30
+    
+    compliance_status:
+      enabled: true
+      priority: 3
+      refresh_interval_seconds: 300
+    
+    directory_sync:
+      enabled: true
+      priority: 4
+      refresh_interval_seconds: 120
+    
+    active_alerts:
+      enabled: true
+      priority: 1
+      refresh_interval_seconds: 15
+  
+  # Data retention
+  data_retention:
+    metrics_days: 30
+    alerts_days: 90
+    logs_days: 60
+    dashboard_data_days: 7
+
+# Security Monitoring
+security_monitoring:
+  enabled: true
+  
+  # Threat detection
+  threat_detection:
+    failed_login_threshold: 5
+    privilege_escalation_monitoring: true
+    suspicious_activity_detection: true
+    anomaly_detection: true
+  
+  # User behavior monitoring
+  user_behavior:
+    baseline_learning_days: 30
+    anomaly_sensitivity: 0.8
+    risk_scoring: true
+    behavioral_analytics: true
+  
+  # Access monitoring
+  access_monitoring:
+    privileged_access_logging: true
+    admin_action_monitoring: true
+    data_access_tracking: true
+    permission_change_alerts: true
+
+# Integration Configuration
+integrations:
+  # SIEM integration
+  siem:
+    enabled: false
+    type: null  # splunk, elasticsearch, etc.
+    endpoint: null
+    api_key: null
+  
+  # Metrics collection
+  metrics:
+    prometheus:
+      enabled: false
+      endpoint: "http://localhost:9090"
+      push_gateway: null
+    
+    grafana:
+      enabled: false
+      endpoint: "http://localhost:3000"
+      api_key: null
+  
+  # Log aggregation
+  logging:
+    elasticsearch:
+      enabled: false
+      endpoint: null
+      index_pattern: "securenet-logs-*"
+    
+    splunk:
+      enabled: false
+      endpoint: null
+      token: null
+
+# Advanced Features
+advanced:
+  # Machine learning anomaly detection
+  ml_anomaly_detection:
+    enabled: false
+    model_update_interval_hours: 24
+    sensitivity: 0.8
+  
+  # Predictive analytics
+  predictive_analytics:
+    enabled: false
+    forecast_horizon_days: 7
+    confidence_threshold: 0.85
+  
+  # Auto-remediation
+  auto_remediation:
+    enabled: false
+    safe_mode: true
+    max_actions_per_hour: 5
+    
+    # Remediation actions
+    actions:
+      restart_service: false
+      scale_resources: false
+      block_user: false
+      reset_connection_pool: false
+
+# Maintenance
+maintenance:
+  # Automated maintenance windows
+  windows:
+    weekly:
+      enabled: true
+      day: "Sunday"
+      start_time: "02:00"
+      duration_hours: 2
+      timezone: "UTC"
+  
+  # Database maintenance
+  database_maintenance:
+    vacuum_interval_days: 7
+    analyze_interval_days: 1
+    index_rebuild_interval_days: 30
+    cleanup_old_data: true
+  
+  # Log rotation
+  log_rotation:
+    enabled: true
+    max_file_size_mb: 100
+    max_files: 10
+    compress_old_logs: true
+
+# Environment-specific settings
+environment:
+  name: "production"  # development, staging, production
+  debug_mode: false
+  verbose_logging: false
+  
+  # Resource limits
+  resource_limits:
+    max_memory_mb: 4096
+    max_cpu_percent: 80
+    max_disk_usage_percent: 85
+    max_concurrent_checks: 50 
