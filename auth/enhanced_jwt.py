@@ -23,13 +23,9 @@ import os
 import time
 from utils.logging_config import get_logger
 from monitoring.prometheus_metrics import metrics
+from database.enterprise_models import UserRole
 
 logger = logging.getLogger(__name__)
-
-class UserRole(Enum):
-    PLATFORM_OWNER = "platform_owner"
-    SECURITY_ADMIN = "security_admin"
-    SOC_ANALYST = "soc_analyst"
 
 class MFAMethod(Enum):
     TOTP = "totp"
@@ -40,7 +36,7 @@ class MFAMethod(Enum):
 class AuthConfig:
     """Authentication configuration"""
     jwt_secret: str
-    jwt_algorithm: str = "RS256"
+    jwt_algorithm: str = "HS256"  # Use HMAC for simplicity
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 30
     mfa_required_roles: List[str] = None
@@ -221,8 +217,8 @@ class EnhancedJWTManager:
             # Create limited token for MFA challenge
             payload = {
                 "sub": user_data["username"],
-                "user_id": user_data["id"],
-                "organization_id": user_data["organization_id"],
+                "user_id": str(user_data["id"]),
+                "organization_id": str(user_data["organization_id"]) if user_data.get("organization_id") else None,
                 "role": user_data["role"],
                 "mfa_required": True,
                 "mfa_verified": False,
@@ -233,8 +229,8 @@ class EnhancedJWTManager:
         else:
             payload = {
                 "sub": user_data["username"],
-                "user_id": user_data["id"],
-                "organization_id": user_data["organization_id"],
+                "user_id": str(user_data["id"]),
+                "organization_id": str(user_data["organization_id"]) if user_data.get("organization_id") else None,
                 "role": user_data["role"],
                 "permissions": user_data.get("permissions", []),
                 "mfa_required": self.is_mfa_required(user_data.get("role")),
@@ -244,7 +240,7 @@ class EnhancedJWTManager:
                 "type": "access"
             }
         
-        return jwt.encode(payload, self.private_key, algorithm=self.config.jwt_algorithm)
+        return jwt.encode(payload, self.config.jwt_secret, algorithm=self.config.jwt_algorithm)
     
     def create_refresh_token(self, user_data: Dict[str, Any]) -> str:
         """Create JWT refresh token"""
@@ -253,14 +249,14 @@ class EnhancedJWTManager:
         
         payload = {
             "sub": user_data["username"],
-            "user_id": user_data["id"],
-            "organization_id": user_data["organization_id"],
+            "user_id": str(user_data["id"]),
+            "organization_id": str(user_data["organization_id"]) if user_data.get("organization_id") else None,
             "iat": now,
             "exp": expire,
             "type": "refresh"
         }
         
-        token = jwt.encode(payload, self.private_key, algorithm=self.config.jwt_algorithm)
+        token = jwt.encode(payload, self.config.jwt_secret, algorithm=self.config.jwt_algorithm)
         
         # Store refresh token in Redis
         self.redis_client.setex(
@@ -276,7 +272,7 @@ class EnhancedJWTManager:
         try:
             payload = jwt.decode(
                 token,
-                self.public_key,
+                self.config.jwt_secret,
                 algorithms=[self.config.jwt_algorithm]
             )
             

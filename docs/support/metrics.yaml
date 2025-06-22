@@ -1,0 +1,12 @@
+customer_satisfaction:
+  frequency: Every ticket resolution
+  measurement: Post-resolution surveys
+  target_score: '> 4.5/5.0'
+knowledge_base_usage:
+  measurement: Article views vs. ticket creation
+  optimization: Regular article updates and improvements
+  target_self_service: '> 60%'
+response_times:
+  measurement: Automatic tracking via support system
+  target_first_response: < 4 hours
+  target_resolution: < 24 hours for standard issues

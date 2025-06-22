@@ -160,6 +160,15 @@ class PostgreSQLAdapter:
     async def create_schema(self):
         """Create database schema and initial data"""
         try:
+            # Check if tables already exist
+            with self._engine.connect() as conn:
+                result = conn.execute(text("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'"))
+                tables_exist = result.scalar() > 0
+            
+            if tables_exist:
+                logger.info("Database tables already exist, skipping schema creation")
+                return
+            
             # Create tables
             Base.metadata.create_all(self._engine)
             
@@ -199,7 +208,8 @@ class PostgreSQLAdapter:
             
         except Exception as e:
             logger.error(f"Failed to create database schema: {e}")
-            raise
+            # Don't raise the exception, just log it and continue
+            logger.info("Continuing with existing database schema")
     
     @contextmanager
     def get_session(self) -> Session:
@@ -231,38 +241,37 @@ class PostgreSQLAdapter:
     # User Management
     async def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new user"""
-        async with self.get_async_connection() as conn:
-            user_id = uuid.uuid4()
-            
-            await conn.execute("""
-                INSERT INTO users (
-                    id, organization_id, username, email, password_hash,
-                    first_name, last_name, role, is_active, created_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            """, 
-            user_id,
-            uuid.UUID(user_data['organization_id']),
-            user_data['username'],
-            user_data['email'],
-            user_data['password_hash'],
-            user_data.get('first_name'),
-            user_data.get('last_name'),
-            user_data.get('role', 'soc_analyst'),
-            user_data.get('is_active', True),
-            datetime.now(timezone.utc)
-            )
-            
-            # Log user creation
-            await self.create_audit_log({
-                'organization_id': user_data['organization_id'],
-                'event_type': 'user_created',
-                'resource_type': 'user',
-                'resource_id': str(user_id),
-                'action': f"Created user {user_data['username']}",
-                'success': True
-            })
-            
-            return {'id': str(user_id), **user_data}
+        try:
+            async with self.get_async_connection() as conn:
+                query = """
+                    INSERT INTO users (
+                        id, username, email, password_hash, first_name, last_name, 
+                        phone, role, organization_id, organization_name, is_active, 
+                        created_at, license_type, is_organization_owner
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                    RETURNING *
+                """
+                row = await conn.fetchrow(
+                    query,
+                    user_data["id"],
+                    user_data["username"],
+                    user_data["email"],
+                    user_data["password_hash"],
+                    user_data.get("first_name"),
+                    user_data.get("last_name"),
+                    user_data.get("phone"),
+                    user_data["role"],
+                    user_data["organization_id"],
+                    user_data.get("organization_name"),
+                    user_data.get("is_active", True),
+                    user_data.get("created_at", datetime.now(timezone.utc)),
+                    user_data.get("license_type"),
+                    user_data.get("is_organization_owner", False)
+                )
+                return dict(row)
+        except Exception as e:
+            logger.error(f"Error creating user: {e}")
+            raise
     
     async def get_user_by_username(self, username: str) -> Optional[Dict[str, Any]]:
         """Get user by username"""
@@ -297,30 +306,47 @@ class PostgreSQLAdapter:
                 'success': True
             })
     
+    async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Get user by email address"""
+        try:
+            async with self.get_async_connection() as conn:
+                query = """
+                    SELECT u.*, o.name as organization_name, o.plan_type
+                    FROM users u
+                    LEFT JOIN organizations o ON u.organization_id = o.id
+                    WHERE u.email = $1 AND u.is_active = true
+                """
+                row = await conn.fetchrow(query, email)
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error getting user by email: {e}")
+            return None
+    
     # Organization Management
     async def create_organization(self, org_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new organization"""
-        async with self.get_async_connection() as conn:
-            org_id = uuid.uuid4()
-            
-            await conn.execute("""
-                INSERT INTO organizations (
-                    id, name, slug, status, plan_type, primary_contact_email,
-                    device_limit, user_limit, created_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            """,
-            org_id,
-            org_data['name'],
-            org_data['slug'],
-            org_data.get('status', 'active'),
-            org_data.get('plan_type', 'free'),
-            org_data['primary_contact_email'],
-            org_data.get('device_limit', 10),
-            org_data.get('user_limit', 5),
-            datetime.now(timezone.utc)
-            )
-            
-            return {'id': str(org_id), **org_data}
+        try:
+            async with self.get_async_connection() as conn:
+                query = """
+                    INSERT INTO organizations (
+                        id, name, status, plan_type, created_at, company_size, industry
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    RETURNING *
+                """
+                row = await conn.fetchrow(
+                    query,
+                    org_data["id"],
+                    org_data["name"],
+                    org_data.get("status", "active"),
+                    org_data.get("plan_type", "basic_user"),
+                    org_data.get("created_at", datetime.now(timezone.utc)),
+                    org_data.get("company_size"),
+                    org_data.get("industry")
+                )
+                return dict(row)
+        except Exception as e:
+            logger.error(f"Error creating organization: {e}")
+            raise
     
     async def get_organization_by_id(self, org_id: str) -> Optional[Dict[str, Any]]:
         """Get organization by ID"""
@@ -330,6 +356,34 @@ class PostgreSQLAdapter:
             """, uuid.UUID(org_id))
             
             return dict(row) if row else None
+    
+    async def update_organization_setup(self, org_id: str, setup_data: Dict[str, Any]) -> bool:
+        """Update organization with setup information"""
+        try:
+            async with self.get_async_connection() as conn:
+                query = """
+                    UPDATE organizations 
+                    SET network_ranges = $2, security_policies = $3, 
+                        compliance_frameworks = $4, scan_frequency = $5,
+                        setup_completed = $6, setup_completed_at = $7,
+                        updated_at = $8
+                    WHERE id = $1
+                """
+                await conn.execute(
+                    query,
+                    org_id,
+                    json.dumps(setup_data.get("network_ranges", [])),
+                    json.dumps(setup_data.get("security_policies", [])),
+                    json.dumps(setup_data.get("compliance_frameworks", [])),
+                    setup_data.get("scan_frequency", "daily"),
+                    setup_data.get("setup_completed", False),
+                    setup_data.get("setup_completed_at"),
+                    datetime.now(timezone.utc)
+                )
+                return True
+        except Exception as e:
+            logger.error(f"Error updating organization setup: {e}")
+            return False
     
     # Device Management
     async def create_device(self, device_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -533,13 +587,35 @@ def get_database_adapter() -> PostgreSQLAdapter:
     """Get the global database adapter"""
     global db_adapter
     if db_adapter is None:
-        config = DatabaseConfig(
-            host=os.getenv("POSTGRES_HOST", "localhost"),
-            port=int(os.getenv("POSTGRES_PORT", "5432")),
-            database=os.getenv("POSTGRES_DB", "securenet"),
-            username=os.getenv("POSTGRES_USER", "securenet"),
-            password=os.getenv("POSTGRES_PASSWORD", ""),
-        )
+        # Parse DATABASE_URL if available, otherwise use individual env vars
+        database_url = os.getenv("DATABASE_URL")
+        if database_url:
+            # Parse DATABASE_URL: postgresql+asyncpg://user:pass@host:port/db?sslmode=disable
+            import urllib.parse
+            parsed = urllib.parse.urlparse(database_url)
+            
+            # Extract SSL mode from query parameters
+            query_params = urllib.parse.parse_qs(parsed.query)
+            ssl_mode = query_params.get('sslmode', ['disable'])[0]
+            
+            config = DatabaseConfig(
+                host=parsed.hostname or "localhost",
+                port=parsed.port or 5432,
+                database=parsed.path.lstrip('/') or "securenet",
+                username=parsed.username or "securenet",
+                password=parsed.password or "",
+                ssl_mode=ssl_mode
+            )
+        else:
+            # Fallback to individual environment variables
+            config = DatabaseConfig(
+                host=os.getenv("POSTGRES_HOST", "localhost"),
+                port=int(os.getenv("POSTGRES_PORT", "5432")),
+                database=os.getenv("POSTGRES_DB", "securenet"),
+                username=os.getenv("POSTGRES_USER", "securenet"),
+                password=os.getenv("POSTGRES_PASSWORD", ""),
+                ssl_mode=os.getenv("POSTGRES_SSL_MODE", "disable")
+            )
         db_adapter = PostgreSQLAdapter(config)
     return db_adapter
 

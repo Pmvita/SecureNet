@@ -17,7 +17,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import select, update, delete, func, and_, or_
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
-from models import (
+from database.models import (
     Base, Organization, User, UserAPIKey, NetworkDevice, SecurityScan, 
     SecurityFinding, ThreatDetection, AuditLog, SystemLog, Notification, 
     MLModel, UserRole, OrganizationStatus, PlanType, ThreatSeverity, ScanStatus

@@ -1,0 +1,32 @@
+audit_artifacts:
+- Security configuration screenshots
+- Log samples and retention policies
+- User access reviews
+- Security training records
+- Vendor security assessments
+- Penetration test reports
+- Vulnerability scan reports
+- Incident response evidence
+compliance_frameworks:
+- SOC2
+- ISO27001
+- GDPR
+- HIPAA
+documentation_required:
+- Security policies and procedures
+- Risk assessment and management
+- Incident response procedures
+- Business continuity plan
+- Data classification and handling
+- Access control procedures
+- Change management procedures
+- Vulnerability management
+technical_controls:
+- Multi-factor authentication
+- Encryption at rest and in transit
+- Network segmentation
+- Intrusion detection and prevention
+- Security monitoring and logging
+- Vulnerability scanning
+- Penetration testing
+- Code security analysis

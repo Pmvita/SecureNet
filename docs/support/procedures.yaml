@@ -1,0 +1,56 @@
+knowledge_base:
+  article_template:
+    related_articles: Links to related content
+    screenshots: Visual aids when helpful
+    steps: Step-by-step instructions
+    summary: Brief overview of the issue/topic
+    title: Clear, descriptive title
+  categories:
+  - Getting Started
+  - Account Management
+  - Security Features
+  - Reporting
+  - Integrations
+  - Troubleshooting
+  - API Documentation
+  - Billing
+ticket_handling:
+  escalation_matrix:
+  - level: 1
+    role: Support Specialist
+    scope: General support questions
+  - level: 2
+    role: Senior Support Engineer
+    scope: Technical issues
+  - level: 3
+    role: Development Team
+    scope: Product bugs
+  - level: 4
+    role: Engineering Manager
+    scope: Critical system issues
+  priority_levels:
+    critical:
+      examples:
+      - System down
+      - Security breach
+      - Data loss
+      resolution_time: 4 hours
+      response_time: 15 minutes
+    high:
+      examples:
+      - Feature not working
+      - Performance issues
+      resolution_time: 24 hours
+      response_time: 1 hour
+    low:
+      examples:
+      - Documentation updates
+      - General questions
+      resolution_time: 7 days
+      response_time: 24 hours
+    medium:
+      examples:
+      - Configuration questions
+      - Feature requests
+      resolution_time: 3 days
+      response_time: 4 hours

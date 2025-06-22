@@ -18,10 +18,11 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Add the current directory to the path so we can import our modules
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Add the project root to the path so we can import our modules
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(project_root)
 
-from database_factory import db
+from database.database_factory import db
 import logging
 from passlib.context import CryptContext
 
@@ -69,7 +70,7 @@ async def create_default_users_postgresql(db):
             password_hash = pwd_context.hash(user_data["password"])
             
             # Import UserRole enum
-            from database_postgresql import UserRole
+            from database.database_postgresql import UserRole
             role_enum = getattr(UserRole, user_data["role"].upper())
             
             await db.create_user(

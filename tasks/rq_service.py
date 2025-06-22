@@ -4,7 +4,7 @@ Phase 3: Advanced Tooling - RQ Integration
 """
 
 import rq
-from rq import Queue, Worker, Connection
+from rq import Queue, Worker
 from rq.job import Job
 from rq.registry import StartedJobRegistry, FinishedJobRegistry, FailedJobRegistry
 import redis
@@ -21,22 +21,38 @@ class SecureNetRQ:
     """SecureNet RQ task queue service"""
     
     def __init__(self, redis_url: str = None):
-        self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        """Initialize SecureNet RQ service"""
         
+        if redis_url is None:
+            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        
+        self.redis_conn = redis.from_url(redis_url)
+        
+        # Create queues with different priorities
+        self.high_queue = Queue("high", connection=self.redis_conn)
+        self.default_queue = Queue("default", connection=self.redis_conn)
+        self.low_queue = Queue("low", connection=self.redis_conn)
+        
+        logger.info("RQ service initialized", redis_url=redis_url)
+    
+    async def initialize(self):
+        """Initialize the RQ service (async method for compatibility)"""
+        # Test Redis connection
         try:
-            self.redis_conn = redis.from_url(self.redis_url)
-            self.redis_conn.ping()  # Test connection
-            
-            # Create queues with different priorities
-            self.high_queue = Queue('high', connection=self.redis_conn)
-            self.default_queue = Queue('default', connection=self.redis_conn)
-            self.low_queue = Queue('low', connection=self.redis_conn)
-            
-            logger.info("RQ service initialized", redis_url=self.redis_url)
-            
+            self.redis_conn.ping()
+            logger.info("✅ RQ service initialized successfully")
         except Exception as e:
-            logger.error("Failed to connect to Redis", error=str(e))
+            logger.error(f"❌ Failed to initialize RQ service: {e}")
             raise
+    
+    async def close(self):
+        """Close RQ service connections"""
+        try:
+            if self.redis_conn:
+                self.redis_conn.close()
+            logger.info("✅ RQ service closed successfully")
+        except Exception as e:
+            logger.error(f"❌ Error closing RQ service: {e}")
     
     def enqueue_scan_task(self, 
                          tenant_id: str, 
@@ -170,6 +186,28 @@ class SecureNetRQ:
         )
         
         return job.id
+    
+    def is_healthy(self) -> bool:
+        """Check if RQ service is healthy"""
+        try:
+            # Test Redis connection
+            self.redis_conn.ping()
+            
+            # Check if queues are accessible
+            high_count = len(self.high_queue)
+            default_count = len(self.default_queue)
+            low_count = len(self.low_queue)
+            
+            logger.debug(f"RQ service health check passed - Queues: high={high_count}, default={default_count}, low={low_count}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"RQ service health check failed: {e}")
+            return False
+    
+    def health_check(self) -> str:
+        """Get health check status as string"""
+        return "healthy" if self.is_healthy() else "unhealthy"
     
     def get_job_status(self, job_id: str) -> Optional[Dict[str, Any]]:
         """Get job status and details"""

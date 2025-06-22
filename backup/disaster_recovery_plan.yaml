@@ -1,0 +1,33 @@
+recovery_steps:
+- action: Assess disaster scope and impact
+  estimated_time: 15 minutes
+  responsible: Incident Commander
+  step: 1
+- action: Activate disaster recovery team
+  estimated_time: 30 minutes
+  responsible: Operations Manager
+  step: 2
+- action: Restore database from latest backup
+  estimated_time: 2 hours
+  responsible: Database Administrator
+  step: 3
+- action: Deploy application to DR environment
+  estimated_time: 1 hour
+  responsible: DevOps Engineer
+  step: 4
+- action: Validate system functionality
+  estimated_time: 30 minutes
+  responsible: QA Engineer
+  step: 5
+- action: Update DNS and redirect traffic
+  estimated_time: 15 minutes
+  responsible: Network Administrator
+  step: 6
+rpo_targets:
+  application: < 4 hours
+  configuration: < 24 hours
+  database: < 1 hour
+rto_targets:
+  application: < 2 hours
+  database: < 4 hours
+  full_system: < 8 hours

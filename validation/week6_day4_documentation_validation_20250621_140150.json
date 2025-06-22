@@ -1,0 +1,39 @@
+{
+  "api_documentation": {
+    "status": "complete",
+    "endpoints_documented": 3,
+    "examples_provided": 3,
+    "authentication_guide": "complete"
+  },
+  "user_documentation": {
+    "status": "complete",
+    "user_manual_sections": 4,
+    "faq_items": 8,
+    "training_programs": 3
+  },
+  "team_training": {
+    "status": "complete",
+    "training_modules": 3,
+    "knowledge_transfer_guides": 3,
+    "schedule_defined": true
+  },
+  "support_documentation": {
+    "status": "complete",
+    "procedures_documented": 2,
+    "common_solutions": 3,
+    "metrics_defined": true
+  },
+  "overall_metrics": {
+    "total_documentation_items": 13,
+    "completed_items": 13,
+    "completion_percentage": 100.0,
+    "total_word_count": 26600,
+    "average_word_count": 2046.1538461538462
+  },
+  "overall": {
+    "score": 50,
+    "max_score": 50,
+    "percentage": 100.0,
+    "status": "passed"
+  }
+}

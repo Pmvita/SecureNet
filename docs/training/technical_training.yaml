@@ -1,0 +1,48 @@
+architecture_overview:
+  audience: Development Team
+  content:
+    materials:
+    - Architecture diagrams
+    - Code examples
+    - Best practices guide
+    - Troubleshooting tips
+    topics:
+    - System Architecture
+    - Technology Stack
+    - Database Design
+    - API Architecture
+    - Security Framework
+  duration: 1.5 hours
+  title: SecureNet Architecture Overview
+deployment_procedures:
+  audience: DevOps Team
+  content:
+    materials:
+    - Deployment scripts
+    - Monitoring dashboards
+    - Runbooks
+    - Emergency procedures
+    topics:
+    - CI/CD Pipeline
+    - Infrastructure as Code
+    - Monitoring and Alerting
+    - Backup and Recovery
+    - Incident Response
+  duration: 2 hours
+  title: Deployment and Operations
+security_protocols:
+  audience: Security Team
+  content:
+    materials:
+    - Security policies
+    - Testing procedures
+    - Compliance checklists
+    - Response playbooks
+    topics:
+    - Security Architecture
+    - Threat Detection
+    - Compliance Framework
+    - Incident Response
+    - Security Testing
+  duration: 2.5 hours
+  title: Security Implementation

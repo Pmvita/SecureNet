@@ -10,12 +10,14 @@ import base64
 import json
 import hashlib
 import secrets as crypto_secrets
-from typing import Dict, Any, Optional, Union
+import time
+from typing import Dict, Any, Optional, Union, List
 from pathlib import Path
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import logging
+from datetime import datetime
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
@@ -66,7 +68,18 @@ class FileSecretProvider(SecretProvider):
     def _get_cipher(self) -> Fernet:
         """Get encryption cipher"""
         if self.config.encryption_key:
-            key = self.config.encryption_key.encode()
+            # If the key looks like a base64-encoded Fernet key, use it directly
+            if len(self.config.encryption_key) == 44 and self.config.encryption_key.endswith('='):
+                key = self.config.encryption_key.encode()
+            else:
+                # Generate a proper Fernet key from the provided key
+                kdf = PBKDF2HMAC(
+                    algorithm=hashes.SHA256(),
+                    length=32,
+                    salt=b'securenet-salt',
+                    iterations=100000,
+                )
+                key = base64.urlsafe_b64encode(kdf.derive(self.config.encryption_key.encode()))
         else:
             # Generate key from environment
             master_key = os.getenv("MASTER_KEY_MATERIAL", "default-master-key").encode()

@@ -1,0 +1,30 @@
+coverage:
+  business_hours: 24/7 coverage for critical issues
+  language_support:
+  - English
+  - Spanish
+  - French
+  timezone_support: Global coverage with follow-the-sun model
+roles:
+  senior_support_engineer:
+    required_skills:
+    - Advanced technical knowledge
+    - SecureNet platform expertise
+    - Training delivery
+    - Leadership skills
+    responsibilities:
+    - Complex technical issues
+    - Customer training and onboarding
+    - Escalation management
+    - Process improvement
+  support_specialist:
+    required_skills:
+    - Customer service experience
+    - Basic technical knowledge
+    - Communication skills
+    - Problem-solving abilities
+    responsibilities:
+    - First-line customer support
+    - Ticket triage and categorization
+    - Basic troubleshooting
+    - Knowledge base maintenance

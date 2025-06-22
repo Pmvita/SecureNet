@@ -30,13 +30,18 @@ import subprocess
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Add the project root to Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
 # Load environment variables first
 load_dotenv()
 
-def setup_logging():
+def setup_logging(quiet=False):
     """Configure logging for the startup script."""
+    level = logging.WARNING if quiet else logging.INFO
     logging.basicConfig(
-        level=logging.INFO,
+        level=level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     return logging.getLogger(__name__)
@@ -82,7 +87,7 @@ async def validate_database_connection():
     logger = logging.getLogger(__name__)
     
     try:
-        from database_factory import db
+        from database.database_factory import db
         await db.initialize()
         logger.info("✓ Database connection validated")
         return True
@@ -133,7 +138,7 @@ def validate_app_imports():
     logger = logging.getLogger(__name__)
     
     try:
-        from app import app
+        from src.apps.enterprise_app import app
         logger.info(f"✓ FastAPI app imported successfully ({len(app.routes)} routes)")
         return True
     except Exception as e:
@@ -232,7 +237,7 @@ async def start_server(host="127.0.0.1", port=8000, dev_mode=True, skip_validati
         
         # Start the server
         config = uvicorn.Config(
-            "app:app",
+            "src.apps.enterprise_app:app",
             host=host,
             port=port,
             reload=dev_mode,
@@ -300,17 +305,23 @@ def main():
         action="store_true",
         help="Start server directly without validation"
     )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Minimal output for production use"
+    )
     
     args = parser.parse_args()
     
     # Setup logging
-    logger = setup_logging()
+    logger = setup_logging(args.quiet)
     
     # Determine mode
     dev_mode = not args.prod
     
-    logger.info("🔒 SecureNet Backend Startup")
-    logger.info("=" * 50)
+    if not args.quiet:
+        logger.info("🔒 SecureNet Backend Startup")
+        logger.info("=" * 50)
     
     # Validate environment
     if not validate_environment():

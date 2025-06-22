@@ -14,6 +14,9 @@ DEBUG=false
 HOST=0.0.0.0
 PORT=8000
 
+# Boot Logs Control - Set to true to suppress Sentry/Prometheus startup logs
+DISABLE_ENTERPRISE_BOOT_LOGS=true
+
 # Database (PostgreSQL for Enterprise)
 DATABASE_URL=postgresql://securenet:your-secure-password@localhost:5432/securenet
 

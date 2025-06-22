@@ -6,11 +6,11 @@ PostgreSQL-optimized models with SOC 2 compliance, audit trails, and enterprise 
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Boolean, Float, JSON, UUID,
     ForeignKey, Index, CheckConstraint, UniqueConstraint, text,
-    TIMESTAMP, INET, Enum as SQLEnum
+    TIMESTAMP, Enum as SQLEnum
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, validates
-from sqlalchemy.dialects.postgresql import UUID as PostgresUUID, JSONB, TSVECTOR
+from sqlalchemy.dialects.postgresql import UUID as PostgresUUID, JSONB, TSVECTOR, INET
 from sqlalchemy.sql import func
 from enum import Enum
 import uuid

@@ -32,7 +32,7 @@ print_info() {
 }
 
 # Check if we're in the right directory
-if [ ! -f "app.py" ]; then
+if [ ! -f "requirements.txt" ] || [ ! -f "README.md" ]; then
     print_error "Please run this script from the SecureNet root directory"
     exit 1
 fi
@@ -175,26 +175,40 @@ fi
 # 6. Start Services
 echo ""
 echo "🚀 Starting SecureNet in Production Mode..."
+print_info "Enterprise boot logs suppressed for cleaner startup"
 
 # Function to start backend
 start_backend() {
     print_info "Starting backend server..."
-    python start_backend.py --prod &
+    # Ensure all environment variables are loaded
+    export $(grep -v '^#' .env | xargs)
+    # Disable enterprise boot logs for cleaner startup
+    export DISABLE_ENTERPRISE_BOOT_LOGS=true
+    python scripts/start_backend.py --prod &
     BACKEND_PID=$!
     echo $BACKEND_PID > .backend.pid
     
-    # Wait for backend to start
-    sleep 5
+    # Wait for backend to start (backend needs ~10-12 seconds to initialize)
+    print_info "Waiting for backend to initialize..."
+    sleep 12
     
-    # Check if backend is running
-    if curl -s http://localhost:8000/api/health > /dev/null; then
-        print_status "Backend server started successfully"
-        print_info "Backend API: http://localhost:8000"
-        print_info "API Documentation: http://localhost:8000/docs"
-    else
-        print_error "Backend failed to start"
-        return 1
-    fi
+    # Check if backend is running with retry mechanism
+    for i in {1..5}; do
+        if curl -s http://localhost:8000/api/health > /dev/null; then
+            print_status "Backend server started successfully"
+            print_info "Backend API: http://localhost:8000"
+            print_info "API Documentation: http://localhost:8000/docs"
+            return 0
+        else
+            if [ $i -lt 5 ]; then
+                print_info "Backend not ready yet, retrying in 3 seconds... (attempt $i/5)"
+                sleep 3
+            fi
+        fi
+    done
+    
+    print_error "Backend failed to start after 5 attempts"
+    return 1
 }
 
 # Function to start frontend

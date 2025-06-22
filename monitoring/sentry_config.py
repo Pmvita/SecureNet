@@ -18,24 +18,30 @@ def configure_sentry():
     sentry_dsn = os.getenv("SENTRY_DSN")
     environment = os.getenv("ENVIRONMENT", "development")
     
-    if not sentry_dsn:
-        logger.warning("SENTRY_DSN not configured - error tracking disabled")
+    # Skip Sentry configuration in development or if DSN is not properly configured
+    if not sentry_dsn or sentry_dsn.strip() == "" or sentry_dsn in ["your-sentry-dsn-here", "project-id"] or "project-id" in sentry_dsn:
+        # Only log if enterprise boot logs are not disabled
+        if not os.getenv("DISABLE_ENTERPRISE_BOOT_LOGS", "false").lower() == "true":
+            logger.info("✓ Sentry error tracking disabled (no valid DSN configured)")
         return
     
-    sentry_sdk.init(
-        dsn=sentry_dsn,
-        environment=environment,
-        integrations=[
-            FastApiIntegration(auto_enabling_integrations=False),
-            SqlalchemyIntegration(),
-        ],
-        traces_sample_rate=0.1,  # 10% of transactions for performance monitoring
-        profiles_sample_rate=0.1,  # 10% for profiling
-        before_send=filter_sensitive_data,
-        before_send_transaction=filter_sensitive_transactions,
-    )
-    
-    logger.info("Sentry error tracking configured", environment=environment)
+    try:
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            environment=environment,
+            integrations=[
+                FastApiIntegration(),
+                SqlalchemyIntegration(),
+            ],
+            traces_sample_rate=0.1,  # 10% of transactions for performance monitoring
+            profiles_sample_rate=0.1,  # 10% for profiling
+            before_send=filter_sensitive_data,
+            before_send_transaction=filter_sensitive_transactions,
+        )
+        
+        logger.info("Sentry error tracking configured", environment=environment)
+    except Exception as e:
+        logger.warning(f"Failed to configure Sentry: {e} - error tracking disabled")
 
 def filter_sensitive_data(event: Dict[str, Any], hint: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Filter sensitive data from Sentry events"""

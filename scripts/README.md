@@ -90,6 +90,25 @@ python scripts/create_[feature_name].py
 python scripts/monitoring/[monitoring_script].py
 ```
 
+### **Enterprise Production Startup**
+```bash
+# Enterprise startup with comprehensive validation
+python scripts/start_enterprise.py
+
+# Health endpoints verification
+curl http://localhost:8000/api/health
+curl http://localhost:8000/api/system/status
+
+# Exit codes for CI/CD automation
+# 0 = Success, 1 = Failure
+python scripts/start_enterprise.py --check  # Returns proper exit codes
+
+# Validation CLI commands
+python scripts/start_enterprise.py --validate-roles    # Role validation
+python scripts/start_enterprise.py --health-check      # Health verification  
+python scripts/start_enterprise.py --compliance-audit  # Compliance check
+```
+
 ---
 
 ## 📊 **Script Categories**

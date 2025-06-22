@@ -6,6 +6,7 @@ Phase 1: Observability - Prometheus Integration
 from prometheus_client import Counter, Histogram, Gauge, Info, CollectorRegistry, generate_latest
 from prometheus_fastapi_instrumentator import Instrumentator
 import time
+import os
 from typing import Dict, Any
 from utils.logging_config import get_logger
 
@@ -175,6 +176,18 @@ class SecureNetMetrics:
         """Set ML model accuracy"""
         ml_model_accuracy.labels(model_name=model_name).set(accuracy)
     
+    def record_app_startup(self, success: bool = True):
+        """Record application startup event"""
+        status = "success" if success else "failure"
+        self.logger.info(f"Application startup recorded: {status}")
+        
+        # You could add a specific metric here if needed
+        # For now, just log the event
+        if success:
+            self.logger.info("✅ SecureNet Enterprise started successfully")
+        else:
+            self.logger.error("❌ SecureNet Enterprise startup failed")
+    
     def get_metrics(self) -> str:
         """Get all metrics in Prometheus format"""
         return generate_latest(securenet_registry)
@@ -196,7 +209,9 @@ def setup_fastapi_metrics(app):
     instrumentator.instrument(app)
     instrumentator.expose(app, endpoint="/metrics")
     
-    logger.info("FastAPI metrics instrumentation configured")
+    # Only log if enterprise boot logs are not disabled
+    if not os.getenv("DISABLE_ENTERPRISE_BOOT_LOGS", "false").lower() == "true":
+        logger.info("FastAPI metrics instrumentation configured")
     
     return instrumentator
 

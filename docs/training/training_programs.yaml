@@ -1,0 +1,43 @@
+admin_training:
+  duration: 2 hours
+  learning_objectives:
+  - Configure organization settings
+  - Manage user accounts and permissions
+  - Set up security policies
+  - Generate compliance reports
+  - Interpret security analytics
+  modules:
+  - Platform Overview
+  - User Management
+  - Security Configuration
+  - Compliance Setup
+  - Reporting and Analytics
+  title: Administrator Training
+analyst_training:
+  duration: 3 hours
+  learning_objectives:
+  - Monitor security dashboard
+  - Investigate security alerts
+  - Perform incident response
+  - Use investigation tools
+  - Create security reports
+  modules:
+  - Dashboard Navigation
+  - Threat Detection
+  - Incident Response
+  - Investigation Tools
+  - Reporting
+  title: Security Analyst Training
+end_user_training:
+  duration: 1 hour
+  learning_objectives:
+  - Navigate the platform
+  - Update personal settings
+  - Understand security basics
+  - Report security concerns
+  modules:
+  - Platform Introduction
+  - Basic Navigation
+  - Personal Settings
+  - Security Awareness
+  title: End User Training

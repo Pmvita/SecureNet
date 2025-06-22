@@ -1,0 +1,24 @@
+infrastructure_overview:
+  architecture: Multi-tier cloud-native architecture
+  components:
+  - Kubernetes cluster (EKS)
+  - PostgreSQL database (RDS)
+  - Redis cache (ElastiCache)
+  - Application Load Balancer
+  - S3 storage
+  - CloudWatch monitoring
+  deployment_strategy: Blue-green with automated rollback
+  environments:
+  - development
+  - staging
+  - production
+maintenance_windows:
+  development: No scheduled maintenance
+  production: Sunday 2:00-6:00 AM UTC
+  staging: Daily 2:00-3:00 AM UTC
+operational_procedures:
+  backup: Automated daily backups with 30-day retention
+  deployment: Automated via Terraform and Kubernetes
+  disaster_recovery: RTO < 4 hours, RPO < 1 hour
+  monitoring: Prometheus + Grafana + AlertManager
+  scaling: Horizontal auto-scaling based on metrics

@@ -1,0 +1,19 @@
+failed_login_attempts:
+  action: temporary_block
+  threshold: 5
+  time_window: 5m
+file_integrity:
+  action: alert_and_backup
+  alert: immediate
+  monitored_paths:
+  - /etc
+  - /opt/securenet/config
+  - /usr/bin
+privilege_escalation:
+  action: alert_security_team
+  alert: immediate
+  monitor: sudo_commands
+unusual_network_traffic:
+  action: investigate
+  baseline_learning: 7d
+  deviation_threshold: 3_sigma

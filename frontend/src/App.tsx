@@ -9,6 +9,10 @@ import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 
+// Auth pages
+const SignupPage = React.lazy(() => import('./features/auth/pages/SignupPage').then(module => ({ default: module.SignupPage })));
+const OnboardingPage = React.lazy(() => import('./features/auth/pages/OnboardingPage').then(module => ({ default: module.OnboardingPage })));
+
 // Day 2 Sprint 1: Lazy loading for code splitting
 const DashboardPage = React.lazy(() => import('./features/dashboard/pages/DashboardPage').then(module => ({ default: module.DashboardPage })));
 const LogsPage = React.lazy(() => import('./features/logs/pages/LogsPage'));
@@ -96,6 +100,30 @@ const AppRoutes: React.FC = () => {
         path="/login" 
         element={
           isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />
+        } 
+      />
+      
+      {/* Signup Route */}
+      <Route 
+        path="/signup" 
+        element={
+          isAuthenticated ? <Navigate to="/" replace /> : (
+            <Suspense fallback={<LoadingSpinner />}>
+              <SignupPage />
+            </Suspense>
+          )
+        } 
+      />
+      
+      {/* Onboarding Route */}
+      <Route 
+        path="/onboarding" 
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<LoadingSpinner />}>
+              <OnboardingPage />
+            </Suspense>
+          </ProtectedRoute>
         } 
       />
       

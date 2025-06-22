@@ -1,0 +1,48 @@
+application_security:
+  content_security_policy: true
+  csrf_protection: true
+  input_validation: comprehensive
+  jwt_signing: RS256
+  output_encoding: context_aware
+  session_security: httponly_secure_samesite
+  xss_protection: true
+database_security:
+  access_control: strict
+  audit_logging: true
+  backup_encryption: true
+  connection_security: require_ssl
+  encryption_at_rest: true
+  encryption_in_transit: true
+kubernetes_security:
+  admission_controllers:
+  - NamespaceLifecycle
+  - ServiceAccount
+  - PodSecurityPolicy
+  - SecurityContextDeny
+  audit_logging: true
+  network_policies: true
+  pod_security_policies: true
+  rbac_enabled: true
+  secrets_encryption: true
+network_security:
+  ddos_protection: true
+  firewall_rules:
+  - description: SSH access
+    port: 22
+    protocol: tcp
+    source: admin_ips
+  - description: HTTP
+    port: 80
+    protocol: tcp
+    source: 0.0.0.0/0
+  - description: HTTPS
+    port: 443
+    protocol: tcp
+    source: 0.0.0.0/0
+  - description: PostgreSQL
+    port: 5432
+    protocol: tcp
+    source: app_subnets
+  hsts_enabled: true
+  ssl_tls_version: '1.3'
+  waf_enabled: true

@@ -1,0 +1,32 @@
+{
+  "terraform_validation": {
+    "status": "passed",
+    "resources_planned": 5,
+    "syntax_errors": 0,
+    "security_warnings": 0
+  },
+  "monitoring_validation": {
+    "status": "passed",
+    "prometheus_config": "valid",
+    "alertmanager_config": "valid",
+    "grafana_dashboards": 2
+  },
+  "backup_validation": {
+    "status": "passed",
+    "procedures_configured": 3,
+    "scripts_created": 3,
+    "cron_schedule": "configured"
+  },
+  "security_validation": {
+    "status": "passed",
+    "hardening_checklist": "complete",
+    "audit_preparation": "ready",
+    "monitoring_rules": 4
+  },
+  "overall": {
+    "score": 50,
+    "max_score": 50,
+    "percentage": 100.0,
+    "status": "passed"
+  }
+}

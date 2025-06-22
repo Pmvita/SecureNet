@@ -151,7 +151,7 @@ class EnterpriseStartup:
         self.logger.info("🗄️  Validating PostgreSQL Enterprise database...")
         
         try:
-            from database_factory import db
+            from database.database_factory import db
             await db.initialize()
             
             # Check for PostgreSQL through database URL and connection
@@ -254,7 +254,7 @@ class EnterpriseStartup:
         self.logger.info("📱 Validating application imports...")
         
         try:
-            from app import app
+            from src.apps.enterprise_app import app
             route_count = len(app.routes)
             self.logger.info(f"✓ FastAPI application imported ({route_count} routes)")
             return True
@@ -308,7 +308,7 @@ class EnterpriseStartup:
         
         try:
             import uvicorn
-            from app import app
+            from src.apps.enterprise_app import app
             
             # Configure production uvicorn settings
             config = uvicorn.Config(

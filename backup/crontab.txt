@@ -1,0 +1,9 @@
+# SecureNet Backup Schedule
+# Database backup - Daily at 2 AM
+0 2 * * * /opt/securenet/backup/scripts/database_backup.sh
+
+# Application backup - Daily at 3 AM
+0 3 * * * /opt/securenet/backup/scripts/application_backup.sh
+
+# Configuration backup - Weekly on Sunday at 4 AM
+0 4 * * 0 kubectl get all --all-namespaces -o yaml > /backups/config/k8s_config_$(date +\%Y\%m\%d).yaml

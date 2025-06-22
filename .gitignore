@@ -25,6 +25,9 @@ venv/
 ENV/
 env/
 .env
+.env.backup_20250616_190750
+.env.backup_20250616_190750.sh
+
 
 # Testing
 .pytest_cache/

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LockClosedIcon,
@@ -200,6 +200,16 @@ export const LoginPage: React.FC = () => {
             )}
           </button>
         </form>
+
+        {/* Login Link */}
+        <div className="text-center mt-6">
+          <p className="text-gray-600">
+            Don't have an account?{' '}
+            <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
+              Sign up for SecureNet
+            </Link>
+          </p>
+        </div>
 
         {/* Footer */}
         <div className="login-footer">
