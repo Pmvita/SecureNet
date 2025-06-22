@@ -21,6 +21,7 @@ Base = declarative_base()
 
 # Enums for type safety
 class UserRole(Enum):
+    PLATFORM_FOUNDER = "platform_founder"  # Ultimate founder access (Pierre Mvita)
     PLATFORM_OWNER = "platform_owner"
     SECURITY_ADMIN = "security_admin"
     SOC_ANALYST = "soc_analyst"

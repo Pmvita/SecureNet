@@ -68,18 +68,18 @@ from utils.week2_day3_integration import (
 try:
     from utils.week2_day4_advanced_integration import Week2Day4AdvancedIntegration
     week2_day4_integration = Week2Day4AdvancedIntegration()
-    logger.info("Week 2 Day 4 Advanced Integration initialized successfully")
+    # logger will be defined after logging setup below
 except ImportError as e:
-    logger.warning(f"Week 2 Day 4 Advanced Integration not available: {e}")
+    # logger will be defined after logging setup below
     week2_day4_integration = None
 
 # Import Week 2 Day 5 System Hardening
 try:
     from utils.week2_day5_system_hardening import Week2Day5SystemHardening
     week2_day5_hardening = Week2Day5SystemHardening()
-    logger.info("Week 2 Day 5 System Hardening initialized successfully")
+    # logger will be defined after logging setup below
 except ImportError as e:
-    logger.warning(f"Week 2 Day 5 System Hardening not available: {e}")
+    # logger will be defined after logging setup below
     week2_day5_hardening = None
 
 # Load environment variables

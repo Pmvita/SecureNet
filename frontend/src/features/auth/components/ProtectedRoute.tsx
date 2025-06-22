@@ -13,6 +13,9 @@ const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
 
 // Role-based permissions mapping
 const ROLE_PERMISSIONS = {
+  // Founder role - unlimited access
+  platform_founder: ['*'], // Wildcard - unlimited access to everything
+  founder: ['*'], // Backup founder account
   // New role names
   platform_owner: ['system_admin', 'manage_settings', 'manage_users', 'manage_organizations', 'view_audit_logs'],
   security_admin: ['manage_settings', 'manage_org_users', 'view_org_data'],
@@ -60,11 +63,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (requiredPermissions.length > 0 && user) {
-    // Check if user has required permissions based on their role
-    const userPermissions = ROLE_PERMISSIONS[user.role as keyof typeof ROLE_PERMISSIONS] || [];
-    const hasRequiredPermissions = requiredPermissions.every(permission => 
+    // FOUNDER HAS UNLIMITED ACCESS - Check if user has required permissions based on their role
+    const userRole = user.role?.toLowerCase(); // Case-insensitive role checking
+    const userPermissions = ROLE_PERMISSIONS[userRole as keyof typeof ROLE_PERMISSIONS] || [];
+    
+    // Founder has unlimited access to everything
+    const isFounder = userRole === 'platform_founder' || userRole === 'founder';
+    const hasWildcardAccess = userPermissions.includes('*');
+    const hasSpecificPermissions = requiredPermissions.every(permission => 
       userPermissions.includes(permission)
     );
+    
+    const hasRequiredPermissions = isFounder || hasWildcardAccess || hasSpecificPermissions;
 
     if (!hasRequiredPermissions) {
       return (

@@ -33,6 +33,7 @@ from monitoring.prometheus_metrics import metrics, setup_fastapi_metrics
 from monitoring.sentry_config import configure_sentry
 from utils.logging_config import configure_structlog, get_logger
 from tasks.rq_service import rq_service
+from api.endpoints.api_admin import router as admin_router
 
 # Configure enterprise logging
 configure_structlog()
@@ -334,6 +335,9 @@ def setup_middleware():
 
 # Setup middleware
 setup_middleware()
+
+# Include API routers
+app.include_router(admin_router)
 
 # Setup Prometheus metrics
 setup_fastapi_metrics(app)
@@ -706,12 +710,22 @@ async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_curre
 async def get_api_key_endpoint(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get API key for authenticated user"""
     try:
-        # Only allow admin users (PLATFORM_OWNER and SECURITY_ADMIN) to get API keys
-        if current_user["role"] not in ["PLATFORM_OWNER", "SECURITY_ADMIN", "platform_owner", "security_admin"]:
+        # FOUNDER HAS UNLIMITED ACCESS - Allow founder + admin users to get API keys
+        allowed_roles = [
+            "PLATFORM_FOUNDER", "platform_founder", "founder",  # Founder unlimited access
+            "PLATFORM_OWNER", "platform_owner",                # Platform owner access
+            "SECURITY_ADMIN", "security_admin"                 # Security admin access
+        ]
+        
+        if current_user["role"] not in allowed_roles:
             raise HTTPException(
                 status_code=403,
-                detail="Only admin users can access the API key"
+                detail="Admin access required for API key"
             )
+        
+        # Log founder access
+        if current_user["role"].lower() in ["platform_founder", "founder"]:
+            logger.info(f"🏆 FOUNDER ACCESS: {current_user.get('username')} accessing API key with unlimited privileges")
         
         # Generate a secure API key for the user
         import secrets
@@ -719,7 +733,12 @@ async def get_api_key_endpoint(current_user: Dict[str, Any] = Depends(get_curren
         
         return {
             "status": "success",
-            "data": {"api_key": api_key},
+            "data": {
+                "api_key": api_key,
+                "user_role": current_user["role"],
+                "founder_access": current_user["role"].lower() in ["platform_founder", "founder"],
+                "unlimited_access": current_user["role"].lower() in ["platform_founder", "founder"]
+            },
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except HTTPException:
@@ -732,6 +751,230 @@ async def get_api_key_endpoint(current_user: Dict[str, Any] = Depends(get_curren
             detail="Failed to get API key"
         )
 
+@app.get("/api/founder/access-verification")
+async def verify_founder_access(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Verify founder access level and return comprehensive access information"""
+    try:
+        is_founder = current_user["role"].lower() in ["platform_founder", "founder"]
+        
+        if not is_founder:
+            raise HTTPException(
+                status_code=403,
+                detail="Founder access required"
+            )
+        
+        logger.info(f"🏆 FOUNDER ACCESS VERIFICATION: {current_user.get('username')} verified with unlimited privileges")
+        
+        return {
+            "status": "success",
+            "data": {
+                "founder_verified": True,
+                "unlimited_access": True,
+                "username": current_user.get("username"),
+                "role": current_user["role"],
+                "access_level": "UNLIMITED",
+                "privileges": [
+                    "complete_financial_control",
+                    "strategic_business_intelligence", 
+                    "god_mode_system_access",
+                    "multi_tenant_management",
+                    "user_management_all_orgs",
+                    "emergency_override",
+                    "compliance_authority",
+                    "api_unlimited_access",
+                    "audit_log_access",
+                    "billing_management",
+                    "security_policy_control"
+                ],
+                "verification_timestamp": datetime.now(timezone.utc).isoformat()
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying founder access: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to verify founder access"
+        )
+
+@app.get("/api/founder/dashboard/metrics")
+async def get_founder_dashboard_metrics(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get comprehensive business intelligence metrics for founder dashboard"""
+    try:
+        is_founder = current_user["role"].lower() in ["platform_founder", "founder"]
+        
+        if not is_founder:
+            raise HTTPException(
+                status_code=403,
+                detail="Founder access required"
+            )
+        
+        # Mock business intelligence data - in production this would come from real analytics
+        metrics = {
+            "company_health": {
+                "monthly_recurring_revenue": "$847,350",
+                "customer_count": 247,
+                "churn_rate": "2.1%",
+                "growth_rate": "34%",
+                "uptime": "99.97%"
+            },
+            "customer_analytics": {
+                "enterprise_customers": 42,
+                "sme_customers": 205,
+                "trial_conversions": "28.5%",
+                "support_satisfaction": "4.7/5.0"
+            },
+            "technical_metrics": {
+                "system_performance": "excellent",
+                "security_incidents": 3,
+                "feature_adoption": "87%",
+                "api_usage": "2.3M calls/month"
+            },
+            "financial_summary": {
+                "mrr": 847350,
+                "arr": 10168200,
+                "growth_rate": 34.2,
+                "churn_rate": 2.1
+            }
+        }
+        
+        logger.info(f"🏆 FOUNDER DASHBOARD METRICS: {current_user.get('username')} accessed business intelligence")
+        
+        return {
+            "status": "success",
+            "data": metrics,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching founder dashboard metrics: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch founder dashboard metrics"
+        )
+
+@app.get("/api/founder/financial/metrics")
+async def get_founder_financial_metrics(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get comprehensive financial metrics for founder financial control"""
+    try:
+        is_founder = current_user["role"].lower() in ["platform_founder", "founder"]
+        
+        if not is_founder:
+            raise HTTPException(
+                status_code=403,
+                detail="Founder access required"
+            )
+        
+        # Mock financial data - in production this would come from real financial systems
+        financial_metrics = {
+            "revenue": {
+                "mrr": 847350,
+                "arr": 10168200,
+                "growth_rate": 34.2,
+                "churn_rate": 2.1
+            },
+            "customers": {
+                "total": 247,
+                "enterprise": 42,
+                "sme": 205,
+                "trial": 23
+            },
+            "billing": {
+                "outstanding": 127500,
+                "collected_this_month": 823400,
+                "overdue": 15200,
+                "subscription_changes": 8
+            },
+            "forecasting": {
+                "next_month_mrr": 892000,
+                "quarter_projection": 2750000,
+                "annual_projection": 11500000,
+                "confidence": 87
+            }
+        }
+        
+        logger.info(f"🏆 FOUNDER FINANCIAL METRICS: {current_user.get('username')} accessed financial control data")
+        
+        return {
+            "status": "success",
+            "data": financial_metrics,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching founder financial metrics: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch founder financial metrics"
+        )
+
+@app.get("/api/founder/system/metrics")
+async def get_founder_system_metrics(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get comprehensive system metrics for founder system administration"""
+    try:
+        is_founder = current_user["role"].lower() in ["platform_founder", "founder"]
+        
+        if not is_founder:
+            raise HTTPException(
+                status_code=403,
+                detail="Founder access required"
+            )
+        
+        # Mock system data - in production this would come from real infrastructure monitoring
+        system_metrics = {
+            "infrastructure": {
+                "servers_online": 12,
+                "total_servers": 12,
+                "cpu_usage": 67,
+                "memory_usage": 78,
+                "disk_usage": 45,
+                "network_latency": 23
+            },
+            "database": {
+                "connections": 47,
+                "query_performance": 95,
+                "storage_used": 234,
+                "backup_status": "healthy",
+                "replication_lag": 0.2
+            },
+            "security": {
+                "active_sessions": 156,
+                "failed_logins": 3,
+                "security_alerts": 2,
+                "compliance_score": 98
+            },
+            "platform": {
+                "total_organizations": 247,
+                "total_users": 1847,
+                "api_requests_today": 234567,
+                "uptime_percentage": 99.97
+            }
+        }
+        
+        logger.info(f"🏆 FOUNDER SYSTEM METRICS: {current_user.get('username')} accessed system administration data")
+        
+        return {
+            "status": "success",
+            "data": system_metrics,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching founder system metrics: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch founder system metrics"
+        )
+
 @app.get("/api/organizations/{org_id}/devices")
 async def get_organization_devices(
     org_id: str,
@@ -741,8 +984,12 @@ async def get_organization_devices(
 ):
     """Get devices for an organization"""
     
-    # Verify user has access to organization
-    if current_user.get("organization_id") != org_id and current_user.get("role") != "platform_owner":
+    # Verify user has access to organization - FOUNDER HAS UNLIMITED ACCESS
+    founder_roles = ["platform_founder", "founder", "PLATFORM_FOUNDER", "FOUNDER"]
+    platform_owner_roles = ["platform_owner", "PLATFORM_OWNER"]
+    
+    if (current_user.get("organization_id") != org_id and 
+        current_user.get("role") not in founder_roles + platform_owner_roles):
         raise HTTPException(
             status_code=403,
             detail="Access denied to organization"
@@ -776,8 +1023,12 @@ async def get_security_metrics(
 ):
     """Get security metrics for an organization"""
     
-    # Verify user has access to organization
-    if current_user.get("organization_id") != org_id and current_user.get("role") != "platform_owner":
+    # Verify user has access to organization - FOUNDER HAS UNLIMITED ACCESS
+    founder_roles = ["platform_founder", "founder", "PLATFORM_FOUNDER", "FOUNDER"]
+    platform_owner_roles = ["platform_owner", "PLATFORM_OWNER"]
+    
+    if (current_user.get("organization_id") != org_id and 
+        current_user.get("role") not in founder_roles + platform_owner_roles):
         raise HTTPException(
             status_code=403,
             detail="Access denied to organization"
@@ -808,9 +1059,14 @@ async def get_audit_logs(
 ):
     """Get audit logs for an organization (SOC 2 compliance)"""
     
-    # Verify user has admin access
-    if (current_user.get("organization_id") != org_id or 
-        current_user.get("role") not in ["platform_owner", "security_admin"]):
+    # Verify user has admin access - FOUNDER HAS UNLIMITED ACCESS
+    founder_roles = ["platform_founder", "founder", "PLATFORM_FOUNDER", "FOUNDER"]
+    admin_roles = ["platform_owner", "security_admin", "PLATFORM_OWNER", "SECURITY_ADMIN"]
+    
+    # Founder has unlimited access, others need org access + admin role
+    if (current_user.get("role") not in founder_roles and
+        (current_user.get("organization_id") != org_id or 
+         current_user.get("role") not in admin_roles)):
         raise HTTPException(
             status_code=403,
             detail="Admin access required for audit logs"
@@ -1232,6 +1488,228 @@ async def get_onboarding_status(
             status_code=500,
             detail="Unable to fetch onboarding status"
         )
+
+# ===== MISSING API ENDPOINTS FOR FRONTEND COMPATIBILITY =====
+
+@app.get("/api/security")
+async def get_security_data(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get security overview data"""
+    try:
+        # Mock security data - replace with real data from your security systems
+        security_data = {
+            "threats": [
+                {"id": "thr_001", "type": "malware", "severity": "high", "status": "active", "timestamp": "2025-06-21T20:30:00Z"},
+                {"id": "thr_002", "type": "suspicious_login", "severity": "medium", "status": "resolved", "timestamp": "2025-06-21T19:15:00Z"},
+                {"id": "thr_003", "type": "port_scan", "severity": "low", "status": "active", "timestamp": "2025-06-21T18:45:00Z"}
+            ],
+            "scans": [
+                {"id": "scan_001", "type": "vulnerability", "status": "completed", "findings": 3, "timestamp": "2025-06-21T16:00:00Z"},
+                {"id": "scan_002", "type": "network", "status": "running", "progress": 65, "timestamp": "2025-06-21T20:00:00Z"}
+            ],
+            "metrics": {
+                "total_threats": 127,
+                "active_threats": 8,
+                "resolved_threats": 119,
+                "security_score": 87,
+                "last_scan": "2025-06-21T16:00:00Z"
+            }
+        }
+        
+        return {
+            "status": "success",
+            "data": security_data,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching security data: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch security data")
+
+@app.get("/api/network")
+async def get_network_data(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get network overview data"""
+    try:
+        # Mock network data - replace with real data from your network monitoring
+        network_data = {
+            "devices": [
+                {"id": "dev_001", "name": "Router-Main", "type": "router", "status": "online", "ip": "192.168.1.1", "last_seen": "2025-06-21T21:30:00Z"},
+                {"id": "dev_002", "name": "Switch-Core", "type": "switch", "status": "online", "ip": "192.168.1.2", "last_seen": "2025-06-21T21:29:00Z"},
+                {"id": "dev_003", "name": "Server-DB", "type": "server", "status": "online", "ip": "192.168.1.10", "last_seen": "2025-06-21T21:30:00Z"},
+                {"id": "dev_004", "name": "Workstation-Admin", "type": "workstation", "status": "offline", "ip": "192.168.1.50", "last_seen": "2025-06-21T18:00:00Z"}
+            ],
+            "traffic": [
+                {"timestamp": "2025-06-21T21:25:00Z", "bytes_in": 1024576, "bytes_out": 2048128, "packets_in": 1500, "packets_out": 2100},
+                {"timestamp": "2025-06-21T21:20:00Z", "bytes_in": 987654, "bytes_out": 1876543, "packets_in": 1450, "packets_out": 1980},
+                {"timestamp": "2025-06-21T21:15:00Z", "bytes_in": 1156789, "bytes_out": 2234567, "packets_in": 1650, "packets_out": 2250}
+            ],
+            "protocols": [
+                {"name": "HTTP", "count": 4567, "percentage": 35.2},
+                {"name": "HTTPS", "count": 6234, "percentage": 48.1},
+                {"name": "SSH", "count": 890, "percentage": 6.9},
+                {"name": "FTP", "count": 345, "percentage": 2.7},
+                {"name": "Other", "count": 928, "percentage": 7.1}
+            ],
+            "stats": {
+                "total_devices": 15,
+                "active_devices": 12,
+                "total_traffic": 15678234,
+                "average_latency": 23.5
+            }
+        }
+        
+        return {
+            "status": "success",
+            "data": network_data,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching network data: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch network data")
+
+@app.get("/api/logs")
+async def get_logs_data(
+    page: int = 1,
+    page_size: int = 50,
+    level: Optional[str] = None,
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get system logs with pagination and filtering"""
+    try:
+        # Mock logs data - replace with real log data from your logging system
+        logs = [
+            {"id": "log_001", "timestamp": "2025-06-21T21:30:00Z", "level": "info", "category": "security", "source": "auth_service", "message": "User login successful", "details": {"user": "admin", "ip": "192.168.1.100"}},
+            {"id": "log_002", "timestamp": "2025-06-21T21:29:30Z", "level": "warning", "category": "network", "source": "network_monitor", "message": "High bandwidth usage detected", "details": {"interface": "eth0", "usage": "85%"}},
+            {"id": "log_003", "timestamp": "2025-06-21T21:29:00Z", "level": "error", "category": "system", "source": "database", "message": "Database connection timeout", "details": {"database": "postgres", "timeout": "30s"}},
+            {"id": "log_004", "timestamp": "2025-06-21T21:28:30Z", "level": "info", "category": "application", "source": "api_server", "message": "API request processed", "details": {"endpoint": "/api/security", "duration": "125ms"}},
+            {"id": "log_005", "timestamp": "2025-06-21T21:28:00Z", "level": "debug", "category": "system", "source": "scheduler", "message": "Background task completed", "details": {"task": "security_scan", "duration": "2.5s"}}
+        ]
+        
+        # Apply filters
+        if level:
+            level_list = level if isinstance(level, list) else [level]
+            logs = [log for log in logs if log["level"] in level_list]
+        
+        if category:
+            category_list = category if isinstance(category, list) else [category]
+            logs = [log for log in logs if log["category"] in category_list]
+        
+        if search:
+            logs = [log for log in logs if search.lower() in log["message"].lower()]
+        
+        # Apply pagination
+        total = len(logs)
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated_logs = logs[start:end]
+        
+        return {
+            "status": "success",
+            "data": {
+                "logs": paginated_logs,
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total + page_size - 1) // page_size
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching logs: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch logs")
+
+@app.get("/api/anomalies/list")
+async def get_anomalies_list(
+    page: int = 1,
+    pageSize: int = 20,
+    status: Optional[str] = None,
+    severity: Optional[str] = None,
+    type: Optional[str] = None,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get anomalies list with pagination and filtering"""
+    try:
+        # Mock anomalies data - replace with real anomaly detection data
+        anomalies = [
+            {"id": "anom_001", "type": "traffic_spike", "severity": "high", "status": "open", "description": "Unusual traffic spike detected on port 443", "timestamp": "2025-06-21T21:25:00Z", "source": "network_monitor", "metrics": {"port": 443, "spike_factor": 3.2}},
+            {"id": "anom_002", "type": "login_pattern", "severity": "medium", "status": "investigating", "description": "Unusual login pattern detected for user admin", "timestamp": "2025-06-21T21:20:00Z", "source": "auth_monitor", "metrics": {"user": "admin", "pattern_score": 0.75}},
+            {"id": "anom_003", "type": "cpu_usage", "severity": "low", "status": "resolved", "description": "CPU usage anomaly detected on server-01", "timestamp": "2025-06-21T21:15:00Z", "source": "system_monitor", "metrics": {"server": "server-01", "cpu_usage": 95.2}},
+            {"id": "anom_004", "type": "disk_space", "severity": "critical", "status": "open", "description": "Disk space critically low on database server", "timestamp": "2025-06-21T21:10:00Z", "source": "system_monitor", "metrics": {"server": "db-server", "disk_usage": 98.5}},
+            {"id": "anom_005", "type": "network_scan", "severity": "high", "status": "open", "description": "Potential port scan detected from external IP", "timestamp": "2025-06-21T21:05:00Z", "source": "security_monitor", "metrics": {"source_ip": "203.0.113.45", "ports_scanned": 25}}
+        ]
+        
+        # Apply filters
+        if status:
+            anomalies = [a for a in anomalies if a["status"] == status]
+        
+        if severity:
+            anomalies = [a for a in anomalies if a["severity"] == severity]
+        
+        if type:
+            anomalies = [a for a in anomalies if a["type"] == type]
+        
+        # Apply pagination
+        total = len(anomalies)
+        start = (page - 1) * pageSize
+        end = start + pageSize
+        paginated_anomalies = anomalies[start:end]
+        
+        return {
+            "status": "success",
+            "data": {
+                "items": paginated_anomalies,
+                "total": total,
+                "page": page,
+                "page_size": pageSize,
+                "total_pages": (total + pageSize - 1) // pageSize
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching anomalies: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch anomalies")
+
+@app.get("/api/anomalies/stats")
+async def get_anomalies_stats(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get anomalies statistics"""
+    try:
+        # Mock anomalies statistics - replace with real stats from your anomaly detection system
+        stats = {
+            "total": 47,
+            "open": 12,
+            "critical": 3,
+            "resolved": 35,
+            "by_type": {
+                "traffic_spike": 8,
+                "login_pattern": 12,
+                "cpu_usage": 5,
+                "disk_space": 7,
+                "network_scan": 9,
+                "other": 6
+            },
+            "by_severity": {
+                "critical": 3,
+                "high": 15,
+                "medium": 18,
+                "low": 11
+            }
+        }
+        
+        return {
+            "status": "success",
+            "data": stats,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching anomalies stats: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch anomalies stats")
+
+# ===== END MISSING API ENDPOINTS =====
 
 # Main application runner
 def main():

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, startTransition } from 'react';
 import { apiClient } from '../api/client';
 
 export interface RealTimeNotification {
@@ -31,7 +31,9 @@ export function useRealTimeNotifications() {
   // Get API key reactively
   useEffect(() => {
     const key = apiClient.getApiKey();
-    setApiKey(key);
+    startTransition(() => {
+      setApiKey(key);
+    });
   }, []);
   
   const wsRef = useRef<WebSocket | null>(null);
@@ -43,13 +45,16 @@ export function useRealTimeNotifications() {
   const fetchNotifications = useCallback(async () => {
     try {
       const response = await apiClient.get('/api/notifications?page=1&page_size=50');
-      const notifications = response.data.notifications || [];
+      const data = response.data as { notifications?: RealTimeNotification[] };
+      const notifications = data.notifications || [];
       
-      setState(prev => ({
-        ...prev,
-        notifications,
-        unreadCount: notifications.filter((n: RealTimeNotification) => !n.read).length,
-      }));
+      startTransition(() => {
+        setState(prev => ({
+          ...prev,
+          notifications,
+          unreadCount: notifications.filter((n: RealTimeNotification) => !n.read).length,
+        }));
+      });
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
@@ -67,11 +72,13 @@ export function useRealTimeNotifications() {
 
       wsRef.current.onopen = () => {
         console.log('Real-time notifications WebSocket connected');
-        setState(prev => ({
-          ...prev,
-          isConnected: true,
-          connectionError: null,
-        }));
+        startTransition(() => {
+          setState(prev => ({
+            ...prev,
+            isConnected: true,
+            connectionError: null,
+          }));
+        });
         reconnectAttempts.current = 0;
       };
 
@@ -79,11 +86,13 @@ export function useRealTimeNotifications() {
         try {
           const notification: RealTimeNotification = JSON.parse(event.data);
           
-          setState(prev => ({
-            ...prev,
-            notifications: [notification, ...prev.notifications].slice(0, 100), // Keep last 100
-            unreadCount: prev.unreadCount + (notification.read ? 0 : 1),
-          }));
+          startTransition(() => {
+            setState(prev => ({
+              ...prev,
+              notifications: [notification, ...prev.notifications].slice(0, 100), // Keep last 100
+              unreadCount: prev.unreadCount + (notification.read ? 0 : 1),
+            }));
+          });
 
           // Show browser notification for critical/error notifications
           if ((notification.severity === 'critical' || notification.severity === 'error') && 'Notification' in window) {
@@ -102,18 +111,22 @@ export function useRealTimeNotifications() {
 
       wsRef.current.onerror = (error) => {
         console.error('WebSocket error:', error);
-        setState(prev => ({
-          ...prev,
-          connectionError: 'Connection error',
-        }));
+        startTransition(() => {
+          setState(prev => ({
+            ...prev,
+            connectionError: 'Connection error',
+          }));
+        });
       };
 
       wsRef.current.onclose = (event) => {
         console.log('WebSocket connection closed:', event.code, event.reason);
-        setState(prev => ({
-          ...prev,
-          isConnected: false,
-        }));
+        startTransition(() => {
+          setState(prev => ({
+            ...prev,
+            isConnected: false,
+          }));
+        });
 
         // Attempt to reconnect if not closed normally
         if (event.code !== 1000 && reconnectAttempts.current < maxReconnectAttempts) {
@@ -126,10 +139,12 @@ export function useRealTimeNotifications() {
       };
     } catch (error) {
       console.error('Error creating WebSocket connection:', error);
-      setState(prev => ({
-        ...prev,
-        connectionError: 'Failed to connect',
-      }));
+              startTransition(() => {
+          setState(prev => ({
+            ...prev,
+            connectionError: 'Failed to connect',
+          }));
+        });
     }
   }, [apiKey]);
 
@@ -137,13 +152,15 @@ export function useRealTimeNotifications() {
   const markAsRead = useCallback(async (notificationId: number) => {
     try {
       await apiClient.post(`/api/notifications/${notificationId}/read`);
-      setState(prev => ({
-        ...prev,
-        notifications: prev.notifications.map(n =>
-          n.id === notificationId ? { ...n, read: true } : n
-        ),
-        unreadCount: Math.max(0, prev.unreadCount - 1),
-      }));
+      startTransition(() => {
+        setState(prev => ({
+          ...prev,
+          notifications: prev.notifications.map(n =>
+            n.id === notificationId ? { ...n, read: true } : n
+          ),
+          unreadCount: Math.max(0, prev.unreadCount - 1),
+        }));
+      });
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -153,11 +170,13 @@ export function useRealTimeNotifications() {
   const markAllAsRead = useCallback(async () => {
     try {
       await apiClient.post('/api/notifications/read-all');
-      setState(prev => ({
-        ...prev,
-        notifications: prev.notifications.map(n => ({ ...n, read: true })),
-        unreadCount: 0,
-      }));
+      startTransition(() => {
+        setState(prev => ({
+          ...prev,
+          notifications: prev.notifications.map(n => ({ ...n, read: true })),
+          unreadCount: 0,
+        }));
+      });
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
@@ -167,13 +186,15 @@ export function useRealTimeNotifications() {
   const deleteNotification = useCallback(async (notificationId: number) => {
     try {
       await apiClient.delete(`/api/notifications/${notificationId}`);
-      setState(prev => {
-        const notification = prev.notifications.find(n => n.id === notificationId);
-        return {
-          ...prev,
-          notifications: prev.notifications.filter(n => n.id !== notificationId),
-          unreadCount: notification && !notification.read ? prev.unreadCount - 1 : prev.unreadCount,
-        };
+      startTransition(() => {
+        setState(prev => {
+          const notification = prev.notifications.find(n => n.id === notificationId);
+          return {
+            ...prev,
+            notifications: prev.notifications.filter(n => n.id !== notificationId),
+            unreadCount: notification && !notification.read ? prev.unreadCount - 1 : prev.unreadCount,
+          };
+        });
       });
     } catch (error) {
       console.error('Error deleting notification:', error);

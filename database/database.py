@@ -39,7 +39,8 @@ class OrganizationStatus(Enum):
     EXPIRED = "expired"
 
 class UserRole(Enum):
-    """User role types for 3-tier RBAC system."""
+    """User role types for 4-tier RBAC system with founder access."""
+    PLATFORM_FOUNDER = "platform_founder"  # Ultimate founder access - Pierre Mvita (unlimited access)
     PLATFORM_OWNER = "platform_owner"    # Full platform access, tenant management (formerly superadmin)
     SECURITY_ADMIN = "security_admin"     # Organization admin with advanced controls (formerly manager/platform_admin)
     SOC_ANALYST = "soc_analyst"           # Standard tenant user (formerly analyst/end_user)
@@ -4278,7 +4279,12 @@ class Database:
 
     def has_permission(self, user_role: str, required_permission: str) -> bool:
         """Check if user role has required permission."""
+        # Founder has unlimited access to everything
+        if user_role in [UserRole.PLATFORM_FOUNDER.value, 'platform_founder', 'founder']:
+            return True  # Founder access overrides all permission checks
+            
         permissions = {
+            UserRole.PLATFORM_FOUNDER.value: ['*'],  # Wildcard - unlimited access
             UserRole.PLATFORM_OWNER.value: [
                 'view_all_organizations', 'manage_organizations', 'view_all_users',
                 'manage_users', 'view_audit_logs', 'manage_billing', 'system_admin'
@@ -4294,7 +4300,8 @@ class Database:
         }
         
         user_permissions = permissions.get(user_role, [])
-        return required_permission in user_permissions
+        # Check for wildcard permission (founder) or specific permission
+        return '*' in user_permissions or required_permission in user_permissions
 
     async def seed_default_users(self) -> bool:
         """Seed the 3 default development users with proper roles and organization setup."""
@@ -4822,6 +4829,15 @@ class Database:
     def get_role_permissions(self, role: str) -> List[str]:
         """Get permissions for a user role."""
         role_permissions = {
+            'platform_founder': [
+                # Ultimate founder access - UNLIMITED PERMISSIONS
+                'founder_unlimited_access', 'founder_financial_control', 'founder_strategic_analytics',
+                'founder_system_administration', 'founder_emergency_override', 'founder_business_intelligence',
+                'manage_users', 'manage_organizations', 'view_audit_logs', 'manage_settings', 'view_logs',
+                'manage_security', 'manage_network', 'view_anomalies', 'manage_billing', 'system_admin',
+                'god_mode_access', 'override_all_permissions', 'emergency_access', 'financial_control',
+                'strategic_control', 'compliance_override', 'multi_tenant_god_mode'
+            ],
             'platform_owner': [
                 'manage_users', 'manage_organizations', 'view_audit_logs',
                 'manage_settings', 'view_logs', 'manage_security',
@@ -4839,6 +4855,13 @@ class Database:
                 'manage_users', 'manage_organizations', 'view_audit_logs',
                 'manage_settings', 'view_logs', 'manage_security',
                 'manage_network', 'view_anomalies', 'manage_billing'
+            ],
+            'founder': [  # Legacy -> platform_founder
+                'founder_unlimited_access', 'founder_financial_control', 'founder_strategic_analytics',
+                'founder_system_administration', 'founder_emergency_override', 'founder_business_intelligence',
+                'manage_users', 'manage_organizations', 'view_audit_logs', 'manage_settings', 'view_logs',
+                'manage_security', 'manage_network', 'view_anomalies', 'manage_billing', 'system_admin',
+                'god_mode_access', 'override_all_permissions', 'emergency_access', 'financial_control'
             ],
             'manager': [  # Legacy -> security_admin
                 'manage_org_users', 'manage_settings', 'view_logs',

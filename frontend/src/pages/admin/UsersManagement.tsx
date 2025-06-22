@@ -296,6 +296,10 @@ const UsersManagement: React.FC = () => {
 
   const getRoleDisplayName = (role: string) => {
     switch (role) {
+      case 'platform_founder':
+        return '🏆 FOUNDER (Unlimited Access)';
+      case 'founder':
+        return '🏆 FOUNDER BACKUP';
       case 'platform_owner':
         return 'Platform Owner';
       case 'security_admin':
@@ -318,7 +322,8 @@ const UsersManagement: React.FC = () => {
   };
 
   const canDeleteUser = (user: User) => {
-    return user.role !== 'platform_owner' && user.role !== 'superadmin';
+    return user.role !== 'platform_founder' && user.role !== 'founder' && 
+           user.role !== 'platform_owner' && user.role !== 'superadmin';
   };
 
   if (loading) {

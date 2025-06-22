@@ -30,6 +30,11 @@ const UsersManagement = React.lazy(() => import('./pages/admin/UsersManagement')
 const TenantsManagement = React.lazy(() => import('./pages/admin/TenantsManagement'));
 const BillingManagement = React.lazy(() => import('./pages/admin/BillingManagement'));
 const AuditLogs = React.lazy(() => import('./pages/admin/AuditLogs'));
+
+// Founder pages - ultimate access
+const FounderDashboard = React.lazy(() => import('./pages/founder/FounderDashboard').then(module => ({ default: module.FounderDashboard })));
+const FinancialControl = React.lazy(() => import('./pages/founder/FinancialControl').then(module => ({ default: module.FinancialControl })));
+const SystemAdministration = React.lazy(() => import('./pages/founder/SystemAdministration').then(module => ({ default: module.SystemAdministration })));
 import LoadingSpinner from './components/LoadingSpinner';
 import {
   ChartBarIcon,
@@ -65,10 +70,28 @@ const AppRoutes: React.FC = () => {
       { path: '/settings', label: 'Settings', icon: 'Cog6ToothIcon' },
     ];
 
+    // Get user role in lowercase for consistent comparison
+    const userRole = user?.role?.toLowerCase();
+
+    // Add founder navigation items for ultimate access
+    if (userRole === 'platform_founder' || userRole === 'founder') {
+      return [
+        ...baseItems,
+        { path: '/founder', label: '🏆 Executive Command Center', icon: 'StarIcon' },
+        { path: '/founder/financial', label: '💰 Financial Control', icon: 'CreditCardIcon' },
+        { path: '/founder/system', label: '⚙️ System Administration', icon: 'Cog6ToothIcon' },
+        { path: '/admin', label: 'Admin Dashboard', icon: 'StarIcon' },
+        { path: '/admin/users', label: 'Users', icon: 'UsersIcon' },
+        { path: '/admin/tenants', label: 'Tenants', icon: 'BuildingOfficeIcon' },
+        { path: '/admin/billing', label: 'Billing', icon: 'CreditCardIcon' },
+        { path: '/admin/audit', label: 'Audit Logs', icon: 'ClipboardDocumentListIcon' },
+      ];
+    }
+
     // Add admin navigation items for users with system_admin permissions
-    // Check for both new and legacy roles
-    if (user?.role === 'platform_owner' || user?.role === 'security_admin' || 
-        user?.role === 'superadmin' || user?.role === 'admin' || user?.role === 'manager' || user?.role === 'platform_admin') {
+    // Check for both new and legacy roles (case-insensitive)
+    if (userRole === 'platform_owner' || userRole === 'security_admin' || 
+        userRole === 'superadmin' || userRole === 'admin' || userRole === 'manager' || userRole === 'platform_admin') {
       return [
         ...baseItems,
         { path: '/admin', label: 'Admin Dashboard', icon: 'StarIcon' },
@@ -209,6 +232,38 @@ const AppRoutes: React.FC = () => {
                   element={
                     <ProtectedRoute requiredPermissions={['system_admin']}>
                       <AuditLogs />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Founder Routes - Ultimate Access Only */}
+                <Route
+                  path="founder"
+                  element={
+                    <ProtectedRoute requiredPermissions={['founder_unlimited_access']}>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <FounderDashboard />
+                      </Suspense>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="founder/financial"
+                  element={
+                    <ProtectedRoute requiredPermissions={['founder_financial_control']}>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <FinancialControl />
+                      </Suspense>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="founder/system"
+                  element={
+                    <ProtectedRoute requiredPermissions={['founder_system_administration']}>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <SystemAdministration />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />

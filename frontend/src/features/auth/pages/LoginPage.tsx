@@ -86,47 +86,7 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {/* Development Credentials */}
-        <div className="dev-credentials">
-          <h3 className="dev-title">🧪 Development Credentials</h3>
-          <div className="dev-buttons">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin({ username: 'ceo', password: 'superadmin123' })}
-              className="dev-button"
-              disabled={isSubmitting}
-            >
-              <span className="dev-role">
-                <StarIcon className="w-4 h-4 text-yellow-400 inline mr-1" />
-                Platform Owner
-              </span>
-              <span className="dev-username">ceo</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin({ username: 'admin', password: 'platform123' })}
-              className="dev-button"
-              disabled={isSubmitting}
-            >
-              <span className="dev-role">
-                <Cog6ToothIcon className="w-4 h-4 text-blue-400 inline mr-1" />
-                Security Admin
-              </span>
-              <span className="dev-username">admin</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin({ username: 'user', password: 'enduser123' })}
-              className="dev-button"
-              disabled={isSubmitting}
-            >
-              <span className="dev-role">
-                <UserIcon className="w-4 h-4 text-green-400 inline mr-1" />
-                SOC Analyst
-              </span>
-              <span className="dev-username">user</span>
-            </button>
-          </div>
-        </div>
+
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="login-form">

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, startTransition } from 'react';
 import type { ApiError } from '../types';
 
 interface MutationOptions<TData, TVariables> {
@@ -32,25 +32,33 @@ export function useApiMutation<TData, TVariables>({
   const [isSuccess, setIsSuccess] = useState(false);
 
   const executeMutation = useCallback(async (variables: TVariables): Promise<TData> => {
-    setIsLoading(true);
-    setError(null);
-    setIsError(false);
-    setIsSuccess(false);
+    startTransition(() => {
+      setIsLoading(true);
+      setError(null);
+      setIsError(false);
+      setIsSuccess(false);
+    });
 
     try {
       const result = await mutationFn(variables);
-      setData(result);
-      setIsSuccess(true);
+      startTransition(() => {
+        setData(result);
+        setIsSuccess(true);
+      });
       await onSuccess?.(result, variables);
       return result;
     } catch (err) {
       const apiError = err as ApiError;
-      setError(apiError);
-      setIsError(true);
+      startTransition(() => {
+        setError(apiError);
+        setIsError(true);
+      });
       await onError?.(apiError, variables);
       throw apiError;
     } finally {
-      setIsLoading(false);
+      startTransition(() => {
+        setIsLoading(false);
+      });
       await onSettled?.(data, error, variables);
     }
   }, [mutationFn, onSuccess, onError, onSettled, data, error]);
@@ -64,11 +72,13 @@ export function useApiMutation<TData, TVariables>({
   }, [executeMutation]);
 
   const reset = useCallback(() => {
-    setData(null);
-    setError(null);
-    setIsLoading(false);
-    setIsError(false);
-    setIsSuccess(false);
+    startTransition(() => {
+      setData(null);
+      setError(null);
+      setIsLoading(false);
+      setIsError(false);
+      setIsSuccess(false);
+    });
   }, []);
 
   return {

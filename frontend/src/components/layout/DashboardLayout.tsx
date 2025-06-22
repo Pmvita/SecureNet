@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, startTransition } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import {
   ChartBarIcon,
@@ -96,10 +96,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setUserMenuOpen(false);
+        startTransition(() => setUserMenuOpen(false));
       }
       if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
-        setNotificationsOpen(false);
+        startTransition(() => setNotificationsOpen(false));
       }
     };
 
@@ -112,7 +112,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
         event.preventDefault();
-        setCommandPaletteOpen(true);
+        startTransition(() => setCommandPaletteOpen(true));
       }
     };
 
@@ -141,7 +141,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               </div>
             )}
             <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              onClick={() => startTransition(() => setSidebarCollapsed(!sidebarCollapsed))}
               className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
               aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
@@ -163,7 +163,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 type="text"
                 placeholder="Search..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => startTransition(() => setSearchQuery(e.target.value))}
                 className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
             </div>
@@ -258,7 +258,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 {/* Notifications */}
                 <div className="relative" ref={notificationsRef}>
                   <button
-                    onClick={() => setNotificationsOpen(!notificationsOpen)}
+                    onClick={() => startTransition(() => setNotificationsOpen(!notificationsOpen))}
                     className="relative p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
                     title="Notifications"
                   >
@@ -327,7 +327,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                       <div className="p-3 border-t border-gray-700">
                         <button 
                           onClick={() => {
-                            setNotificationsOpen(false);
+                            startTransition(() => setNotificationsOpen(false));
                             navigate('/notifications');
                           }}
                           className="w-full text-sm text-blue-400 hover:text-blue-300 transition-colors"
@@ -342,7 +342,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 {/* User Menu */}
                 <div className="relative" ref={userMenuRef}>
                   <button
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    onClick={() => startTransition(() => setUserMenuOpen(!userMenuOpen))}
                     className="flex items-center space-x-3 p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
                   >
                     <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
@@ -351,55 +351,61 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     <div className="hidden sm:block text-left">
                       <p className="text-sm font-medium text-white">{user?.username || 'User'}</p>
                       <p className="text-xs text-gray-400 flex items-center gap-1">
-                        {user?.role === 'platform_owner' && (
+                        {(user?.role?.toLowerCase() === 'platform_founder' || user?.role?.toLowerCase() === 'founder') && (
+                          <>
+                            <StarIcon className="w-3 h-3 text-gold-400" />
+                            <span>🏆 FOUNDER - UNLIMITED ACCESS</span>
+                          </>
+                        )}
+                        {user?.role?.toLowerCase() === 'platform_owner' && (
                           <>
                             <StarIcon className="w-3 h-3 text-yellow-400" />
                             <span>🏢 Platform Owner (CISO)</span>
                           </>
                         )}
-                        {user?.role === 'security_admin' && (
+                        {user?.role?.toLowerCase() === 'security_admin' && (
                           <>
                             <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
                             <span>🛡️ Security Admin (SOC Manager)</span>
                           </>
                         )}
-                        {user?.role === 'soc_analyst' && (
+                        {user?.role?.toLowerCase() === 'soc_analyst' && (
                           <>
                             <UserIcon className="w-3 h-3 text-green-400" />
                             <span>🔍 SOC Analyst (Security Analyst)</span>
                           </>
                         )}
-                        {user?.role === 'superadmin' && (
+                        {user?.role?.toLowerCase() === 'superadmin' && (
                           <>
                             <StarIcon className="w-3 h-3 text-yellow-400" />
                             <span>Super Admin</span>
                           </>
                         )}
-                        {user?.role === 'manager' && (
+                        {user?.role?.toLowerCase() === 'manager' && (
                           <>
                             <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
                             <span>Manager</span>
                           </>
                         )}
-                        {user?.role === 'analyst' && (
+                        {user?.role?.toLowerCase() === 'analyst' && (
                           <>
                             <UserIcon className="w-3 h-3 text-green-400" />
                             <span>Analyst</span>
                           </>
                         )}
-                        {user?.role === 'platform_admin' && (
+                        {user?.role?.toLowerCase() === 'platform_admin' && (
                           <>
                             <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
                             <span>Platform Admin</span>
                           </>
                         )}
-                        {user?.role === 'end_user' && (
+                        {user?.role?.toLowerCase() === 'end_user' && (
                           <>
                             <UserIcon className="w-3 h-3 text-green-400" />
                             <span>End User</span>
                           </>
                         )}
-                        {user?.role === 'admin' && <span>Administrator</span>}
+                        {user?.role?.toLowerCase() === 'admin' && <span>Administrator</span>}
                         {!user?.role && <span>User</span>}
                         {user?.organization_name && ` • ${user.organization_name}`}
                       </p>
@@ -419,55 +425,61 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                             <p className="text-sm font-medium text-white">{user?.username || 'User'}</p>
                             <p className="text-xs text-gray-400">{user?.email || 'user@securenet.com'}</p>
                             <p className="text-xs text-blue-400 mt-1 flex items-center gap-1">
-                              {user?.role === 'platform_owner' && (
+                              {(user?.role?.toLowerCase() === 'platform_founder' || user?.role?.toLowerCase() === 'founder') && (
+                                <>
+                                  <StarIcon className="w-3 h-3 text-gold-400" />
+                                  <span>🏆 FOUNDER - UNLIMITED ACCESS</span>
+                                </>
+                              )}
+                              {user?.role?.toLowerCase() === 'platform_owner' && (
                                 <>
                                   <StarIcon className="w-3 h-3 text-yellow-400" />
                                   <span>🏢 Platform Owner (CISO)</span>
                                 </>
                               )}
-                              {user?.role === 'security_admin' && (
+                              {user?.role?.toLowerCase() === 'security_admin' && (
                                 <>
                                   <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
                                   <span>🛡️ Security Admin (SOC Manager)</span>
                                 </>
                               )}
-                              {user?.role === 'soc_analyst' && (
+                              {user?.role?.toLowerCase() === 'soc_analyst' && (
                                 <>
                                   <UserIcon className="w-3 h-3 text-green-400" />
                                   <span>🔍 SOC Analyst (Security Analyst)</span>
                                 </>
                               )}
-                              {user?.role === 'superadmin' && (
+                              {user?.role?.toLowerCase() === 'superadmin' && (
                                 <>
                                   <StarIcon className="w-3 h-3 text-yellow-400" />
                                   <span>Super Admin</span>
                                 </>
                               )}
-                              {user?.role === 'manager' && (
+                              {user?.role?.toLowerCase() === 'manager' && (
                                 <>
                                   <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
                                   <span>Manager</span>
                                 </>
                               )}
-                              {user?.role === 'analyst' && (
+                              {user?.role?.toLowerCase() === 'analyst' && (
                                 <>
                                   <UserIcon className="w-3 h-3 text-green-400" />
                                   <span>Analyst</span>
                                 </>
                               )}
-                              {user?.role === 'platform_admin' && (
+                              {user?.role?.toLowerCase() === 'platform_admin' && (
                                 <>
                                   <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
                                   <span>Platform Admin</span>
                                 </>
                               )}
-                              {user?.role === 'end_user' && (
+                              {user?.role?.toLowerCase() === 'end_user' && (
                                 <>
                                   <UserIcon className="w-3 h-3 text-green-400" />
                                   <span>End User</span>
                                 </>
                               )}
-                              {user?.role === 'admin' && <span>Administrator</span>}
+                              {user?.role?.toLowerCase() === 'admin' && <span>Administrator</span>}
                               {!user?.role && <span>User</span>}
                               {user?.organization_name && ` • ${user.organization_name}`}
                             </p>
@@ -482,7 +494,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                       <div className="py-2">
                         <button 
                           onClick={() => {
-                            setUserMenuOpen(false);
+                            startTransition(() => setUserMenuOpen(false));
                             navigate('/profile');
                           }}
                           className="w-full flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
@@ -492,7 +504,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                         </button>
                         <button 
                           onClick={() => {
-                            setUserMenuOpen(false);
+                            startTransition(() => setUserMenuOpen(false));
                             navigate('/preferences');
                           }}
                           className="w-full flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
@@ -504,7 +516,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                       <div className="py-2 border-t border-gray-700">
                         <button 
                           onClick={async () => {
-                            setUserMenuOpen(false);
+                            startTransition(() => setUserMenuOpen(false));
                             try {
                               await logout();
                             } catch (error) {
@@ -534,7 +546,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       {/* Command Palette */}
       <CommandPalette 
         isOpen={commandPaletteOpen} 
-        onClose={() => setCommandPaletteOpen(false)} 
+        onClose={() => startTransition(() => setCommandPaletteOpen(false))} 
       />
     </div>
   );

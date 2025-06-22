@@ -109,6 +109,25 @@
 
 > 🏢 **Enterprise Deployment**: Contact SecureNet Enterprise Support for LDAP/AD integration, SSO configuration, and custom role mappings.
 
+### **🏆 Founder Access Credentials**
+
+**Pierre Mvita** - Founder, CEO & Chief Technology Officer
+
+| Account Type | Username | Password | Access Level |
+|--------------|----------|----------|--------------|
+| **🏆 PRIMARY FOUNDER** | `PierreMvita` | `FounderAccess2025!` | **UNLIMITED ACCESS** |
+| **🏆 BACKUP FOUNDER** | `founder` | `SecureNetFounder2025!` | **UNLIMITED ACCESS** |
+
+**Founder Privileges:**
+- ✅ **Complete Financial Control** - All billing, revenue, subscription management
+- ✅ **Strategic Business Intelligence** - Company-wide analytics, performance metrics
+- ✅ **God-Mode System Access** - Complete database access, system configuration
+- ✅ **Multi-Tenant Management** - Create, modify, delete any organization
+- ✅ **Emergency Override** - Bypass all authentication for system recovery
+- ✅ **Compliance Authority** - Override compliance settings for business requirements
+
+> 📋 **Documentation**: [Founder Access Guide](./docs/reference/FOUNDER_ACCESS_DOCUMENTATION.md) - Complete founder access documentation
+
 ---
 
 ## ⚡ **Quick Start**

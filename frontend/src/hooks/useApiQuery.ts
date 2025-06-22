@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, startTransition } from 'react';
 import type { ApiError } from '../types';
 
 interface QueryOptions<T> {
@@ -49,42 +49,54 @@ export function useApiQuery<T>({
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
-    setIsError(false);
-    setIsSuccess(false);
+    startTransition(() => {
+      setIsLoading(true);
+      setError(null);
+      setIsError(false);
+      setIsSuccess(false);
+    });
 
     try {
       const result = await queryFn();
-      setData(result);
-      setIsSuccess(true);
-      setLastFetchTime(now);
+      startTransition(() => {
+        setData(result);
+        setIsSuccess(true);
+        setLastFetchTime(now);
+      });
       onSuccess?.(result);
     } catch (err) {
       const apiError = err as ApiError;
-      setError(apiError);
-      setIsError(true);
+      startTransition(() => {
+        setError(apiError);
+        setIsError(true);
+      });
       onError?.(apiError);
 
       // Handle retry logic
       if (retry !== false && retryCount < (typeof retry === 'number' ? retry : 1)) {
-        setRetryCount(prev => prev + 1);
+        startTransition(() => {
+          setRetryCount(prev => prev + 1);
+        });
         setTimeout(() => {
           executeQuery();
         }, retryDelay);
       }
     } finally {
-      setIsLoading(false);
+      startTransition(() => {
+        setIsLoading(false);
+      });
     }
   }, [queryFn, enabled, onSuccess, onError, retry, retryCount, retryDelay, lastFetchTime]);
 
   const reset = useCallback(() => {
-    setData(null);
-    setError(null);
-    setIsLoading(false);
-    setIsError(false);
-    setIsSuccess(false);
-    setRetryCount(0);
+    startTransition(() => {
+      setData(null);
+      setError(null);
+      setIsLoading(false);
+      setIsError(false);
+      setIsSuccess(false);
+      setRetryCount(0);
+    });
   }, []);
 
   // Initial fetch

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, startTransition } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { apiClient, initializeApiClient } from '../../../api/client';
 import { useToast } from '../../../components/common/ToastContainer';
@@ -8,7 +8,7 @@ interface User {
   id: string;
   username: string;
   email: string;
-  role: 'platform_owner' | 'security_admin' | 'soc_analyst' | 'superadmin' | 'manager' | 'analyst' | 'platform_admin' | 'end_user' | 'admin' | 'user';
+  role: 'platform_founder' | 'founder' | 'platform_owner' | 'security_admin' | 'soc_analyst' | 'superadmin' | 'manager' | 'analyst' | 'platform_admin' | 'end_user' | 'admin' | 'user';
   last_login: string;
   last_logout?: string;
   login_count?: number;
@@ -78,7 +78,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleAuthError = () => {
     if (!DEV_MODE) {
       localStorage.removeItem('auth_token');
-      setUser(null);
+      startTransition(() => {
+        setUser(null);
+      });
       apiClient.clearApiKey();
       if (!location.pathname.includes('/login')) {
         navigate('/login', { replace: true });
@@ -108,16 +110,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userData = response.data as UserApiResponse;
           console.log('checkAuth: userData parsed', userData);
           
-          setUser({
-            id: userData.id.toString(),
-            username: userData.username,
-            email: userData.email,
-            role: userData.role as User['role'],
-            last_login: userData.last_login || new Date().toISOString(),
-            last_logout: userData.last_logout,
-            login_count: userData.login_count,
-            org_id: userData.org_id,
-            organization_name: userData.organization_name,
+          startTransition(() => {
+            setUser({
+              id: userData.id.toString(),
+              username: userData.username,
+              email: userData.email,
+              role: userData.role as User['role'],
+              last_login: userData.last_login || new Date().toISOString(),
+              last_logout: userData.last_logout,
+              login_count: userData.login_count,
+              org_id: userData.org_id,
+              organization_name: userData.organization_name,
+            });
           });
           console.log('checkAuth: user set successfully');
           
@@ -140,7 +144,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
         }
       }
-      setIsLoading(false);
+      startTransition(() => {
+        setIsLoading(false);
+      });
     };
 
     checkAuth();
@@ -148,7 +154,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string) => {
     try {
-      setIsLoading(true); // Show loading during entire login process
+      startTransition(() => {
+        setIsLoading(true); // Show loading during entire login process
+      });
       
       // Make the login request using the special login method
       const backendResponse = await apiClient.loginRequest(username, password);
@@ -166,7 +174,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('API key initialization failed');
           // Don't proceed with login if API key initialization fails
           localStorage.removeItem('auth_token');
-          setIsLoading(false);
+          startTransition(() => {
+            setIsLoading(false);
+          });
           showToast({
             type: 'error',
             message: 'Failed to initialize API key. Please try logging in again.',
@@ -175,19 +185,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         // Only set user state AFTER API key is successfully initialized
-        setUser({
-          id: user.id.toString(),
-          username: user.username,
-          email: user.email,
-          role: user.role as User['role'],
-          last_login: user.last_login || new Date().toISOString(),
-          last_logout: user.last_logout,
-          login_count: user.login_count,
-          org_id: user.org_id,
-          organization_name: user.organization_name,
+        startTransition(() => {
+          setUser({
+            id: user.id.toString(),
+            username: user.username,
+            email: user.email,
+            role: user.role as User['role'],
+            last_login: user.last_login || new Date().toISOString(),
+            last_logout: user.last_logout,
+            login_count: user.login_count,
+            org_id: user.org_id,
+            organization_name: user.organization_name,
+          });
+          
+          setIsLoading(false);
         });
-        
-        setIsLoading(false);
         
         showToast({
           type: 'success',
@@ -202,7 +214,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Login error:', error);
-      setIsLoading(false);
+      startTransition(() => {
+        setIsLoading(false);
+      });
       showToast({
         type: 'error',
         message: 'Invalid username or password',
@@ -219,7 +233,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       // Clear auth state regardless of dev mode for logout
       localStorage.removeItem('auth_token');
-      setUser(null);
+      startTransition(() => {
+        setUser(null);
+      });
       apiClient.clearApiKey();
       
       // Navigate to login page
