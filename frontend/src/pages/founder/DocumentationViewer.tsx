@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Card } from '../../components/common/Card/Card';
 import { Button } from '../../components/common/Button/Button';
 import { Alert } from '../../components/common/Alert/Alert';
+import { apiClient } from '../../api/client';
 import {
   DocumentTextIcon,
   FolderIcon,
@@ -60,19 +61,8 @@ const DocumentationViewer: React.FC = () => {
     try {
       setLoading(true);
       
-      const response = await fetch('http://127.0.0.1:8000/api/founder/documentation/list', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch documentation list');
-      }
-      
-      const data = await response.json();
-      setDocumentation(data.data);
+      const response = await apiClient.get<DocumentationData>('/api/founder/documentation/list');
+      setDocumentation(response.data);
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -85,19 +75,8 @@ const DocumentationViewer: React.FC = () => {
     try {
       setLoading(true);
       
-      const response = await fetch(`http://127.0.0.1:8000/api/founder/documentation/content?path=${encodeURIComponent(path)}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch document content');
-      }
-      
-      const data = await response.json();
-      setSelectedDocument(data.data);
+      const response = await apiClient.get<DocumentContent>(`/api/founder/documentation/content?path=${encodeURIComponent(path)}`);
+      setSelectedDocument(response.data);
       setIsViewingDocument(true);
       
     } catch (err) {

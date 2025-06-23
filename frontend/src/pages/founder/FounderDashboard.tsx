@@ -345,7 +345,6 @@ export const FounderDashboard: React.FC = () => {
         <div className="flex space-x-1 mb-8 bg-gray-900 rounded-lg p-1">
           {[
             { id: 'overview', label: 'Executive Overview', icon: ChartBarIcon },
-            { id: 'financial', label: 'Financial Command', icon: CurrencyDollarIcon },
             { id: 'operations', label: 'Operations Control', icon: Cog6ToothIcon },
             { id: 'security', label: 'Security Command', icon: ShieldCheckIcon },
             { id: 'intelligence', label: 'Business Intelligence', icon: SparklesIcon },
@@ -528,13 +527,7 @@ export const FounderDashboard: React.FC = () => {
                   <DocumentTextIcon className="w-5 h-5" />
                   Documentation
                 </Button>
-                <Button
-                  onClick={() => window.location.href = '/founder/financial'}
-                  className="bg-gradient-to-br from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 p-4 rounded-lg flex items-center justify-center gap-2"
-                >
-                  <CurrencyDollarIcon className="w-5 h-5" />
-                  Financial Control
-                </Button>
+
                 <Button
                   onClick={() => window.location.href = '/founder/system'}
                   className="bg-gradient-to-br from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 p-4 rounded-lg flex items-center justify-center gap-2"
@@ -554,23 +547,7 @@ export const FounderDashboard: React.FC = () => {
           </div>
         )}
 
-        {selectedTab === 'financial' && (
-          <div className="space-y-6">
-            <div className="bg-gray-900 rounded-lg p-6">
-              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                <CurrencyDollarIconSolid className="w-6 h-6 text-green-400" />
-                Financial Command Center
-              </h2>
-              <p className="text-gray-300 mb-4">Access comprehensive financial controls and revenue management.</p>
-              <Button
-                onClick={() => window.location.href = '/founder/financial'}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Open Financial Control
-              </Button>
-            </div>
-          </div>
-        )}
+
 
         {selectedTab === 'operations' && (
           <div className="space-y-6">
