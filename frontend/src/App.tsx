@@ -35,6 +35,7 @@ const AuditLogs = React.lazy(() => import('./pages/admin/AuditLogs'));
 const FounderDashboard = React.lazy(() => import('./pages/founder/FounderDashboard').then(module => ({ default: module.FounderDashboard })));
 const FinancialControl = React.lazy(() => import('./pages/founder/FinancialControl').then(module => ({ default: module.FinancialControl })));
 const SystemAdministration = React.lazy(() => import('./pages/founder/SystemAdministration').then(module => ({ default: module.SystemAdministration })));
+const EmployeeManagement = React.lazy(() => import('./pages/founder/EmployeeManagement'));
 import LoadingSpinner from './components/LoadingSpinner';
 import {
   ChartBarIcon,
@@ -77,9 +78,9 @@ const AppRoutes: React.FC = () => {
     if (userRole === 'platform_founder' || userRole === 'founder') {
       return [
         ...baseItems,
-        { path: '/founder', label: '🏆 Executive Command Center', icon: 'StarIcon' },
-        { path: '/founder/financial', label: '💰 Financial Control', icon: 'CreditCardIcon' },
-        { path: '/founder/system', label: '⚙️ System Administration', icon: 'Cog6ToothIcon' },
+              { path: '/founder', label: 'Executive Command Center', icon: 'StarIcon' },
+      { path: '/founder/financial', label: 'Financial Control', icon: 'CreditCardIcon' },
+      { path: '/founder/system', label: 'System Administration', icon: 'Cog6ToothIcon' },
         { path: '/admin', label: 'Admin Dashboard', icon: 'StarIcon' },
         { path: '/admin/users', label: 'Users', icon: 'UsersIcon' },
         { path: '/admin/tenants', label: 'Tenants', icon: 'BuildingOfficeIcon' },
@@ -267,6 +268,16 @@ const AppRoutes: React.FC = () => {
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="founder/employee-management"
+                  element={
+                    <ProtectedRoute requiredPermissions={['founder_unlimited_access']}>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <EmployeeManagement />
+                      </Suspense>
+                    </ProtectedRoute>
+                  }
+                />
                 
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
@@ -330,7 +341,12 @@ const App: React.FC = () => {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <ToastProvider>
-            <Router>
+            <Router
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true
+              }}
+            >
               <AuthProvider>
                 <AppRoutes />
               </AuthProvider>

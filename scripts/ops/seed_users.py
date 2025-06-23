@@ -82,8 +82,19 @@ async def create_default_users_postgresql(db):
             password_hash = pwd_context.hash(user_data["password"])
             
             # Import UserRole enum
-            from database.database_postgresql import UserRole
-            role_enum = getattr(UserRole, user_data["role"].upper())
+            from database.models import UserRole
+            
+            # Get the correct enum value
+            if user_data["role"] == "platform_founder":
+                role_enum = UserRole.PLATFORM_FOUNDER
+            elif user_data["role"] == "platform_owner":
+                role_enum = UserRole.PLATFORM_OWNER
+            elif user_data["role"] == "security_admin":
+                role_enum = UserRole.SECURITY_ADMIN
+            elif user_data["role"] == "soc_analyst":
+                role_enum = UserRole.SOC_ANALYST
+            else:
+                role_enum = UserRole.SOC_ANALYST  # default fallback
             
             await db.create_user(
                 username=user_data["username"],

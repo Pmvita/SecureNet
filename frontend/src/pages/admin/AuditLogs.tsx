@@ -42,7 +42,7 @@ const AuditLogs: React.FC = () => {
       setLoading(true);
       setError(null); // Clear previous errors
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`/api/admin/audit-logs?limit=${limit}`, {
+              const response = await fetch(`http://127.0.0.1:8000/api/admin/audit-logs?limit=${limit}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

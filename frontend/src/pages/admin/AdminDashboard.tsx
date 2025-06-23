@@ -47,10 +47,10 @@ const AdminDashboard: React.FC = () => {
       const token = localStorage.getItem('auth_token');
       
       const [statsResponse, billingResponse] = await Promise.all([
-        fetch('/api/admin/system/stats', {
+        fetch('http://127.0.0.1:8000/api/admin/system/stats', {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch('/api/admin/billing/overview', {
+        fetch('http://127.0.0.1:8000/api/admin/billing/overview', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);

@@ -45,6 +45,7 @@ export class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: 'http://127.0.0.1:8000',  // Add base URL for the backend
+      timeout: 10000,  // 10 second timeout
       headers: {
         'Content-Type': 'application/json',
       },
@@ -78,6 +79,12 @@ export class ApiClient {
     // Response interceptor
     this.client.interceptors.response.use(
       (response) => {
+        // Check if response is HTML (error page)
+        if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE')) {
+          console.error('Received HTML response instead of JSON:', response.config.url);
+          throw new ApiError('Server returned HTML instead of JSON', 'INVALID_RESPONSE', 500);
+        }
+        
         // Return the full response for login endpoint
         if (response.config.url === '/api/auth/login') {
           return response;
@@ -86,6 +93,15 @@ export class ApiClient {
         return response;
       },
       (error) => {
+        // Log the full error for debugging
+        console.error('API Request failed:', {
+          url: error.config?.url,
+          method: error.config?.method,
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message
+        });
+        
         if (error.response?.data?.status === 'error') {
           return Promise.reject(new ApiError(
             error.response.data.data,

@@ -4097,10 +4097,12 @@ class Database:
             return False
 
     async def get_all_users_for_admin(self, requesting_user_role: str) -> List[Dict]:
-        """Get all users for admin interface (superadmin only)."""
+        """Get all users for admin interface (platform_owner and founder only)."""
         try:
-            if requesting_user_role != UserRole.PLATFORM_OWNER.value:
-                raise PermissionError("Only platform_owner can view all users")
+            # Allow both platform_owner and platform_founder to view all users
+            allowed_roles = [UserRole.PLATFORM_OWNER.value, UserRole.PLATFORM_FOUNDER.value, "platform_founder", "founder"]
+            if requesting_user_role not in allowed_roles:
+                raise PermissionError("Only platform_owner or platform_founder can view all users")
                 
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.execute("""
@@ -4195,10 +4197,12 @@ class Database:
             raise
 
     async def get_audit_logs(self, requesting_user_role: str, limit: int = 100) -> List[Dict]:
-        """Get audit logs for admin interface (platform_owner only)."""
+        """Get audit logs for admin interface (platform_owner and founder only)."""
         try:
-            if requesting_user_role != UserRole.PLATFORM_OWNER.value:
-                raise PermissionError("Only platform_owner can view audit logs")
+            # Allow both platform_owner and platform_founder to view audit logs
+            allowed_roles = [UserRole.PLATFORM_OWNER.value, UserRole.PLATFORM_FOUNDER.value, "platform_founder", "founder"]
+            if requesting_user_role not in allowed_roles:
+                raise PermissionError("Only platform_owner or platform_founder can view audit logs")
                 
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.execute("""
@@ -4232,10 +4236,12 @@ class Database:
             return []
 
     async def get_all_organizations_for_admin(self, requesting_user_role: str) -> List[Dict]:
-        """Get all organizations for admin interface (platform_owner only)."""
+        """Get all organizations for admin interface (platform_owner and founder only)."""
         try:
-            if requesting_user_role != UserRole.PLATFORM_OWNER.value:
-                raise PermissionError("Only platform_owner can view all organizations")
+            # Allow both platform_owner and platform_founder to view all organizations
+            allowed_roles = [UserRole.PLATFORM_OWNER.value, UserRole.PLATFORM_FOUNDER.value, "platform_founder", "founder"]
+            if requesting_user_role not in allowed_roles:
+                raise PermissionError("Only platform_owner or platform_founder can view all organizations")
                 
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.execute("""

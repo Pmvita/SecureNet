@@ -50,32 +50,32 @@ export function useApiQuery<T>({
     }
 
     startTransition(() => {
-      setIsLoading(true);
-      setError(null);
-      setIsError(false);
-      setIsSuccess(false);
+    setIsLoading(true);
+    setError(null);
+    setIsError(false);
+    setIsSuccess(false);
     });
 
     try {
       const result = await queryFn();
       startTransition(() => {
-        setData(result);
-        setIsSuccess(true);
-        setLastFetchTime(now);
+      setData(result);
+      setIsSuccess(true);
+      setLastFetchTime(now);
       });
       onSuccess?.(result);
     } catch (err) {
       const apiError = err as ApiError;
       startTransition(() => {
-        setError(apiError);
-        setIsError(true);
+      setError(apiError);
+      setIsError(true);
       });
       onError?.(apiError);
 
       // Handle retry logic
       if (retry !== false && retryCount < (typeof retry === 'number' ? retry : 1)) {
         startTransition(() => {
-          setRetryCount(prev => prev + 1);
+        setRetryCount(prev => prev + 1);
         });
         setTimeout(() => {
           executeQuery();
@@ -83,19 +83,19 @@ export function useApiQuery<T>({
       }
     } finally {
       startTransition(() => {
-        setIsLoading(false);
+      setIsLoading(false);
       });
     }
   }, [queryFn, enabled, onSuccess, onError, retry, retryCount, retryDelay, lastFetchTime]);
 
   const reset = useCallback(() => {
     startTransition(() => {
-      setData(null);
-      setError(null);
-      setIsLoading(false);
-      setIsError(false);
-      setIsSuccess(false);
-      setRetryCount(0);
+    setData(null);
+    setError(null);
+    setIsLoading(false);
+    setIsError(false);
+    setIsSuccess(false);
+    setRetryCount(0);
     });
   }, []);
 

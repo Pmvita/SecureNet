@@ -54,6 +54,10 @@ As the founder of SecureNet, Pierre Mvita has **UNLIMITED ACCESS** to all platfo
 
 #### **🏢 Organizational Control**
 - ✅ **Employee Management**: All internal SecureNet team access and permissions
+  - **Complete Team Oversight**: 47 employees across Engineering (18), Sales (12), Customer Success (8), Executive/Corporate (9)
+  - **Department Management**: Budget utilization, performance tracking, access control
+  - **Frontend Interface**: `/founder/employee-management` - Full employee management dashboard
+  - **Team Structure Details**: [Enterprise User Management Guide](./ENTERPRISE_USER_MANAGEMENT.md#internal-securenet-company-users)
 - ✅ **Contractor Oversight**: All contractor and temporary access management
 - ✅ **Partner Management**: Channel partner access, integration partnerships
 - ✅ **Vendor Control**: Third-party service integrations, vendor access management
@@ -93,6 +97,48 @@ As the founder of SecureNet, Pierre Mvita has **UNLIMITED ACCESS** to all platfo
 - **Integration Authority**: Approve and manage all third-party integrations
 - **API Strategy**: Control API access, rate limits, and partnership integrations
 - **Product Roadmap**: Access to all product analytics and customer feedback
+
+### **👥 Internal Team Management**
+**Complete Employee Oversight** - Full control over SecureNet's internal team:
+
+#### **Frontend Employee Management Dashboard**
+- **Access Path**: `/founder/employee-management`
+- **API Endpoint**: `/api/founder/organizational-control/employees`
+- **Real-time Data**: Live employee status, performance metrics, department overview
+
+#### **Team Structure & Analytics**
+- **Engineering Department (18)**: VP Engineering, Senior Developers, DevOps/SRE, Security Engineers, ML/AI Engineers
+- **Sales Department (12)**: VP Sales, Account Executives, Sales Engineers, SDRs, Channel Partners
+- **Customer Success (8)**: Director Customer Success, CSMs, Onboarding Specialists, Support Engineers
+- **Executive/Corporate (9)**: CEO, CTO, VPs, Finance/HR, Legal/Compliance, Operations
+
+#### **Employee Management Capabilities**
+- ✅ **View All Employees**: Complete directory with contact info, positions, departments
+- ✅ **Performance Tracking**: Individual performance scores (4.6-4.9 ratings)
+- ✅ **Status Management**: Active (44), On Leave (2), Pending (1)
+- ✅ **Access Control**: Manage employee permissions and access levels
+- ✅ **Department Analytics**: Budget utilization, performance metrics, open positions
+- ✅ **Compliance Audit**: Access reviews, compliance scoring, finding tracking
+- ✅ **Activity Monitoring**: Recent hires, promotions, status changes
+
+#### **Employee Data Available**
+```json
+{
+  "employee_details": {
+    "name": "Employee Name",
+    "email": "employee@securenet.ai", 
+    "department": "Engineering/Sales/Customer Success",
+    "position": "VP/Director/Senior roles",
+    "status": "active/on_leave/pending",
+    "access_level": "department_admin/standard_user",
+    "last_login": "timestamp",
+    "hire_date": "date",
+    "performance_score": "4.6-4.9 rating"
+  }
+}
+```
+
+> 📋 **Detailed Team Structure**: See [Enterprise User Management - Internal SecureNet Company Users](./ENTERPRISE_USER_MANAGEMENT.md#internal-securenet-company-users) for comprehensive role definitions, responsibilities, and access levels.
 
 ---
 

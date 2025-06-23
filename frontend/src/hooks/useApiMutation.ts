@@ -33,31 +33,31 @@ export function useApiMutation<TData, TVariables>({
 
   const executeMutation = useCallback(async (variables: TVariables): Promise<TData> => {
     startTransition(() => {
-      setIsLoading(true);
-      setError(null);
-      setIsError(false);
-      setIsSuccess(false);
+    setIsLoading(true);
+    setError(null);
+    setIsError(false);
+    setIsSuccess(false);
     });
 
     try {
       const result = await mutationFn(variables);
       startTransition(() => {
-        setData(result);
-        setIsSuccess(true);
+      setData(result);
+      setIsSuccess(true);
       });
       await onSuccess?.(result, variables);
       return result;
     } catch (err) {
       const apiError = err as ApiError;
       startTransition(() => {
-        setError(apiError);
-        setIsError(true);
+      setError(apiError);
+      setIsError(true);
       });
       await onError?.(apiError, variables);
       throw apiError;
     } finally {
       startTransition(() => {
-        setIsLoading(false);
+      setIsLoading(false);
       });
       await onSettled?.(data, error, variables);
     }
@@ -73,11 +73,11 @@ export function useApiMutation<TData, TVariables>({
 
   const reset = useCallback(() => {
     startTransition(() => {
-      setData(null);
-      setError(null);
-      setIsLoading(false);
-      setIsError(false);
-      setIsSuccess(false);
+    setData(null);
+    setError(null);
+    setIsLoading(false);
+    setIsError(false);
+    setIsSuccess(false);
     });
   }, []);
 

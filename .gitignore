@@ -28,6 +28,11 @@ env/
 .env.backup_20250616_190750
 .env.backup_20250616_190750.sh
 
+# Founder access documentation
+FOUNDER_ACCESS_DOCUMENTATION.md
+FOUNDER_IMPLEMENTATION_SUMMARY.md
+
+
 
 # Testing
 .pytest_cache/

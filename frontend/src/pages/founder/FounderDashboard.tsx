@@ -12,6 +12,10 @@ import {
   ClockIcon,
   ServerIcon
 } from '@heroicons/react/24/outline';
+import { motion } from 'framer-motion';
+import { Card } from '../../components/common/Card/Card';
+import { Button } from '../../components/common/Button/Button';
+import { Alert } from '../../components/common/Alert/Alert';
 
 interface BusinessMetrics {
   company_health: {
@@ -35,405 +39,468 @@ interface BusinessMetrics {
   };
 }
 
+interface FounderMetrics {
+  platform_health: {
+    uptime: string;
+    active_users: number;
+    revenue_ytd: string;
+    security_score: number;
+  };
+  business_intelligence: {
+    mrr: string;
+    customer_growth: string;
+    churn_rate: string;
+    customer_satisfaction: number;
+  };
+  operational_control: {
+    active_organizations: number;
+    total_devices_monitored: number;
+    threats_mitigated: number;
+    compliance_score: number;
+  };
+  financial_overview: {
+    revenue_this_month: string;
+    operating_expenses: string;
+    profit_margin: string;
+    cash_flow: string;
+  };
+}
+
+interface OrganizationalControlData {
+  employee_management: {
+    total_employees: number;
+    active_employees: number;
+    on_leave: number;
+    pending_onboarding: number;
+    department_breakdown: Record<string, number>;
+    access_levels: Record<string, number>;
+  };
+  contractor_oversight: {
+    active_contractors: number;
+    contract_types: Record<string, number>;
+    expiring_contracts: Record<string, number>;
+    compliance_status: string;
+  };
+  partner_management: {
+    channel_partners: number;
+    integration_partners: number;
+    revenue_partners: number;
+    api_integrations: number;
+    partner_health_score: number;
+  };
+  vendor_control: {
+    active_vendors: number;
+    third_party_integrations: number;
+    vendor_risk_assessment: string;
+    contract_renewals_due: number;
+    spend_this_quarter: string;
+  };
+  compliance_management: {
+    frameworks: Record<string, any>;
+    compliance_score: number;
+    open_findings: number;
+    remediation_progress: string;
+  };
+  legal_ip_control: {
+    intellectual_property: {
+      patents_filed: number;
+      trademarks: number;
+      copyrights: number;
+    };
+    legal_compliance: {
+      contracts_under_review: number;
+      legal_risk_score: string;
+      pending_agreements: number;
+    };
+    ip_monitoring: {
+      infringement_alerts: number;
+      domain_monitoring: string;
+      brand_protection: string;
+    };
+  };
+}
+
+interface OrganizationalControlCardProps {
+  title: string;
+  description: string;
+  status: string;
+  metrics: Record<string, any>;
+  documentationLink: string;
+  onClick: () => void;
+}
+
+const OrganizationalControlCard: React.FC<OrganizationalControlCardProps> = ({
+  title,
+  description,
+  status,
+  metrics,
+  documentationLink,
+  onClick
+}) => (
+  <motion.div
+    whileHover={{ scale: 1.02 }}
+    className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 cursor-pointer transition-all duration-200"
+    onClick={onClick}
+  >
+    <div className="flex justify-between items-start mb-4">
+      <h4 className="text-lg font-semibold text-gray-900">{title}</h4>
+      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+        {status}
+      </span>
+    </div>
+    <p className="text-gray-600 text-sm mb-4">{description}</p>
+    
+    <div className="grid grid-cols-2 gap-4 mb-4">
+      {Object.entries(metrics).slice(0, 4).map(([key, value]) => (
+        <div key={key} className="text-center">
+          <div className="text-xl font-bold text-blue-600">{value}</div>
+          <div className="text-xs text-gray-500 capitalize">{key.replace('_', ' ')}</div>
+        </div>
+      ))}
+    </div>
+    
+    <div className="flex justify-between items-center">
+      <a 
+        href={documentationLink} 
+        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+        onClick={(e) => e.stopPropagation()}
+      >
+        View Documentation →
+      </a>
+      <Button size="sm" variant="outline">
+        Manage
+      </Button>
+    </div>
+  </motion.div>
+);
+
 export const FounderDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [metrics, setMetrics] = useState<BusinessMetrics | null>(null);
+  const [metrics, setMetrics] = useState<FounderMetrics | null>(null);
+  const [organizationalData, setOrganizationalData] = useState<OrganizationalControlData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch real founder metrics from API
   useEffect(() => {
-    const fetchFounderMetrics = async () => {
+    const fetchData = async () => {
       try {
-        const token = localStorage.getItem('auth_token');
-        const response = await fetch('/api/founder/dashboard/metrics', {
-          method: 'GET',
+        setLoading(true);
+        
+        // Fetch founder dashboard metrics
+        const metricsResponse = await fetch('http://127.0.0.1:8000/api/founder/dashboard/metrics', {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          setMetrics(result.data);
-        } else {
-          console.error('Failed to fetch founder metrics');
-          // Fallback to mock data if API fails
-          setMetrics({
-            company_health: {
-              monthly_recurring_revenue: "$847,350",
-              customer_count: 247,
-              churn_rate: "2.1%",
-              growth_rate: "34%",
-              uptime: "99.97%"
-            },
-            customer_analytics: {
-              enterprise_customers: 42,
-              sme_customers: 205,
-              trial_conversions: "28.5%",
-              support_satisfaction: "4.7/5.0"
-            },
-            technical_metrics: {
-              system_performance: "excellent",
-              security_incidents: 3,
-              feature_adoption: "87%",
-              api_usage: "2.3M calls/month"
-            }
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching founder metrics:', error);
-        // Fallback to mock data
-        setMetrics({
-          company_health: {
-            monthly_recurring_revenue: "$847,350",
-            customer_count: 247,
-            churn_rate: "2.1%",
-            growth_rate: "34%",
-            uptime: "99.97%"
-          },
-          customer_analytics: {
-            enterprise_customers: 42,
-            sme_customers: 205,
-            trial_conversions: "28.5%",
-            support_satisfaction: "4.7/5.0"
-          },
-          technical_metrics: {
-            system_performance: "excellent",
-            security_incidents: 3,
-            feature_adoption: "87%",
-            api_usage: "2.3M calls/month"
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
           }
         });
+        
+        if (!metricsResponse.ok) {
+          throw new Error('Failed to fetch dashboard metrics');
+        }
+        
+        const metricsData = await metricsResponse.json();
+        setMetrics(metricsData.data);
+        
+        // Fetch organizational control data
+        const orgResponse = await fetch('http://127.0.0.1:8000/api/founder/organizational-control/overview', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!orgResponse.ok) {
+          throw new Error('Failed to fetch organizational control data');
+        }
+        
+        const orgData = await orgResponse.json();
+        setOrganizationalData(orgData.data);
+        
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        console.error('Error fetching dashboard data:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchFounderMetrics();
+    fetchData();
   }, []);
+
+  // Function to handle organizational control actions
+  const handleOrganizationalAction = async (action: string, category: string, details: any) => {
+    try {
+      await fetch('http://127.0.0.1:8000/api/founder/organizational-control/audit-log', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action,
+          category,
+          resource_type: 'organizational_control',
+          details,
+          ip_address: 'browser_client',
+          user_agent: navigator.userAgent,
+          compliance_framework: 'SOC2_ISO27001',
+          risk_level: 'low'
+        })
+      });
+    } catch (error) {
+      console.error('Error logging organizational action:', error);
+    }
+  };
+
+  const scrollToOrganizationalControl = () => {
+    document.getElementById('organizational-control')?.scrollIntoView({ 
+      behavior: 'smooth' 
+    });
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold-400 mx-auto"></div>
-          <p className="mt-4 text-gray-300">Loading Executive Command Center...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl text-gray-600">Loading founder dashboard...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Alert type="error" title="Error" message={error} />
+      </div>
+    );
+  }
+
+  if (!metrics || !organizationalData) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Alert type="warning" title="No Data Available" message="Please check your connection and try again." />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Header */}
-      <div className="bg-gradient-to-r from-gold-600 to-yellow-600 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                <span className="text-4xl">🏆</span>
-                Executive Command Center
-              </h1>
-              <p className="text-gold-100 mt-1">
-                Welcome back, {user?.username} - Complete platform control at your fingertips
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gold-100">Access Level</p>
-              <p className="text-lg font-semibold text-white">UNLIMITED</p>
-            </div>
-          </div>
-        </div>
+      <div className="text-center">
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          🏆 Founder Command Center
+        </h1>
+        <p className="text-xl text-gray-600 mb-6">
+          Ultimate platform control and strategic oversight
+        </p>
+        <Button 
+          onClick={scrollToOrganizationalControl}
+          size="lg"
+          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+        >
+          View Organizational Control
+        </Button>
       </div>
 
-      {/* Quick Actions */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <QuickActionCard
-            title="Financial Control"
-            description="Revenue & Billing"
-            icon={CurrencyDollarIcon}
-            color="green"
-            onClick={() => {/* Navigate to financial dashboard */}}
-          />
-          <QuickActionCard
-            title="System Administration"
-            description="God-Mode Access"
-            icon={CogIcon}
-            color="blue"
-            onClick={() => {/* Navigate to system admin */}}
-          />
-          <QuickActionCard
-            title="User Management"
-            description="All Organizations"
-            icon={UserGroupIcon}
-            color="purple"
-            onClick={() => {/* Navigate to user management */}}
-          />
-          <QuickActionCard
-            title="Emergency Controls"
-            description="System Recovery"
-            icon={ExclamationTriangleIcon}
-            color="red"
-            onClick={() => {/* Navigate to emergency controls */}}
-          />
-        </div>
-
-        {/* Business Intelligence Dashboard */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Company Health */}
-          <div className="lg:col-span-2">
-            <div className="bg-gray-900 rounded-lg border border-gray-800 p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <ChartBarIcon className="w-6 h-6 text-blue-400" />
-                Company Health Metrics
-              </h2>
-              <div className="grid grid-cols-2 gap-4">
-                <MetricCard
-                  label="Monthly Recurring Revenue"
-                  value={metrics?.company_health.monthly_recurring_revenue || "N/A"}
-                  trend="+12.5%"
-                  color="green"
-                />
-                <MetricCard
-                  label="Customer Count"
-                  value={metrics?.company_health.customer_count.toString() || "N/A"}
-                  trend="+8.2%"
-                  color="blue"
-                />
-                <MetricCard
-                  label="Churn Rate"
-                  value={metrics?.company_health.churn_rate || "N/A"}
-                  trend="-0.3%"
-                  color="green"
-                />
-                <MetricCard
-                  label="Growth Rate"
-                  value={metrics?.company_health.growth_rate || "N/A"}
-                  trend="+5.1%"
-                  color="green"
-                />
-              </div>
-            </div>
+      {/* Platform Health Metrics */}
+      <Card>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Platform Health & Performance</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="text-center p-4 bg-green-50 rounded-lg">
+            <div className="text-3xl font-bold text-green-600">{metrics.platform_health.uptime}</div>
+            <div className="text-sm text-gray-600">Platform Uptime</div>
           </div>
+          <div className="text-center p-4 bg-blue-50 rounded-lg">
+            <div className="text-3xl font-bold text-blue-600">{metrics.platform_health.active_users.toLocaleString()}</div>
+            <div className="text-sm text-gray-600">Active Users</div>
+          </div>
+          <div className="text-center p-4 bg-purple-50 rounded-lg">
+            <div className="text-3xl font-bold text-purple-600">{metrics.platform_health.revenue_ytd}</div>
+            <div className="text-sm text-gray-600">Revenue YTD</div>
+          </div>
+          <div className="text-center p-4 bg-indigo-50 rounded-lg">
+            <div className="text-3xl font-bold text-indigo-600">{metrics.platform_health.security_score}%</div>
+            <div className="text-sm text-gray-600">Security Score</div>
+          </div>
+        </div>
+      </Card>
 
-          {/* System Status */}
+      {/* Business Intelligence */}
+      <Card>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Business Intelligence</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="text-center p-4 bg-emerald-50 rounded-lg">
+            <div className="text-3xl font-bold text-emerald-600">{metrics.business_intelligence.mrr}</div>
+            <div className="text-sm text-gray-600">Monthly Recurring Revenue</div>
+          </div>
+          <div className="text-center p-4 bg-teal-50 rounded-lg">
+            <div className="text-3xl font-bold text-teal-600">{metrics.business_intelligence.customer_growth}</div>
+            <div className="text-sm text-gray-600">Customer Growth</div>
+          </div>
+          <div className="text-center p-4 bg-cyan-50 rounded-lg">
+            <div className="text-3xl font-bold text-cyan-600">{metrics.business_intelligence.churn_rate}</div>
+            <div className="text-sm text-gray-600">Churn Rate</div>
+          </div>
+          <div className="text-center p-4 bg-sky-50 rounded-lg">
+            <div className="text-3xl font-bold text-sky-600">{metrics.business_intelligence.customer_satisfaction}%</div>
+            <div className="text-sm text-gray-600">Customer Satisfaction</div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Organizational Control Section */}
+      <Card id="organizational-control">
+        <div className="flex justify-between items-center mb-6">
           <div>
-            <div className="bg-gray-900 rounded-lg border border-gray-800 p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <ServerIcon className="w-6 h-6 text-green-400" />
-                System Status
-              </h2>
-              <div className="space-y-4">
-                <StatusIndicator
-                  label="Platform Uptime"
-                  value={metrics?.company_health.uptime || "N/A"}
-                  status="excellent"
-                />
-                <StatusIndicator
-                  label="System Performance"
-                  value={metrics?.technical_metrics.system_performance || "N/A"}
-                  status="excellent"
-                />
-                <StatusIndicator
-                  label="Security Incidents"
-                  value={`${metrics?.technical_metrics.security_incidents || 0} this month`}
-                  status="good"
-                />
-              </div>
-            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Organizational Control</h2>
+            <p className="text-gray-600">
+              Comprehensive control over all organizational aspects. 
+              <a 
+                href="/docs/reference/FOUNDER_ACCESS_DOCUMENTATION.md#organizational-control" 
+                className="text-blue-600 hover:text-blue-800 ml-1"
+              >
+                View Documentation →
+              </a>
+            </p>
           </div>
+          <Button 
+            onClick={() => handleOrganizationalAction('overview_access', 'organizational_control', { section: 'overview' })}
+            variant="outline"
+          >
+            Quick Control
+          </Button>
         </div>
 
-        {/* Customer Analytics */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-gray-900 rounded-lg border border-gray-800 p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <BuildingOfficeIcon className="w-6 h-6 text-purple-400" />
-              Customer Analytics
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              <MetricCard
-                label="Enterprise Customers"
-                value={metrics?.customer_analytics.enterprise_customers.toString() || "N/A"}
-                trend="+15.3%"
-                color="purple"
-              />
-              <MetricCard
-                label="SME Customers"
-                value={metrics?.customer_analytics.sme_customers.toString() || "N/A"}
-                trend="+6.7%"
-                color="blue"
-              />
-              <MetricCard
-                label="Trial Conversions"
-                value={metrics?.customer_analytics.trial_conversions || "N/A"}
-                trend="+2.1%"
-                color="green"
-              />
-              <MetricCard
-                label="Support Satisfaction"
-                value={metrics?.customer_analytics.support_satisfaction || "N/A"}
-                trend="+0.2"
-                color="green"
-              />
-            </div>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Employee Management */}
+          <OrganizationalControlCard
+            title="Employee Management"
+            description="Manage internal SecureNet team access, roles, and permissions across all departments."
+            status="active"
+            metrics={{
+              total_employees: organizationalData.employee_management.total_employees,
+              active_employees: organizationalData.employee_management.active_employees,
+              on_leave: organizationalData.employee_management.on_leave,
+              pending: organizationalData.employee_management.pending_onboarding
+            }}
+            documentationLink="/docs/reference/ENTERPRISE_USER_MANAGEMENT.md#employee-management"
+            onClick={() => {
+              handleOrganizationalAction('employee_management_access', 'employees', { total: organizationalData.employee_management.total_employees });
+              // Navigate to employee management page
+              window.location.href = '/founder/employee-management';
+            }}
+          />
 
-          <div className="bg-gray-900 rounded-lg border border-gray-800 p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <ArrowTrendingUpIcon className="w-6 h-6 text-yellow-400" />
-              Technical Metrics
-            </h2>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-300">Feature Adoption</span>
-                <span className="text-yellow-400 font-semibold">{metrics?.technical_metrics.feature_adoption || "N/A"}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-300">API Usage</span>
-                <span className="text-yellow-400 font-semibold">{metrics?.technical_metrics.api_usage || "N/A"}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-300">Platform Performance</span>
-                <span className="text-green-400 font-semibold capitalize">{metrics?.technical_metrics.system_performance || "N/A"}</span>
-              </div>
-            </div>
+          {/* Contractor Oversight */}
+          <OrganizationalControlCard
+            title="Contractor Oversight"
+            description="Oversee 6-month, 1-year, and 30-90 day contractor agreements and compliance."
+            status="active"
+            metrics={{
+              active_contractors: organizationalData.contractor_oversight.active_contractors,
+              '6_month': organizationalData.contractor_oversight.contract_types['6_month'],
+              '1_year': organizationalData.contractor_oversight.contract_types['1_year'],
+              'short_term': organizationalData.contractor_oversight.contract_types['short_term_30_90']
+            }}
+            documentationLink="/docs/reference/ENTERPRISE_USER_MANAGEMENT.md#contractor-management"
+            onClick={() => {
+              handleOrganizationalAction('contractor_oversight_access', 'contractors', { active: organizationalData.contractor_oversight.active_contractors });
+            }}
+          />
+
+          {/* Partner Management */}
+          <OrganizationalControlCard
+            title="Partner Management"
+            description="Control channel partners, integration partnerships, and revenue sharing agreements."
+            status="active"
+            metrics={{
+              channel_partners: organizationalData.partner_management.channel_partners,
+              integration_partners: organizationalData.partner_management.integration_partners,
+              revenue_partners: organizationalData.partner_management.revenue_partners,
+              health_score: `${organizationalData.partner_management.partner_health_score}/5.0`
+            }}
+            documentationLink="/docs/reference/ENTERPRISE_USER_MANAGEMENT.md#partner-management"
+            onClick={() => {
+              handleOrganizationalAction('partner_management_access', 'partners', { total: organizationalData.partner_management.channel_partners + organizationalData.partner_management.integration_partners });
+            }}
+          />
+
+          {/* Vendor Control */}
+          <OrganizationalControlCard
+            title="Vendor Control"
+            description="Manage third-party vendors, service providers, and external access controls."
+            status="active"
+            metrics={{
+              active_vendors: organizationalData.vendor_control.active_vendors,
+              integrations: organizationalData.vendor_control.third_party_integrations,
+              renewals_due: organizationalData.vendor_control.contract_renewals_due,
+              spend_q: organizationalData.vendor_control.spend_this_quarter
+            }}
+            documentationLink="/docs/reference/ENTERPRISE_USER_MANAGEMENT.md#vendor-management"
+            onClick={() => {
+              handleOrganizationalAction('vendor_control_access', 'vendors', { active: organizationalData.vendor_control.active_vendors });
+            }}
+          />
+
+          {/* Compliance Management */}
+          <OrganizationalControlCard
+            title="Compliance Management"
+            description="SOC 2, ISO 27001, GDPR, HIPAA, and FedRAMP compliance monitoring and reporting."
+            status="active"
+            metrics={{
+              compliance_score: `${organizationalData.compliance_management.compliance_score}%`,
+              frameworks: Object.keys(organizationalData.compliance_management.frameworks).length,
+              open_findings: organizationalData.compliance_management.open_findings,
+              remediation: organizationalData.compliance_management.remediation_progress
+            }}
+            documentationLink="/docs/compliance/COMPLIANCE_FRAMEWORKS.md"
+            onClick={() => {
+              handleOrganizationalAction('compliance_management_access', 'compliance', { score: organizationalData.compliance_management.compliance_score });
+            }}
+          />
+
+          {/* Legal & IP Control */}
+          <OrganizationalControlCard
+            title="Legal & IP Control"
+            description="Intellectual property protection, legal compliance, and contract management."
+            status="active"
+            metrics={{
+              patents: organizationalData.legal_ip_control.intellectual_property.patents_filed,
+              trademarks: organizationalData.legal_ip_control.intellectual_property.trademarks,
+              copyrights: organizationalData.legal_ip_control.intellectual_property.copyrights,
+              contracts: organizationalData.legal_ip_control.legal_compliance.contracts_under_review
+            }}
+            documentationLink="/docs/reference/ENTERPRISE_USER_MANAGEMENT.md#legal-ip-management"
+            onClick={() => {
+              handleOrganizationalAction('legal_ip_control_access', 'legal', { total_ip: organizationalData.legal_ip_control.intellectual_property.patents_filed + organizationalData.legal_ip_control.intellectual_property.trademarks });
+            }}
+          />
+        </div>
+      </Card>
+
+      {/* Financial Overview */}
+      <Card>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Financial Overview</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="text-center p-4 bg-green-50 rounded-lg">
+            <div className="text-3xl font-bold text-green-600">{metrics.financial_overview.revenue_this_month}</div>
+            <div className="text-sm text-gray-600">Revenue This Month</div>
+          </div>
+          <div className="text-center p-4 bg-orange-50 rounded-lg">
+            <div className="text-3xl font-bold text-orange-600">{metrics.financial_overview.operating_expenses}</div>
+            <div className="text-sm text-gray-600">Operating Expenses</div>
+          </div>
+          <div className="text-center p-4 bg-purple-50 rounded-lg">
+            <div className="text-3xl font-bold text-purple-600">{metrics.financial_overview.profit_margin}</div>
+            <div className="text-sm text-gray-600">Profit Margin</div>
+          </div>
+          <div className="text-center p-4 bg-blue-50 rounded-lg">
+            <div className="text-3xl font-bold text-blue-600">{metrics.financial_overview.cash_flow}</div>
+            <div className="text-sm text-gray-600">Cash Flow</div>
           </div>
         </div>
-
-        {/* Founder Privileges */}
-        <div className="bg-gradient-to-r from-gold-900 to-yellow-900 rounded-lg border border-gold-600 p-6">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <ShieldCheckIcon className="w-6 h-6 text-gold-400" />
-            Founder Privileges & Access
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <PrivilegeCard
-              title="Complete Financial Control"
-              description="All billing, revenue, subscription management"
-              active={true}
-            />
-            <PrivilegeCard
-              title="Strategic Business Intelligence"
-              description="Company-wide analytics, performance metrics"
-              active={true}
-            />
-            <PrivilegeCard
-              title="God-Mode System Access"
-              description="Complete database access, system configuration"
-              active={true}
-            />
-            <PrivilegeCard
-              title="Multi-Tenant Management"
-              description="Create, modify, delete any organization"
-              active={true}
-            />
-            <PrivilegeCard
-              title="Emergency Override"
-              description="Bypass all authentication for system recovery"
-              active={true}
-            />
-            <PrivilegeCard
-              title="Compliance Authority"
-              description="Override compliance settings for business requirements"
-              active={true}
-            />
-          </div>
-        </div>
-      </div>
+      </Card>
     </div>
   );
 };
 
-// Helper Components
-interface QuickActionCardProps {
-  title: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
-  onClick: () => void;
-}
-
-const QuickActionCard: React.FC<QuickActionCardProps> = ({ title, description, icon: Icon, color, onClick }) => {
-  const colorClasses = {
-    green: 'bg-green-900 border-green-600 hover:bg-green-800',
-    blue: 'bg-blue-900 border-blue-600 hover:bg-blue-800',
-    purple: 'bg-purple-900 border-purple-600 hover:bg-purple-800',
-    red: 'bg-red-900 border-red-600 hover:bg-red-800'
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      className={`${colorClasses[color as keyof typeof colorClasses]} rounded-lg border p-4 text-left transition-colors hover:scale-105 transform transition-transform`}
-    >
-      <Icon className="w-8 h-8 mb-2 text-white" />
-      <h3 className="font-semibold text-white">{title}</h3>
-      <p className="text-sm text-gray-300">{description}</p>
-    </button>
-  );
-};
-
-interface MetricCardProps {
-  label: string;
-  value: string;
-  trend: string;
-  color: string;
-}
-
-const MetricCard: React.FC<MetricCardProps> = ({ label, value, trend, color }) => {
-  const trendColor = trend.startsWith('+') ? 'text-green-400' : trend.startsWith('-') ? 'text-red-400' : 'text-gray-400';
-  
-  return (
-    <div className="bg-gray-800 rounded-lg p-4">
-      <p className="text-sm text-gray-400 mb-1">{label}</p>
-      <p className="text-xl font-bold text-white">{value}</p>
-      <p className={`text-sm ${trendColor}`}>{trend}</p>
-    </div>
-  );
-};
-
-interface StatusIndicatorProps {
-  label: string;
-  value: string;
-  status: 'excellent' | 'good' | 'warning' | 'critical';
-}
-
-const StatusIndicator: React.FC<StatusIndicatorProps> = ({ label, value, status }) => {
-  const statusColors = {
-    excellent: 'bg-green-500',
-    good: 'bg-blue-500',
-    warning: 'bg-yellow-500',
-    critical: 'bg-red-500'
-  };
-
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-gray-400">{label}</p>
-        <p className="text-white font-semibold">{value}</p>
-      </div>
-      <div className={`w-3 h-3 rounded-full ${statusColors[status]}`}></div>
-    </div>
-  );
-};
-
-interface PrivilegeCardProps {
-  title: string;
-  description: string;
-  active: boolean;
-}
-
-const PrivilegeCard: React.FC<PrivilegeCardProps> = ({ title, description, active }) => {
-  return (
-    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-      <div className="flex items-center gap-2 mb-2">
-        <div className={`w-2 h-2 rounded-full ${active ? 'bg-green-400' : 'bg-red-400'}`}></div>
-        <h3 className="font-semibold text-white">{title}</h3>
-      </div>
-      <p className="text-sm text-gray-300">{description}</p>
-    </div>
-  );
-}; 
+export default FounderDashboard; 

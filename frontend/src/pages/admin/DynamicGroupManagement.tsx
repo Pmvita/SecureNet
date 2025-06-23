@@ -114,7 +114,7 @@ const DynamicGroupManagement: React.FC = () => {
 
   const loadGroups = async () => {
     try {
-      const response = await fetch('/api/admin/groups');
+      const response = await fetch('http://127.0.0.1:8000/api/admin/groups');
       const data = await response.json();
       setGroups(data.groups || []);
       if (data.groups?.length > 0) {
@@ -129,7 +129,7 @@ const DynamicGroupManagement: React.FC = () => {
 
   const loadGroupRules = async (groupId: number) => {
     try {
-      const response = await fetch(`/api/admin/groups/${groupId}/rules`);
+      const response = await fetch(`http://127.0.0.1:8000/api/admin/groups/${groupId}/rules`);
       const data = await response.json();
       setRules(data.rules || []);
     } catch (error) {
@@ -139,7 +139,7 @@ const DynamicGroupManagement: React.FC = () => {
 
   const loadGroupRuleSets = async (groupId: number) => {
     try {
-      const response = await fetch(`/api/admin/groups/${groupId}/rule-sets`);
+      const response = await fetch(`http://127.0.0.1:8000/api/admin/groups/${groupId}/rule-sets`);
       const data = await response.json();
       setRuleSets(data.rule_sets || []);
     } catch (error) {
@@ -151,7 +151,7 @@ const DynamicGroupManagement: React.FC = () => {
     if (!selectedGroup) return;
 
     try {
-      const response = await fetch(`/api/admin/groups/${selectedGroup.id}/rules`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/admin/groups/${selectedGroup.id}/rules`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newRule)
@@ -177,7 +177,7 @@ const DynamicGroupManagement: React.FC = () => {
     if (!selectedGroup) return;
 
     try {
-      const response = await fetch(`/api/admin/groups/${selectedGroup.id}/rule-sets`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/admin/groups/${selectedGroup.id}/rule-sets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newRuleSet)
@@ -202,7 +202,7 @@ const DynamicGroupManagement: React.FC = () => {
 
     setIsEvaluating(true);
     try {
-      const response = await fetch(`/api/admin/groups/${selectedGroup.id}/evaluate`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/admin/groups/${selectedGroup.id}/evaluate`, {
         method: 'POST'
       });
       const data = await response.json();
@@ -216,7 +216,7 @@ const DynamicGroupManagement: React.FC = () => {
 
   const applyRuleChanges = async () => {
     try {
-      const response = await fetch('/api/admin/groups/apply-rules', {
+      const response = await fetch('http://127.0.0.1:8000/api/admin/groups/apply-rules', {
         method: 'POST'
       });
       
@@ -235,7 +235,7 @@ const DynamicGroupManagement: React.FC = () => {
 
   const toggleRule = async (ruleId: number, isActive: boolean) => {
     try {
-      await fetch(`/api/admin/rules/${ruleId}`, {
+      await fetch(`http://127.0.0.1:8000/api/admin/rules/${ruleId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !isActive })
@@ -251,7 +251,7 @@ const DynamicGroupManagement: React.FC = () => {
 
   const deleteRule = async (ruleId: number) => {
     try {
-      await fetch(`/api/admin/rules/${ruleId}`, {
+      await fetch(`http://127.0.0.1:8000/api/admin/rules/${ruleId}`, {
         method: 'DELETE'
       });
       

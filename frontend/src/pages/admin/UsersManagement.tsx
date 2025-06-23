@@ -85,7 +85,7 @@ const UsersManagement: React.FC = () => {
         queryParams.append('role_filter', selectedRole);
       }
       
-      const response = await fetch(`/api/admin/users?${queryParams.toString()}`, {
+              const response = await fetch(`http://127.0.0.1:8000/api/admin/users?${queryParams.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -111,7 +111,7 @@ const UsersManagement: React.FC = () => {
   const fetchOrganizations = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/admin/organizations', {
+              const response = await fetch('http://127.0.0.1:8000/api/admin/organizations', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -128,7 +128,7 @@ const UsersManagement: React.FC = () => {
     try {
       setCreateLoading(true);
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/admin/users', {
+              const response = await fetch('http://127.0.0.1:8000/api/admin/users', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -173,7 +173,7 @@ const UsersManagement: React.FC = () => {
     try {
       setDeleteLoading(true);
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`/api/admin/users/${selectedUser.id}`, {
+              const response = await fetch(`http://127.0.0.1:8000/api/admin/users/${selectedUser.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -205,7 +205,7 @@ const UsersManagement: React.FC = () => {
   const updateUserRole = async (userId: number, role: string) => {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/admin/users/role', {
+              const response = await fetch('http://127.0.0.1:8000/api/admin/users/role', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

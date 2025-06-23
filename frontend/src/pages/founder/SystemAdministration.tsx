@@ -53,7 +53,7 @@ export const SystemAdministration: React.FC = () => {
     const fetchSystemMetrics = async () => {
       try {
         const token = localStorage.getItem('auth_token');
-        const response = await fetch('/api/founder/system/metrics', {
+        const response = await fetch('http://127.0.0.1:8000/api/founder/system/metrics', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

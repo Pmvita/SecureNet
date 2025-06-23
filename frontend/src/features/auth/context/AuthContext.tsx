@@ -79,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!DEV_MODE) {
       localStorage.removeItem('auth_token');
       startTransition(() => {
-        setUser(null);
+      setUser(null);
       });
       apiClient.clearApiKey();
       if (!location.pathname.includes('/login')) {
@@ -111,16 +111,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('checkAuth: userData parsed', userData);
           
           startTransition(() => {
-            setUser({
-              id: userData.id.toString(),
-              username: userData.username,
-              email: userData.email,
-              role: userData.role as User['role'],
-              last_login: userData.last_login || new Date().toISOString(),
-              last_logout: userData.last_logout,
-              login_count: userData.login_count,
-              org_id: userData.org_id,
-              organization_name: userData.organization_name,
+          setUser({
+            id: userData.id.toString(),
+            username: userData.username,
+            email: userData.email,
+            role: userData.role as User['role'],
+            last_login: userData.last_login || new Date().toISOString(),
+            last_logout: userData.last_logout,
+            login_count: userData.login_count,
+            org_id: userData.org_id,
+            organization_name: userData.organization_name,
             });
           });
           console.log('checkAuth: user set successfully');
@@ -145,7 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       startTransition(() => {
-        setIsLoading(false);
+      setIsLoading(false);
       });
     };
 
@@ -155,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username: string, password: string) => {
     try {
       startTransition(() => {
-        setIsLoading(true); // Show loading during entire login process
+      setIsLoading(true); // Show loading during entire login process
       });
       
       // Make the login request using the special login method
@@ -175,7 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Don't proceed with login if API key initialization fails
           localStorage.removeItem('auth_token');
           startTransition(() => {
-            setIsLoading(false);
+          setIsLoading(false);
           });
           showToast({
             type: 'error',
@@ -186,19 +186,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Only set user state AFTER API key is successfully initialized
         startTransition(() => {
-          setUser({
-            id: user.id.toString(),
-            username: user.username,
-            email: user.email,
-            role: user.role as User['role'],
-            last_login: user.last_login || new Date().toISOString(),
-            last_logout: user.last_logout,
-            login_count: user.login_count,
-            org_id: user.org_id,
-            organization_name: user.organization_name,
-          });
-          
-          setIsLoading(false);
+        setUser({
+          id: user.id.toString(),
+          username: user.username,
+          email: user.email,
+          role: user.role as User['role'],
+          last_login: user.last_login || new Date().toISOString(),
+          last_logout: user.last_logout,
+          login_count: user.login_count,
+          org_id: user.org_id,
+          organization_name: user.organization_name,
+        });
+        
+        setIsLoading(false);
         });
         
         showToast({
@@ -215,7 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Login error:', error);
       startTransition(() => {
-        setIsLoading(false);
+      setIsLoading(false);
       });
       showToast({
         type: 'error',
@@ -234,7 +234,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Clear auth state regardless of dev mode for logout
       localStorage.removeItem('auth_token');
       startTransition(() => {
-        setUser(null);
+      setUser(null);
       });
       apiClient.clearApiKey();
       

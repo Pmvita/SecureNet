@@ -142,7 +142,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
             
         except Exception as e:
             logger.error(f"JWT token processing error: {str(e)}")
-            raise HTTPException(status_code=401, detail="Invalid authentication token")
+                raise HTTPException(status_code=401, detail="Invalid authentication token")
         
     except HTTPException:
         raise

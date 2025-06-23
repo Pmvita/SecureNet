@@ -90,7 +90,7 @@ const UserGroupsManagement: React.FC = () => {
     try {
       setLoading(true);
       // Mock API call - replace with actual API
-      const response = await fetch('/api/user-groups?' + new URLSearchParams({
+      const response = await fetch('http://127.0.0.1:8000/api/user-groups?' + new URLSearchParams({
         organization_id: 'default-org',
         ...filters
       }));

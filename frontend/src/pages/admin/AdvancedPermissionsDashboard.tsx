@@ -118,7 +118,7 @@ const AdvancedPermissionsDashboard: React.FC = () => {
 
   const loadRoles = async () => {
     try {
-      const response = await fetch('/api/admin/roles');
+      const response = await fetch('http://127.0.0.1:8000/api/admin/roles');
       const data = await response.json();
       setRoles(data.roles || []);
       if (data.roles?.length > 0) {
@@ -131,7 +131,7 @@ const AdvancedPermissionsDashboard: React.FC = () => {
 
   const loadPermissions = async () => {
     try {
-      const response = await fetch('/api/admin/permissions');
+      const response = await fetch('http://127.0.0.1:8000/api/admin/permissions');
       const data = await response.json();
       setPermissions(data.permissions || []);
     } catch (error) {
@@ -141,7 +141,7 @@ const AdvancedPermissionsDashboard: React.FC = () => {
 
   const loadUsers = async () => {
     try {
-      const response = await fetch('/api/admin/users');
+      const response = await fetch('http://127.0.0.1:8000/api/admin/users');
       const data = await response.json();
       setUsers(data.users || []);
     } catch (error) {
@@ -151,7 +151,7 @@ const AdvancedPermissionsDashboard: React.FC = () => {
 
   const loadPermissionConflicts = async () => {
     try {
-      const response = await fetch('/api/admin/permissions/conflicts');
+      const response = await fetch('http://127.0.0.1:8000/api/admin/permissions/conflicts');
       const data = await response.json();
       setPermissionConflicts(data.conflicts || []);
     } catch (error) {
@@ -161,7 +161,7 @@ const AdvancedPermissionsDashboard: React.FC = () => {
 
   const createRole = async () => {
     try {
-      const response = await fetch('/api/admin/roles', {
+      const response = await fetch('http://127.0.0.1:8000/api/admin/roles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newRole)
@@ -179,7 +179,7 @@ const AdvancedPermissionsDashboard: React.FC = () => {
 
   const createPermission = async () => {
     try {
-      const response = await fetch('/api/admin/permissions', {
+      const response = await fetch('http://127.0.0.1:8000/api/admin/permissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newPermission)
@@ -197,7 +197,7 @@ const AdvancedPermissionsDashboard: React.FC = () => {
 
   const bulkAssignPermissions = async () => {
     try {
-      const response = await fetch('/api/admin/permissions/bulk-assign', {
+      const response = await fetch('http://127.0.0.1:8000/api/admin/permissions/bulk-assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bulkAssignment)
@@ -217,11 +217,11 @@ const AdvancedPermissionsDashboard: React.FC = () => {
   const togglePermissionForRole = async (roleId: number, permissionId: number, currentlyHas: boolean) => {
     try {
       if (currentlyHas) {
-        await fetch(`/api/admin/roles/${roleId}/permissions/${permissionId}`, {
+        await fetch(`http://127.0.0.1:8000/api/admin/roles/${roleId}/permissions/${permissionId}`, {
           method: 'DELETE'
         });
       } else {
-        await fetch(`/api/admin/roles/${roleId}/permissions`, {
+        await fetch(`http://127.0.0.1:8000/api/admin/roles/${roleId}/permissions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ permission_id: permissionId, effect: 'allow' })

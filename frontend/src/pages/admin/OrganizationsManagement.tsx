@@ -48,7 +48,7 @@ const OrganizationsManagement: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/admin/organizations', {
+              const response = await fetch('http://127.0.0.1:8000/api/admin/organizations', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -68,7 +68,7 @@ const OrganizationsManagement: React.FC = () => {
   const handleOrganizationUpdate = async (orgId: string, updateData: any) => {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`/api/admin/organizations/${orgId}`, {
+              const response = await fetch(`http://127.0.0.1:8000/api/admin/organizations/${orgId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

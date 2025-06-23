@@ -48,7 +48,7 @@ export const FinancialControl: React.FC = () => {
     const fetchFinancialData = async () => {
       try {
         const token = localStorage.getItem('auth_token');
-        const response = await fetch('/api/founder/financial/metrics', {
+        const response = await fetch('http://127.0.0.1:8000/api/founder/financial/metrics', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

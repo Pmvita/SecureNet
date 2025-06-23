@@ -32,7 +32,7 @@ export function useRealTimeNotifications() {
   useEffect(() => {
     const key = apiClient.getApiKey();
     startTransition(() => {
-      setApiKey(key);
+    setApiKey(key);
     });
   }, []);
   
@@ -49,11 +49,11 @@ export function useRealTimeNotifications() {
       const notifications = data.notifications || [];
       
       startTransition(() => {
-        setState(prev => ({
-          ...prev,
-          notifications,
-          unreadCount: notifications.filter((n: RealTimeNotification) => !n.read).length,
-        }));
+      setState(prev => ({
+        ...prev,
+        notifications,
+        unreadCount: notifications.filter((n: RealTimeNotification) => !n.read).length,
+      }));
       });
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -73,11 +73,11 @@ export function useRealTimeNotifications() {
       wsRef.current.onopen = () => {
         console.log('Real-time notifications WebSocket connected');
         startTransition(() => {
-          setState(prev => ({
-            ...prev,
-            isConnected: true,
-            connectionError: null,
-          }));
+        setState(prev => ({
+          ...prev,
+          isConnected: true,
+          connectionError: null,
+        }));
         });
         reconnectAttempts.current = 0;
       };
@@ -87,11 +87,11 @@ export function useRealTimeNotifications() {
           const notification: RealTimeNotification = JSON.parse(event.data);
           
           startTransition(() => {
-            setState(prev => ({
-              ...prev,
-              notifications: [notification, ...prev.notifications].slice(0, 100), // Keep last 100
-              unreadCount: prev.unreadCount + (notification.read ? 0 : 1),
-            }));
+          setState(prev => ({
+            ...prev,
+            notifications: [notification, ...prev.notifications].slice(0, 100), // Keep last 100
+            unreadCount: prev.unreadCount + (notification.read ? 0 : 1),
+          }));
           });
 
           // Show browser notification for critical/error notifications
@@ -112,20 +112,20 @@ export function useRealTimeNotifications() {
       wsRef.current.onerror = (error) => {
         console.error('WebSocket error:', error);
         startTransition(() => {
-          setState(prev => ({
-            ...prev,
-            connectionError: 'Connection error',
-          }));
+        setState(prev => ({
+          ...prev,
+          connectionError: 'Connection error',
+        }));
         });
       };
 
       wsRef.current.onclose = (event) => {
         console.log('WebSocket connection closed:', event.code, event.reason);
         startTransition(() => {
-          setState(prev => ({
-            ...prev,
-            isConnected: false,
-          }));
+        setState(prev => ({
+          ...prev,
+          isConnected: false,
+        }));
         });
 
         // Attempt to reconnect if not closed normally
@@ -140,10 +140,10 @@ export function useRealTimeNotifications() {
     } catch (error) {
       console.error('Error creating WebSocket connection:', error);
               startTransition(() => {
-          setState(prev => ({
-            ...prev,
-            connectionError: 'Failed to connect',
-          }));
+      setState(prev => ({
+        ...prev,
+        connectionError: 'Failed to connect',
+      }));
         });
     }
   }, [apiKey]);
@@ -153,13 +153,13 @@ export function useRealTimeNotifications() {
     try {
       await apiClient.post(`/api/notifications/${notificationId}/read`);
       startTransition(() => {
-        setState(prev => ({
-          ...prev,
-          notifications: prev.notifications.map(n =>
-            n.id === notificationId ? { ...n, read: true } : n
-          ),
-          unreadCount: Math.max(0, prev.unreadCount - 1),
-        }));
+      setState(prev => ({
+        ...prev,
+        notifications: prev.notifications.map(n =>
+          n.id === notificationId ? { ...n, read: true } : n
+        ),
+        unreadCount: Math.max(0, prev.unreadCount - 1),
+      }));
       });
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -171,11 +171,11 @@ export function useRealTimeNotifications() {
     try {
       await apiClient.post('/api/notifications/read-all');
       startTransition(() => {
-        setState(prev => ({
-          ...prev,
-          notifications: prev.notifications.map(n => ({ ...n, read: true })),
-          unreadCount: 0,
-        }));
+      setState(prev => ({
+        ...prev,
+        notifications: prev.notifications.map(n => ({ ...n, read: true })),
+        unreadCount: 0,
+      }));
       });
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
@@ -187,13 +187,13 @@ export function useRealTimeNotifications() {
     try {
       await apiClient.delete(`/api/notifications/${notificationId}`);
       startTransition(() => {
-        setState(prev => {
-          const notification = prev.notifications.find(n => n.id === notificationId);
-          return {
-            ...prev,
-            notifications: prev.notifications.filter(n => n.id !== notificationId),
-            unreadCount: notification && !notification.read ? prev.unreadCount - 1 : prev.unreadCount,
-          };
+      setState(prev => {
+        const notification = prev.notifications.find(n => n.id === notificationId);
+        return {
+          ...prev,
+          notifications: prev.notifications.filter(n => n.id !== notificationId),
+          unreadCount: notification && !notification.read ? prev.unreadCount - 1 : prev.unreadCount,
+        };
         });
       });
     } catch (error) {
