@@ -2192,112 +2192,128 @@ async def get_documentation_list(current_user: Dict[str, Any] = Depends(get_curr
         if current_user.get("role", "").lower() not in ["platform_founder", "founder"]:
             raise HTTPException(status_code=403, detail="Founder access required")
         
-        # Documentation structure - organized by category
-        documentation = {
-            "quick_start": [
-                {
-                    "title": "Installation Guide",
-                    "path": "docs/installation/INSTALLATION.md",
-                    "description": "Complete setup instructions for backend + frontend",
-                    "category": "Setup"
-                },
-                {
-                    "title": "Startup Guide",
-                    "path": "docs/setup/STARTUP_GUIDE.md",
-                    "description": "Complete instructions for both original and enhanced versions",
-                    "category": "Setup"
-                },
-                {
-                    "title": "Production Quick Reference",
-                    "path": "docs/setup/PRODUCTION_QUICK_REFERENCE.md",
-                    "description": "Fast production deployment commands",
-                    "category": "Setup"
+        import os
+        import glob
+        
+        # Function to scan all documentation files
+        def scan_documentation_directory():
+            docs_root = os.path.join(os.getcwd(), "docs")
+            documentation = {}
+            
+            # Category mapping for better organization
+            category_mapping = {
+                "setup": "Setup & Installation",
+                "installation": "Setup & Installation", 
+                "reference": "Reference",
+                "project": "Project Management",
+                "enterprise": "Enterprise",
+                "api": "API & Technical",
+                "architecture": "API & Technical",
+                "features": "API & Technical",
+                "auth": "API & Technical",
+                "di": "API & Technical",
+                "ml": "API & Technical",
+                "tasks": "API & Technical",
+                "audit": "Compliance & Security",
+                "compliance": "Compliance & Security",
+                "certification": "Compliance & Security",
+                "deployment": "Operations",
+                "monitoring": "Operations",
+                "infrastructure": "Operations",
+                "system": "Operations",
+                "integration": "Operations",
+                "migration": "Operations",
+                "release": "Operations",
+                "testing": "Development",
+                "contributing": "Development",
+                "support": "User Guide",
+                "user": "User Guide",
+                "training": "User Guide"
+            }
+            
+            # Get all markdown files recursively
+            md_files = glob.glob(os.path.join(docs_root, "**", "*.md"), recursive=True)
+            
+            for file_path in md_files:
+                # Skip if file doesn't exist or is not readable
+                if not os.path.exists(file_path):
+                    continue
+                    
+                # Get relative path from docs root
+                rel_path = os.path.relpath(file_path, os.getcwd())
+                
+                # Extract directory name for categorization
+                path_parts = rel_path.split(os.sep)
+                if len(path_parts) < 2:
+                    continue
+                    
+                folder_name = path_parts[1]  # docs/folder_name/file.md
+                file_name = os.path.basename(file_path)
+                
+                # Skip certain files
+                if file_name.lower() in ["readme.md"] and folder_name != "docs":
+                    continue
+                
+                # Determine category
+                category_key = category_mapping.get(folder_name.lower(), "Other Documentation")
+                
+                # Read first few lines to get description
+                description = "Documentation file"
+                try:
+                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read(500)  # Read first 500 chars
+                        lines = content.split('\n')
+                        
+                        # Try to extract description from content
+                        for line in lines[1:6]:  # Skip title, check next few lines
+                            line = line.strip()
+                            if line and not line.startswith('#') and not line.startswith('=') and len(line) > 20:
+                                description = line[:100] + ("..." if len(line) > 100 else "")
+                                break
+                except Exception:
+                    pass
+                
+                # Generate title from filename
+                title = file_name.replace('.md', '').replace('_', ' ').replace('-', ' ').title()
+                
+                # Special handling for certain files
+                if file_name.upper() == "README.MD":
+                    title = f"{folder_name.title()} Overview"
+                elif "SUMMARY" in file_name.upper():
+                    title = file_name.replace('.md', '').replace('_', ' ').title()
+                elif "GUIDE" in file_name.upper():
+                    title = file_name.replace('.md', '').replace('_', ' ').title()
+                
+                # Mark certain documents as confidential
+                confidential = any(keyword in file_name.upper() for keyword in [
+                    "FOUNDER", "ROADMAP", "SPRINT", "FINANCIAL", "PRIVATE", "CONFIDENTIAL", "INTERNAL"
+                ])
+                
+                # Add to documentation structure
+                if category_key not in documentation:
+                    documentation[category_key] = []
+                
+                doc_item = {
+                    "title": title,
+                    "path": rel_path.replace(os.sep, '/'),  # Use forward slashes for URLs
+                    "description": description,
+                    "category": category_key,
+                    "folder": folder_name
                 }
-            ],
-            "enterprise": [
-                {
-                    "title": "Enterprise User Management",
-                    "path": "docs/reference/ENTERPRISE_USER_MANAGEMENT.md",
-                    "description": "Complete user groups, account expiration, and access control guide",
-                    "category": "Enterprise"
-                },
-                {
-                    "title": "Founder Access Documentation",
-                    "path": "docs/reference/FOUNDER_ACCESS_DOCUMENTATION.md",
-                    "description": "Complete founder access privileges and implementation",
-                    "category": "Enterprise",
-                    "confidential": True
-                },
-                {
-                    "title": "Enterprise Certification",
-                    "path": "docs/certification/ENTERPRISE_CERTIFICATION.md",
-                    "description": "Official certification document",
-                    "category": "Enterprise"
-                }
-            ],
-            "project_management": [
-                {
-                    "title": "Production Launch Roadmap",
-                    "path": "docs/project/PRODUCTION_LAUNCH_ROADMAP.md",
-                    "description": "Strategic implementation plan and milestones",
-                    "category": "Project Management",
-                    "confidential": True
-                },
-                {
-                    "title": "Sprint Planning Guide",
-                    "path": "docs/project/SPRINT_PLANNING.md",
-                    "description": "Daily implementation tasks and sprint management",
-                    "category": "Project Management",
-                    "confidential": True
-                },
-                {
-                    "title": "Project Summary",
-                    "path": "docs/project/PROJECT-SUMMARY.md",
-                    "description": "Comprehensive project overview and architecture",
-                    "category": "Project Management"
-                }
-            ],
-            "technical": [
-                {
-                    "title": "API Reference",
-                    "path": "docs/api/API-Reference.md",
-                    "description": "REST endpoints, WebSocket connections, authentication",
-                    "category": "Technical"
-                },
-                {
-                    "title": "Frontend Architecture",
-                    "path": "docs/architecture/FRONTEND-ARCHITECTURE.md",
-                    "description": "Component structure, design system, technical details",
-                    "category": "Technical"
-                },
-                {
-                    "title": "Enhanced Features",
-                    "path": "docs/reference/ENHANCED_FEATURES.md",
-                    "description": "Feature comparison and enhanced capabilities reference",
-                    "category": "Technical"
-                }
-            ],
-            "compliance": [
-                {
-                    "title": "Compliance Frameworks",
-                    "path": "docs/compliance/COMPLIANCE_FRAMEWORKS.md",
-                    "description": "SOC 2, ISO 27001, GDPR compliance",
-                    "category": "Compliance"
-                },
-                {
-                    "title": "Security Hardening",
-                    "path": "docs/compliance/security-hardening.md",
-                    "description": "Enterprise security controls",
-                    "category": "Compliance"
-                },
-                {
-                    "title": "Final Audit Report",
-                    "path": "docs/audit/FINAL_AUDIT_REPORT.md",
-                    "description": "Complete audit results and validation",
-                    "category": "Compliance"
-                }
-            ]
-        }
+                
+                if confidential:
+                    doc_item["confidential"] = True
+                    
+                documentation[category_key].append(doc_item)
+            
+            # Sort documents within each category
+            for category in documentation:
+                documentation[category].sort(key=lambda x: x["title"])
+            
+            return documentation
+        
+        # Scan all documentation
+        documentation = scan_documentation_directory()
         
         # Count total documents
         total_docs = sum(len(category) for category in documentation.values())
