@@ -15,7 +15,7 @@
 
 ## 📊 Dashboard Overview
 
-![Dashboard](screenshots/dashboard.png)
+![Dashboard](../screenshots/dashboard.png)
 *Comprehensive Security Operations Center (SOC) dashboard featuring:*
 
 #### Real-time Security Metrics
@@ -37,7 +37,7 @@
 
 ## 📝 Log Management
 
-![Log Management](screenshots/log.png)
+![Log Management](../screenshots/log.png)
 *Professional log management system (ELK Stack/Splunk style) featuring:*
 
 #### Real-time Log Streaming
@@ -64,7 +64,7 @@
 
 ## 🔒 Security Management
 
-![Security](screenshots/security.png)
+![Security](../screenshots/security.png)
 *Enhanced security management center featuring:*
 
 #### Real-time Security Scanning
@@ -86,7 +86,7 @@
 
 ## 🌐 Network Monitoring
 
-![Network Monitoring](screenshots/Network-monitoring.png)
+![Network Monitoring](../screenshots/Network-monitoring.png)
 *Comprehensive network monitoring center featuring:*
 
 #### Live Network Traffic Monitoring (Wireshark-style)
@@ -114,7 +114,7 @@
 
 ## 🚨 Anomaly Detection
 
-![Anomaly Analysis](screenshots/anomaly-detection.png)
+![Anomaly Analysis](../screenshots/anomaly-detection.png)
 *Advanced anomaly detection featuring:*
 
 #### ML-Powered Insights
@@ -134,7 +134,7 @@
 
 ## ⚙️ Settings & Configuration
 
-![Settings](screenshots/settings.png)
+![Settings](../screenshots/settings.png)
 *Configuration management interface featuring:*
 
 #### System Configuration
@@ -163,7 +163,7 @@
 
 ## ⭐️ Executive Command Center
 
-![Executive Command Center](screenshots/executive-command-center.png)
+![Executive Command Center](../screenshots/executive-command-center.png)
 *Executive command center interface featuring:*
 
 #### Comprehensive Dashboard
@@ -177,7 +177,7 @@
 
 ## 💰 Financial Command & Control
 
-![Financial Command Center](screenshots/financial-command-center.png)
+![Financial Command Center](../screenshots/financial-command-center.png)
 *Financial command center interface featuring:*
 
 #### Comprehensive Dashboard
@@ -191,7 +191,7 @@
 
 ## 👤 System Administration
 
-![System Administration](screenshots/system-administration.png)
+![System Administration](../screenshots/system-administration.png)
 *System administration interface featuring:*
 
 #### Comprehensive Dashboard
@@ -203,7 +203,7 @@
 
 ## ⭐️ Admin Dashboard
 
-![Admin Dashboard](screenshots/admin-dashboard.png)
+![Admin Dashboard](../screenshots/admin-dashboard.png)
 *Admin dashboard interface featuring:*
 
 #### Comprehensive Dashboard
@@ -218,7 +218,7 @@
 
 ## 👥 User Management
 
-![User Management](screenshots/user-management.png)
+![User Management](../screenshots/user-management.png)
 *User management interface featuring:*
 
 #### User Management
@@ -231,7 +231,7 @@
 
 ## 🏢 Tenant Management
 
-![Tenant Management](screenshots/tenant-management.png)
+![Tenant Management](../screenshots/tenant-management.png)
 *Tenant management interface featuring:*
 
 #### Tenant Management
@@ -244,7 +244,7 @@
 
 ## 💳 Billing Management
 
-![Billing](screenshots/billing.png)
+![Billing](../screenshots/billing.png)
 *Billing management interface featuring:*
 
 #### Billing Management
@@ -256,7 +256,7 @@
 
 ## 🗒️ Audit Logs
 
-![Audit Logs](screenshots/audit-logs.png)
+![Audit Logs](../screenshots/audit-logs.png)
 *Audit logs management interface featuring:*
 
 #### Audit Logs
@@ -269,7 +269,7 @@
 
 ## 👤 Profile Settings
 
-![Profile](screenshots/profile-settings.png)
+![Profile](../screenshots/profile-settings.png)
 *Profile management interface featuring:*
 
 #### User Management
@@ -282,7 +282,7 @@
 
 ## ⚙️ Preferences
 
-![Preferences](screenshots/Preferences.png)
+![Preferences](../screenshots/Preferences.png)
 *Preferences management interface featuring:*
 
 #### User Preferences
