@@ -175,10 +175,24 @@
 
 ---
 
-## ⭐️ Admin Dashboard
+## 💰 Financial Command & Control
 
-![Admin Dashboard](screenshots/admin-dashboard.png)
-*Admin dashboard interface featuring:*
+![Financial Command Center](screenshots/financial-command-center.png)
+*Financial command center interface featuring:*
+
+#### Comprehensive Dashboard
+- **Revenue Breakdown**
+- **SecuCustomer Metrics**
+- **Billing & Collections**
+- **Revenue Forecasting**
+- **Founder Financial Controls**
+
+---
+
+## 👤 System Administration
+
+![System Administration](screenshots/system-administration.png)
+*System administration interface featuring:*
 
 #### Comprehensive Dashboard
 - **Real-time system status** with live updates
@@ -186,6 +200,19 @@
 - **Network topology visualization** with device health monitoring
 - **Real-time data updates** via WebSocket connections
 - **User management** and role-based access control
+
+## ⭐️ Admin Dashboard
+
+![Admin Dashboard](screenshots/admin-dashboard.png)
+*Admin dashboard interface featuring:*
+
+#### Comprehensive Dashboard
+- **System Overview**
+- **Infrastructure Monitoring**
+- **Database Management**
+- **Security Administration**
+- **User Management**
+- **Emergency Controls**
 
 ---
 
