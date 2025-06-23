@@ -64,7 +64,7 @@ export function SettingsPage() {
 
   // Initialize form values
   React.useEffect(() => {
-    if (settings) {
+    if (settings && Object.keys(formValues).length === 0) {
       const initialValues: Record<string, any> = {};
       
       // Flatten settings structure
@@ -78,7 +78,7 @@ export function SettingsPage() {
       
       setFormValues(initialValues);
     }
-  }, [settings]);
+  }, [settings, formValues]);
 
   // Check for authentication
   if (isAuthLoading) {

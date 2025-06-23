@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { apiClient } from '../../../api/client';
 import type { ApiResponse, ApiEndpoints } from '../../../api/endpoints';
 
@@ -118,7 +119,7 @@ export function useSettings() {
     },
   });
 
-  const settings = settingsData?.data ?? {
+  const defaultSettings = useMemo(() => ({
     system: {
       app_name: 'SecureNet',
       theme: 'dark',
@@ -157,7 +158,9 @@ export function useSettings() {
       retention_days: 30,
       audit_enabled: true,
     },
-  };
+  }), []);
+
+  const settings = settingsData?.data ?? defaultSettings;
 
   return {
     settings,
