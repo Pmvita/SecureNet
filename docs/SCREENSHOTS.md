@@ -161,6 +161,20 @@
 
 ---
 
+## ⭐️ Executive Command Center
+
+![Executive Command Center](screenshots/executive-command-center.png)
+*Executive command center interface featuring:*
+
+#### Comprehensive Dashboard
+- **Real-time system status** with live updates
+- **Security score tracking** with trend analysis
+- **Network topology visualization** with device health monitoring
+- **Real-time data updates** via WebSocket connections
+- **User management** and role-based access control
+
+---
+
 ## ⭐️ Admin Dashboard
 
 ![Admin Dashboard](screenshots/admin-dashboard.png)
