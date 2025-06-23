@@ -112,6 +112,26 @@
 
 ---
 
+## 🚨 Anomaly Detection
+
+![Anomaly Analysis](screenshots/anomaly-detection.png)
+*Advanced anomaly detection featuring:*
+
+#### ML-Powered Insights
+- **Interactive timeline charts** for anomaly visualization
+- **Severity distribution analysis** with color-coding
+- **Real-time anomaly updates** via WebSocket
+- **Advanced filtering and search** capabilities
+- **Detailed anomaly inspection** with ML insights
+
+#### Professional Analysis Tools
+- **Trend analysis and statistics** for pattern recognition
+- **Export capabilities** for further analysis
+- **False positive management** and resolution workflows
+- **Anomaly correlation** with security events
+
+---
+
 ## ⚙️ Settings & Configuration
 
 ![Settings](screenshots/settings.png)
@@ -228,26 +248,6 @@
 - **User interface customization** with theme selection
 - **Notification settings** and preferences
 - **Language support** and localization
-
----
-
-## 🚨 Anomaly Detection
-
-### Anomaly Analysis Interface
-*Advanced anomaly detection featuring:*
-
-#### ML-Powered Insights
-- **Interactive timeline charts** for anomaly visualization
-- **Severity distribution analysis** with color-coding
-- **Real-time anomaly updates** via WebSocket
-- **Advanced filtering and search** capabilities
-- **Detailed anomaly inspection** with ML insights
-
-#### Professional Analysis Tools
-- **Trend analysis and statistics** for pattern recognition
-- **Export capabilities** for further analysis
-- **False positive management** and resolution workflows
-- **Anomaly correlation** with security events
 
 ---
 
