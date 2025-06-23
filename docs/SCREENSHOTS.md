@@ -4,7 +4,7 @@
 
 ## 🔐 Authentication
 
-![Login](screenshots/login.png)
+![Login](../screenshots/login.png)
 *Secure login interface with:*
 - Username and password authentication
 - Clean, professional design
