@@ -234,7 +234,7 @@ def setup_middleware():
     # CORS (configured for production)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,https://app.securenet.ai").split(","),
+        allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,https://app.securenet.ai").split(","),
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
         allow_headers=["*"],
@@ -2058,6 +2058,326 @@ async def log_organizational_action(
     except Exception as e:
         logger.error(f"Error logging organizational action: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to log organizational action")
+
+# ===== EMPLOYEE MANAGEMENT API ENDPOINTS =====
+
+@app.post("/api/founder/organizational-control/employees")
+async def create_employee(
+    employee_data: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Create a new employee in the organization."""
+    try:
+        # Verify founder access
+        if current_user.get("role", "").lower() not in ["platform_founder", "founder"]:
+            raise HTTPException(status_code=403, detail="Founder access required")
+        
+        # Validate required fields
+        required_fields = ["name", "email", "department", "position", "access_level", "hire_date"]
+        for field in required_fields:
+            if field not in employee_data:
+                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+        
+        # Generate employee ID
+        employee_id = f"emp_{uuid.uuid4().hex[:8]}"
+        
+        # Create employee record (in production, this would be stored in database)
+        new_employee = {
+            "id": employee_id,
+            "name": employee_data["name"],
+            "email": employee_data["email"],
+            "department": employee_data["department"],
+            "position": employee_data["position"],
+            "status": employee_data.get("status", "pending"),
+            "access_level": employee_data["access_level"],
+            "hire_date": employee_data["hire_date"],
+            "last_login": "Never",
+            "performance_score": 0,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": current_user.get("username")
+        }
+        
+        # Log the creation action
+        logger.info(f"🏆 FOUNDER EMPLOYEE CREATION: {current_user.get('username')} created employee {new_employee['name']} ({new_employee['email']}) in {new_employee['department']}")
+        
+        return {
+            "status": "success",
+            "data": {
+                "employee": new_employee,
+                "message": f"Employee {new_employee['name']} created successfully"
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating employee: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create employee")
+
+@app.put("/api/founder/organizational-control/employees/{employee_id}")
+async def update_employee(
+    employee_id: str,
+    employee_data: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Update an existing employee."""
+    try:
+        # Verify founder access
+        if current_user.get("role", "").lower() not in ["platform_founder", "founder"]:
+            raise HTTPException(status_code=403, detail="Founder access required")
+        
+        # Create updated employee record (in production, this would update database)
+        updated_employee = {
+            "id": employee_id,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_by": current_user.get("username"),
+            **employee_data
+        }
+        
+        logger.info(f"🏆 FOUNDER EMPLOYEE UPDATE: {current_user.get('username')} updated employee {employee_id}")
+        
+        return {
+            "status": "success",
+            "data": {
+                "employee": updated_employee,
+                "message": "Employee updated successfully"
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating employee: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update employee")
+
+@app.delete("/api/founder/organizational-control/employees/{employee_id}")
+async def delete_employee(
+    employee_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Delete an employee (soft delete with audit trail)."""
+    try:
+        # Verify founder access
+        if current_user.get("role", "").lower() not in ["platform_founder", "founder"]:
+            raise HTTPException(status_code=403, detail="Founder access required")
+        
+        # In production, this would soft delete the employee in database
+        logger.info(f"🏆 FOUNDER EMPLOYEE DELETION: {current_user.get('username')} deleted employee {employee_id}")
+        
+        return {
+            "status": "success",
+            "data": {
+                "message": f"Employee {employee_id} deleted successfully",
+                "deleted_at": datetime.now(timezone.utc).isoformat(),
+                "deleted_by": current_user.get("username")
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting employee: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete employee")
+
+# ===== DOCUMENTATION ACCESS API ENDPOINTS =====
+
+@app.get("/api/founder/documentation/list")
+async def get_documentation_list(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get list of all available documentation for founder access."""
+    try:
+        # Verify founder access
+        if current_user.get("role", "").lower() not in ["platform_founder", "founder"]:
+            raise HTTPException(status_code=403, detail="Founder access required")
+        
+        # Documentation structure - organized by category
+        documentation = {
+            "quick_start": [
+                {
+                    "title": "Installation Guide",
+                    "path": "docs/installation/INSTALLATION.md",
+                    "description": "Complete setup instructions for backend + frontend",
+                    "category": "Setup"
+                },
+                {
+                    "title": "Startup Guide",
+                    "path": "docs/setup/STARTUP_GUIDE.md",
+                    "description": "Complete instructions for both original and enhanced versions",
+                    "category": "Setup"
+                },
+                {
+                    "title": "Production Quick Reference",
+                    "path": "docs/setup/PRODUCTION_QUICK_REFERENCE.md",
+                    "description": "Fast production deployment commands",
+                    "category": "Setup"
+                }
+            ],
+            "enterprise": [
+                {
+                    "title": "Enterprise User Management",
+                    "path": "docs/reference/ENTERPRISE_USER_MANAGEMENT.md",
+                    "description": "Complete user groups, account expiration, and access control guide",
+                    "category": "Enterprise"
+                },
+                {
+                    "title": "Founder Access Documentation",
+                    "path": "docs/reference/FOUNDER_ACCESS_DOCUMENTATION.md",
+                    "description": "Complete founder access privileges and implementation",
+                    "category": "Enterprise",
+                    "confidential": True
+                },
+                {
+                    "title": "Enterprise Certification",
+                    "path": "docs/certification/ENTERPRISE_CERTIFICATION.md",
+                    "description": "Official certification document",
+                    "category": "Enterprise"
+                }
+            ],
+            "project_management": [
+                {
+                    "title": "Production Launch Roadmap",
+                    "path": "docs/project/PRODUCTION_LAUNCH_ROADMAP.md",
+                    "description": "Strategic implementation plan and milestones",
+                    "category": "Project Management",
+                    "confidential": True
+                },
+                {
+                    "title": "Sprint Planning Guide",
+                    "path": "docs/project/SPRINT_PLANNING.md",
+                    "description": "Daily implementation tasks and sprint management",
+                    "category": "Project Management",
+                    "confidential": True
+                },
+                {
+                    "title": "Project Summary",
+                    "path": "docs/project/PROJECT-SUMMARY.md",
+                    "description": "Comprehensive project overview and architecture",
+                    "category": "Project Management"
+                }
+            ],
+            "technical": [
+                {
+                    "title": "API Reference",
+                    "path": "docs/api/API-Reference.md",
+                    "description": "REST endpoints, WebSocket connections, authentication",
+                    "category": "Technical"
+                },
+                {
+                    "title": "Frontend Architecture",
+                    "path": "docs/architecture/FRONTEND-ARCHITECTURE.md",
+                    "description": "Component structure, design system, technical details",
+                    "category": "Technical"
+                },
+                {
+                    "title": "Enhanced Features",
+                    "path": "docs/reference/ENHANCED_FEATURES.md",
+                    "description": "Feature comparison and enhanced capabilities reference",
+                    "category": "Technical"
+                }
+            ],
+            "compliance": [
+                {
+                    "title": "Compliance Frameworks",
+                    "path": "docs/compliance/COMPLIANCE_FRAMEWORKS.md",
+                    "description": "SOC 2, ISO 27001, GDPR compliance",
+                    "category": "Compliance"
+                },
+                {
+                    "title": "Security Hardening",
+                    "path": "docs/compliance/security-hardening.md",
+                    "description": "Enterprise security controls",
+                    "category": "Compliance"
+                },
+                {
+                    "title": "Final Audit Report",
+                    "path": "docs/audit/FINAL_AUDIT_REPORT.md",
+                    "description": "Complete audit results and validation",
+                    "category": "Compliance"
+                }
+            ]
+        }
+        
+        # Count total documents
+        total_docs = sum(len(category) for category in documentation.values())
+        
+        logger.info(f"🏆 FOUNDER DOCUMENTATION ACCESS: {current_user.get('username')} accessed documentation list ({total_docs} documents)")
+        
+        return {
+            "status": "success",
+            "data": {
+                "documentation": documentation,
+                "total_documents": total_docs,
+                "categories": list(documentation.keys()),
+                "access_level": "founder_unlimited"
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching documentation list: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch documentation list")
+
+@app.get("/api/founder/documentation/content")
+async def get_documentation_content(
+    path: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get the content of a specific documentation file."""
+    try:
+        # Verify founder access
+        if current_user.get("role", "").lower() not in ["platform_founder", "founder"]:
+            raise HTTPException(status_code=403, detail="Founder access required")
+        
+        # Security: Validate path to prevent directory traversal
+        if ".." in path or path.startswith("/") or not path.startswith("docs/"):
+            raise HTTPException(status_code=400, detail="Invalid documentation path")
+        
+        # Construct full file path
+        import os
+        file_path = os.path.join(os.getcwd(), path)
+        
+        # Check if file exists
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Documentation file not found")
+        
+        # Read file content
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                content = file.read()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to read file: {str(e)}")
+        
+        # Get file stats
+        file_stats = os.stat(file_path)
+        file_size = file_stats.st_size
+        last_modified = datetime.fromtimestamp(file_stats.st_mtime, tz=timezone.utc).isoformat()
+        
+        logger.info(f"🏆 FOUNDER DOCUMENTATION READ: {current_user.get('username')} accessed {path} ({file_size} bytes)")
+        
+        return {
+            "status": "success",
+            "data": {
+                "path": path,
+                "content": content,
+                "metadata": {
+                    "size_bytes": file_size,
+                    "last_modified": last_modified,
+                    "encoding": "utf-8",
+                    "content_type": "text/markdown" if path.endswith('.md') else "text/plain"
+                }
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error reading documentation content: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to read documentation content")
 
 # ===== END ORGANIZATIONAL CONTROL API ENDPOINTS =====
 

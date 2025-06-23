@@ -1,22 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import { apiClient } from '../../api/client';
-import { 
-  ChartBarIcon, 
-  CurrencyDollarIcon, 
-  UserGroupIcon, 
-  ShieldCheckIcon,
-  CogIcon,
-  ExclamationTriangleIcon,
-  ArrowTrendingUpIcon,
-  BuildingOfficeIcon,
-  ClockIcon,
-  ServerIcon
-} from '@heroicons/react/24/outline';
-import { motion } from 'framer-motion';
 import { Card } from '../../components/common/Card/Card';
 import { Button } from '../../components/common/Button/Button';
 import { Alert } from '../../components/common/Alert/Alert';
+import { motion } from 'framer-motion';
+import {
+  ChartBarIcon,
+  CurrencyDollarIcon,
+  UsersIcon,
+  ShieldCheckIcon,
+  BuildingOfficeIcon,
+  ExclamationTriangleIcon,
+  ArrowTrendingUpIcon,
+  SparklesIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  ArrowPathIcon,
+  EyeIcon,
+  Cog6ToothIcon,
+  BellIcon,
+  CommandLineIcon,
+  StarIcon,
+  FireIcon,
+  BoltIcon,
+  GlobeAltIcon,
+  DocumentTextIcon,
+  LockClosedIcon,
+  UserGroupIcon,
+  HandRaisedIcon
+} from '@heroicons/react/24/outline';
+import {
+  ChartBarIcon as ChartBarIconSolid,
+  CurrencyDollarIcon as CurrencyDollarIconSolid,
+  UsersIcon as UsersIconSolid,
+  ShieldCheckIcon as ShieldCheckIconSolid,
+  StarIcon as StarIconSolid
+} from '@heroicons/react/24/solid';
 
 interface BusinessMetrics {
   company_health: {
@@ -182,28 +202,32 @@ export const FounderDashboard: React.FC = () => {
   const [organizationalData, setOrganizationalData] = useState<OrganizationalControlData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState('overview');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch founder dashboard metrics using apiClient
+      const metricsResponse = await apiClient.get('/api/founder/dashboard/metrics');
+      setMetrics(metricsResponse.data as FounderMetrics);
+      
+      // Fetch organizational control data using apiClient
+      const orgResponse = await apiClient.get('/api/founder/organizational-control/overview');
+      setOrganizationalData(orgResponse.data as OrganizationalControlData);
+      
+      setLastUpdated(new Date());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      console.error('Error fetching dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch founder dashboard metrics using apiClient
-        const metricsResponse = await apiClient.get('/api/founder/dashboard/metrics');
-        setMetrics(metricsResponse.data as FounderMetrics);
-        
-        // Fetch organizational control data using apiClient
-        const orgResponse = await apiClient.get('/api/founder/organizational-control/overview');
-        setOrganizationalData(orgResponse.data as OrganizationalControlData);
-        
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
-        console.error('Error fetching dashboard data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
 
@@ -265,224 +289,424 @@ export const FounderDashboard: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
+    <div className="min-h-screen bg-gray-950 text-white">
       {/* Header */}
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">
-          🏆 Founder Command Center
-        </h1>
-        <p className="text-xl text-gray-600 mb-6">
-          Ultimate platform control and strategic oversight
-        </p>
-        <Button 
-          onClick={scrollToOrganizationalControl}
-          size="lg"
-          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-        >
-          View Organizational Control
-        </Button>
+      <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                <StarIconSolid className="w-8 h-8 text-yellow-400" />
+                Executive Command Center
+              </h1>
+              <p className="text-purple-100 mt-1">
+                Ultimate platform control and strategic oversight - {user?.username}
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-purple-100">
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </div>
+              <Button
+                onClick={async () => {
+                  setIsRefreshing(true);
+                  await fetchData();
+                  setIsRefreshing(false);
+                }}
+                disabled={isRefreshing}
+                className="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded-lg flex items-center gap-2"
+              >
+                <ArrowPathIcon className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => window.location.href = '/founder/employee-management'}
+                  className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg flex items-center gap-2 text-sm"
+                >
+                  <HandRaisedIcon className="w-4 h-4" />
+                  Employees
+                </Button>
+                <Button
+                  onClick={() => window.location.href = '/founder/documentation'}
+                  className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg flex items-center gap-2 text-sm"
+                >
+                  <DocumentTextIcon className="w-4 h-4" />
+                  Docs
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Company Health Metrics */}
-      <Card>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Company Health & Performance</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <div className="text-3xl font-bold text-green-600">{metrics.company_health?.uptime || 'N/A'}</div>
-            <div className="text-sm text-gray-600">Platform Uptime</div>
-          </div>
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-3xl font-bold text-blue-600">{metrics.company_health?.customer_count?.toLocaleString() || '0'}</div>
-            <div className="text-sm text-gray-600">Total Customers</div>
-          </div>
-          <div className="text-center p-4 bg-purple-50 rounded-lg">
-            <div className="text-3xl font-bold text-purple-600">{metrics.company_health?.monthly_recurring_revenue || 'N/A'}</div>
-            <div className="text-sm text-gray-600">Monthly Revenue</div>
-          </div>
-          <div className="text-center p-4 bg-indigo-50 rounded-lg">
-            <div className="text-3xl font-bold text-indigo-600">{metrics.company_health?.growth_rate || 'N/A'}</div>
-            <div className="text-sm text-gray-600">Growth Rate</div>
-          </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Navigation Tabs */}
+        <div className="flex space-x-1 mb-8 bg-gray-900 rounded-lg p-1">
+          {[
+            { id: 'overview', label: 'Executive Overview', icon: ChartBarIcon },
+            { id: 'financial', label: 'Financial Command', icon: CurrencyDollarIcon },
+            { id: 'operations', label: 'Operations Control', icon: Cog6ToothIcon },
+            { id: 'security', label: 'Security Command', icon: ShieldCheckIcon },
+            { id: 'intelligence', label: 'Business Intelligence', icon: SparklesIcon },
+            { id: 'emergency', label: 'Emergency Controls', icon: ExclamationTriangleIcon }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+                selectedTab === tab.id
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
         </div>
-      </Card>
 
-      {/* Customer Analytics */}
-      <Card>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Customer Analytics</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="text-center p-4 bg-emerald-50 rounded-lg">
-            <div className="text-3xl font-bold text-emerald-600">{metrics.customer_analytics?.enterprise_customers || 0}</div>
-            <div className="text-sm text-gray-600">Enterprise Customers</div>
-          </div>
-          <div className="text-center p-4 bg-teal-50 rounded-lg">
-            <div className="text-3xl font-bold text-teal-600">{metrics.customer_analytics?.sme_customers || 0}</div>
-            <div className="text-sm text-gray-600">SME Customers</div>
-          </div>
-          <div className="text-center p-4 bg-cyan-50 rounded-lg">
-            <div className="text-3xl font-bold text-cyan-600">{metrics.customer_analytics?.trial_conversions || 'N/A'}</div>
-            <div className="text-sm text-gray-600">Trial Conversions</div>
-          </div>
-          <div className="text-center p-4 bg-sky-50 rounded-lg">
-            <div className="text-3xl font-bold text-sky-600">{metrics.customer_analytics?.support_satisfaction || 'N/A'}</div>
-            <div className="text-sm text-gray-600">Support Satisfaction</div>
-          </div>
-        </div>
-      </Card>
+        {/* Tab Content */}
+        {selectedTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Company Health Metrics */}
+            <div className="bg-gray-900 rounded-lg p-6">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <ChartBarIconSolid className="w-6 h-6 text-blue-400" />
+                Company Health & Performance
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.1 }}
+                  className="text-center p-4 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg"
+                >
+                  <div className="text-3xl font-bold text-white">{metrics?.company_health?.uptime || 'N/A'}</div>
+                  <div className="text-sm text-green-100">Platform Uptime</div>
+                </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.2 }}
+                  className="text-center p-4 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg"
+                >
+                  <div className="text-3xl font-bold text-white">{metrics?.company_health?.customer_count?.toLocaleString() || '0'}</div>
+                  <div className="text-sm text-blue-100">Total Customers</div>
+                </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.3 }}
+                  className="text-center p-4 bg-gradient-to-br from-purple-500 to-violet-500 rounded-lg"
+                >
+                  <div className="text-3xl font-bold text-white">{metrics?.company_health?.monthly_recurring_revenue || 'N/A'}</div>
+                  <div className="text-sm text-purple-100">Monthly Revenue</div>
+                </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.4 }}
+                  className="text-center p-4 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-lg"
+                >
+                  <div className="text-3xl font-bold text-white">{metrics?.company_health?.growth_rate || 'N/A'}</div>
+                  <div className="text-sm text-indigo-100">Growth Rate</div>
+                </motion.div>
+              </div>
+            </div>
 
-      {/* Organizational Control Section */}
-      <Card id="organizational-control">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Organizational Control</h2>
-            <p className="text-gray-600">
-              Comprehensive control over all organizational aspects. 
-              <a 
-                href="/docs/reference/FOUNDER_ACCESS_DOCUMENTATION.md#organizational-control" 
-                className="text-blue-600 hover:text-blue-800 ml-1"
+            {/* Customer Analytics */}
+            <div className="bg-gray-900 rounded-lg p-6">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <UsersIconSolid className="w-6 h-6 text-emerald-400" />
+                Customer Analytics
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.1 }}
+                  className="text-center p-4 bg-gradient-to-br from-emerald-500 to-green-500 rounded-lg"
+                >
+                  <div className="text-3xl font-bold text-white">{metrics?.customer_analytics?.enterprise_customers || 0}</div>
+                  <div className="text-sm text-emerald-100">Enterprise Customers</div>
+                </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.2 }}
+                  className="text-center p-4 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg"
+                >
+                  <div className="text-3xl font-bold text-white">{metrics?.customer_analytics?.sme_customers || 0}</div>
+                  <div className="text-sm text-teal-100">SME Customers</div>
+                </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.3 }}
+                  className="text-center p-4 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg"
+                >
+                  <div className="text-3xl font-bold text-white">{metrics?.customer_analytics?.trial_conversions || 'N/A'}</div>
+                  <div className="text-sm text-cyan-100">Trial Conversions</div>
+                </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.4 }}
+                  className="text-center p-4 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-lg"
+                >
+                  <div className="text-3xl font-bold text-white">{metrics?.customer_analytics?.support_satisfaction || 'N/A'}</div>
+                  <div className="text-sm text-sky-100">Support Satisfaction</div>
+                </motion.div>
+              </div>
+            </div>
+
+            {/* Financial Summary */}
+            <div className="bg-gray-900 rounded-lg p-6">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <CurrencyDollarIconSolid className="w-6 h-6 text-green-400" />
+                Financial Summary
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.1 }}
+                  className="text-center p-4 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg"
+                >
+                  <div className="text-3xl font-bold text-white">${metrics?.financial_summary?.mrr?.toLocaleString() || 'N/A'}</div>
+                  <div className="text-sm text-green-100">Monthly Recurring Revenue</div>
+                </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.2 }}
+                  className="text-center p-4 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg"
+                >
+                  <div className="text-3xl font-bold text-white">${metrics?.financial_summary?.arr?.toLocaleString() || 'N/A'}</div>
+                  <div className="text-sm text-orange-100">Annual Recurring Revenue</div>
+                </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.3 }}
+                  className="text-center p-4 bg-gradient-to-br from-purple-500 to-violet-500 rounded-lg"
+                >
+                  <div className="text-3xl font-bold text-white">{metrics?.financial_summary?.growth_rate || 0}%</div>
+                  <div className="text-sm text-purple-100">Growth Rate</div>
+                </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.4 }}
+                  className="text-center p-4 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg"
+                >
+                  <div className="text-3xl font-bold text-white">{metrics?.financial_summary?.churn_rate || 0}%</div>
+                  <div className="text-sm text-blue-100">Churn Rate</div>
+                </motion.div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="bg-gray-900 rounded-lg p-6">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <BoltIcon className="w-6 h-6 text-yellow-400" />
+                Quick Actions
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Button
+                  onClick={() => window.location.href = '/founder/employee-management'}
+                  className="bg-gradient-to-br from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 p-4 rounded-lg flex items-center justify-center gap-2"
+                >
+                  <UsersIcon className="w-5 h-5" />
+                  Employee Management
+                </Button>
+                <Button
+                  onClick={() => window.location.href = '/founder/documentation'}
+                  className="bg-gradient-to-br from-gray-600 to-slate-600 hover:from-gray-700 hover:to-slate-700 p-4 rounded-lg flex items-center justify-center gap-2"
+                >
+                  <DocumentTextIcon className="w-5 h-5" />
+                  Documentation
+                </Button>
+                <Button
+                  onClick={() => window.location.href = '/founder/financial'}
+                  className="bg-gradient-to-br from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 p-4 rounded-lg flex items-center justify-center gap-2"
+                >
+                  <CurrencyDollarIcon className="w-5 h-5" />
+                  Financial Control
+                </Button>
+                <Button
+                  onClick={() => window.location.href = '/founder/system'}
+                  className="bg-gradient-to-br from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 p-4 rounded-lg flex items-center justify-center gap-2"
+                >
+                  <Cog6ToothIcon className="w-5 h-5" />
+                  System Admin
+                </Button>
+                <Button
+                  onClick={() => setSelectedTab('emergency')}
+                  className="bg-gradient-to-br from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 p-4 rounded-lg flex items-center justify-center gap-2"
+                >
+                  <ExclamationTriangleIcon className="w-5 h-5" />
+                  Emergency
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedTab === 'financial' && (
+          <div className="space-y-6">
+            <div className="bg-gray-900 rounded-lg p-6">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <CurrencyDollarIconSolid className="w-6 h-6 text-green-400" />
+                Financial Command Center
+              </h2>
+              <p className="text-gray-300 mb-4">Access comprehensive financial controls and revenue management.</p>
+              <Button
+                onClick={() => window.location.href = '/founder/financial'}
+                className="bg-green-600 hover:bg-green-700"
               >
-                View Documentation →
-              </a>
-            </p>
+                Open Financial Control
+              </Button>
+            </div>
           </div>
-          <Button 
-            onClick={() => handleOrganizationalAction('overview_access', 'organizational_control', { section: 'overview' })}
-            variant="outline"
-          >
-            Quick Control
-          </Button>
-        </div>
+        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Employee Management */}
-          <OrganizationalControlCard
-            title="Employee Management"
-            description="Manage internal SecureNet team access, roles, and permissions across all departments."
-            status="active"
-            metrics={{
-              total_employees: organizationalData?.employee_management?.total_employees || 0,
-              active_employees: organizationalData?.employee_management?.active_employees || 0,
-              on_leave: organizationalData?.employee_management?.on_leave || 0,
-              pending: organizationalData?.employee_management?.pending_onboarding || 0
-            }}
-            documentationLink="/docs/reference/ENTERPRISE_USER_MANAGEMENT.md#employee-management"
-            onClick={() => {
-              handleOrganizationalAction('employee_management_access', 'employees', { total: organizationalData?.employee_management?.total_employees || 0 });
-              // Navigate to employee management page
-              window.location.href = '/founder/employee-management';
-            }}
-          />
-
-          {/* Contractor Oversight */}
-          <OrganizationalControlCard
-            title="Contractor Oversight"
-            description="Oversee 6-month, 1-year, and 30-90 day contractor agreements and compliance."
-            status="active"
-            metrics={{
-              active_contractors: organizationalData?.contractor_oversight?.active_contractors || 0,
-              '6_month': organizationalData?.contractor_oversight?.contract_types?.['6_month'] || 0,
-              '1_year': organizationalData?.contractor_oversight?.contract_types?.['1_year'] || 0,
-              'short_term': organizationalData?.contractor_oversight?.contract_types?.['short_term_30_90'] || 0
-            }}
-            documentationLink="/docs/reference/ENTERPRISE_USER_MANAGEMENT.md#contractor-management"
-            onClick={() => {
-              handleOrganizationalAction('contractor_oversight_access', 'contractors', { active: organizationalData?.contractor_oversight?.active_contractors || 0 });
-            }}
-          />
-
-          {/* Partner Management */}
-          <OrganizationalControlCard
-            title="Partner Management"
-            description="Control channel partners, integration partnerships, and revenue sharing agreements."
-            status="active"
-            metrics={{
-              channel_partners: organizationalData?.partner_management?.channel_partners || 0,
-              integration_partners: organizationalData?.partner_management?.integration_partners || 0,
-              revenue_partners: organizationalData?.partner_management?.revenue_partners || 0,
-              health_score: `${organizationalData?.partner_management?.partner_health_score || 0}/5.0`
-            }}
-            documentationLink="/docs/reference/ENTERPRISE_USER_MANAGEMENT.md#partner-management"
-            onClick={() => {
-              const total = (organizationalData?.partner_management?.channel_partners || 0) + (organizationalData?.partner_management?.integration_partners || 0);
-              handleOrganizationalAction('partner_management_access', 'partners', { total });
-            }}
-          />
-
-          {/* Vendor Control */}
-          <OrganizationalControlCard
-            title="Vendor Control"
-            description="Manage third-party vendors, service providers, and external access controls."
-            status="active"
-            metrics={{
-              active_vendors: organizationalData?.vendor_control?.active_vendors || 0,
-              integrations: organizationalData?.vendor_control?.third_party_integrations || 0,
-              renewals_due: organizationalData?.vendor_control?.contract_renewals_due || 0,
-              spend_q: organizationalData?.vendor_control?.spend_this_quarter || 'N/A'
-            }}
-            documentationLink="/docs/reference/ENTERPRISE_USER_MANAGEMENT.md#vendor-management"
-            onClick={() => {
-              handleOrganizationalAction('vendor_control_access', 'vendors', { active: organizationalData?.vendor_control?.active_vendors || 0 });
-            }}
-          />
-
-          {/* Compliance Management */}
-          <OrganizationalControlCard
-            title="Compliance Management"
-            description="SOC 2, ISO 27001, GDPR, HIPAA, and FedRAMP compliance monitoring and reporting."
-            status="active"
-            metrics={{
-              compliance_score: `${organizationalData?.compliance_management?.compliance_score || 0}%`,
-              frameworks: Object.keys(organizationalData?.compliance_management?.frameworks || {}).length,
-              open_findings: organizationalData?.compliance_management?.open_findings || 0,
-              remediation: organizationalData?.compliance_management?.remediation_progress || 'N/A'
-            }}
-            documentationLink="/docs/compliance/COMPLIANCE_FRAMEWORKS.md"
-            onClick={() => {
-              handleOrganizationalAction('compliance_management_access', 'compliance', { score: organizationalData?.compliance_management?.compliance_score || 0 });
-            }}
-          />
-
-          {/* Legal & IP Control */}
-          <OrganizationalControlCard
-            title="Legal & IP Control"
-            description="Intellectual property protection, legal compliance, and contract management."
-            status="active"
-            metrics={{
-              patents: organizationalData?.legal_ip_control?.intellectual_property?.patents_filed || 0,
-              trademarks: organizationalData?.legal_ip_control?.intellectual_property?.trademarks || 0,
-              copyrights: organizationalData?.legal_ip_control?.intellectual_property?.copyrights || 0,
-              contracts: organizationalData?.legal_ip_control?.legal_compliance?.contracts_under_review || 0
-            }}
-            documentationLink="/docs/reference/ENTERPRISE_USER_MANAGEMENT.md#legal-ip-management"
-            onClick={() => {
-              const totalIp = (organizationalData?.legal_ip_control?.intellectual_property?.patents_filed || 0) + (organizationalData?.legal_ip_control?.intellectual_property?.trademarks || 0);
-              handleOrganizationalAction('legal_ip_control_access', 'legal', { total_ip: totalIp });
-            }}
-          />
-        </div>
-      </Card>
-
-      {/* Financial Summary */}
-      <Card>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Financial Summary</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <div className="text-3xl font-bold text-green-600">${metrics.financial_summary?.mrr?.toLocaleString() || 'N/A'}</div>
-            <div className="text-sm text-gray-600">Monthly Recurring Revenue</div>
+        {selectedTab === 'operations' && (
+          <div className="space-y-6">
+            <div className="bg-gray-900 rounded-lg p-6">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <Cog6ToothIcon className="w-6 h-6 text-blue-400" />
+                Operations Control Center
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <motion.div className="bg-gray-800 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-white mb-2">Employee Management</h3>
+                  <p className="text-gray-300 text-sm mb-4">
+                    Total: {organizationalData?.employee_management?.total_employees || 0} employees
+                  </p>
+                  <Button 
+                    onClick={() => window.location.href = '/founder/employee-management'}
+                    size="sm"
+                  >
+                    Manage
+                  </Button>
+                </motion.div>
+                <motion.div className="bg-gray-800 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-white mb-2">Contractors</h3>
+                  <p className="text-gray-300 text-sm mb-4">
+                    Active: {organizationalData?.contractor_oversight?.active_contractors || 0} contractors
+                  </p>
+                  <Button size="sm">Manage</Button>
+                </motion.div>
+                <motion.div className="bg-gray-800 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-white mb-2">Partners</h3>
+                  <p className="text-gray-300 text-sm mb-4">
+                    Total: {(organizationalData?.partner_management?.channel_partners || 0) + (organizationalData?.partner_management?.integration_partners || 0)} partners
+                  </p>
+                  <Button size="sm">Manage</Button>
+                </motion.div>
+              </div>
+            </div>
           </div>
-          <div className="text-center p-4 bg-orange-50 rounded-lg">
-            <div className="text-3xl font-bold text-orange-600">${metrics.financial_summary?.arr?.toLocaleString() || 'N/A'}</div>
-            <div className="text-sm text-gray-600">Annual Recurring Revenue</div>
+        )}
+
+        {selectedTab === 'security' && (
+          <div className="space-y-6">
+            <div className="bg-gray-900 rounded-lg p-6">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <ShieldCheckIconSolid className="w-6 h-6 text-red-400" />
+                Security Command Center
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <motion.div className="bg-red-900 border border-red-600 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-white mb-2">Security Incidents</h3>
+                  <p className="text-red-100 text-3xl font-bold mb-2">
+                    {metrics?.technical_metrics?.security_incidents || 0}
+                  </p>
+                  <Button size="sm" variant="outline">View Details</Button>
+                </motion.div>
+                <motion.div className="bg-green-900 border border-green-600 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-white mb-2">Compliance Score</h3>
+                  <p className="text-green-100 text-3xl font-bold mb-2">
+                    {organizationalData?.compliance_management?.compliance_score || 0}%
+                  </p>
+                  <Button size="sm" variant="outline">View Report</Button>
+                </motion.div>
+                <motion.div className="bg-blue-900 border border-blue-600 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-white mb-2">System Performance</h3>
+                  <p className="text-blue-100 text-lg font-semibold mb-2">
+                    {metrics?.technical_metrics?.system_performance || 'Unknown'}
+                  </p>
+                  <Button size="sm" variant="outline">Monitor</Button>
+                </motion.div>
+              </div>
+            </div>
           </div>
-          <div className="text-center p-4 bg-purple-50 rounded-lg">
-            <div className="text-3xl font-bold text-purple-600">{metrics.financial_summary?.growth_rate || 0}%</div>
-            <div className="text-sm text-gray-600">Growth Rate</div>
+        )}
+
+        {selectedTab === 'intelligence' && (
+          <div className="space-y-6">
+            <div className="bg-gray-900 rounded-lg p-6">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <SparklesIcon className="w-6 h-6 text-purple-400" />
+                Business Intelligence
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <motion.div className="bg-gray-800 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-white mb-2">Feature Adoption</h3>
+                  <p className="text-gray-300 text-3xl font-bold mb-2">
+                    {metrics?.technical_metrics?.feature_adoption || 'N/A'}
+                  </p>
+                </motion.div>
+                <motion.div className="bg-gray-800 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-white mb-2">API Usage</h3>
+                  <p className="text-gray-300 text-2xl font-bold mb-2">
+                    {metrics?.technical_metrics?.api_usage || 'N/A'}
+                  </p>
+                </motion.div>
+              </div>
+            </div>
           </div>
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-3xl font-bold text-blue-600">{metrics.financial_summary?.churn_rate || 0}%</div>
-            <div className="text-sm text-gray-600">Churn Rate</div>
+        )}
+
+        {selectedTab === 'emergency' && (
+          <div className="space-y-6">
+            <div className="bg-red-900 border border-red-600 rounded-lg p-6">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <ExclamationTriangleIcon className="w-6 h-6 text-red-400" />
+                Emergency Controls - Founder Only
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button
+                  onClick={() => alert('System reset initiated...')}
+                  className="bg-red-600 hover:bg-red-700 p-4 rounded-lg"
+                >
+                  System Reset
+                </Button>
+                <Button
+                  onClick={() => alert('Emergency override activated...')}
+                  className="bg-orange-600 hover:bg-orange-700 p-4 rounded-lg"
+                >
+                  Emergency Override
+                </Button>
+                <Button
+                  onClick={() => alert('Maintenance mode enabled...')}
+                  className="bg-yellow-600 hover:bg-yellow-700 p-4 rounded-lg"
+                >
+                  Maintenance Mode
+                </Button>
+                <Button
+                  onClick={() => alert('Database recovery initiated...')}
+                  className="bg-purple-600 hover:bg-purple-700 p-4 rounded-lg"
+                >
+                  Database Recovery
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
-      </Card>
+        )}
+      </div>
     </div>
   );
 };

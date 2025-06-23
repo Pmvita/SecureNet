@@ -68,6 +68,15 @@ const EmployeeManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [showAddEmployee, setShowAddEmployee] = useState(false);
+  const [newEmployee, setNewEmployee] = useState({
+    name: '',
+    email: '',
+    department: 'Engineering',
+    position: '',
+    access_level: 'standard_user',
+    hire_date: new Date().toISOString().split('T')[0],
+    status: 'pending'
+  });
 
   useEffect(() => {
     fetchEmployeeData();
@@ -152,7 +161,7 @@ const EmployeeManagement: React.FC = () => {
     }
   };
 
-  const logAction = async (action: string, details: any) => {
+  const logAction = async (action: string, details: Record<string, unknown>) => {
     try {
       await fetch('http://127.0.0.1:8000/api/founder/organizational-control/audit-log', {
         method: 'POST',
@@ -173,6 +182,57 @@ const EmployeeManagement: React.FC = () => {
       });
     } catch (error) {
       console.error('Error logging action:', error);
+    }
+  };
+
+  const handleCreateEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/founder/organizational-control/employees', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newEmployee)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create employee');
+      }
+
+      const result = await response.json();
+      
+      // Add the new employee to the list
+      setEmployees(prev => [...prev, result.data.employee]);
+      
+      // Log the action
+      await logAction('employee_created', {
+        employee_name: newEmployee.name,
+        employee_email: newEmployee.email,
+        department: newEmployee.department,
+        position: newEmployee.position
+      });
+
+      // Reset form and close modal
+      setNewEmployee({
+        name: '',
+        email: '',
+        department: 'Engineering',
+        position: '',
+        access_level: 'standard_user',
+        hire_date: new Date().toISOString().split('T')[0],
+        status: 'pending'
+      });
+      setShowAddEmployee(false);
+
+      // Refresh data
+      await fetchEmployeeData();
+      
+    } catch (error) {
+      console.error('Error creating employee:', error);
+      setError(error instanceof Error ? error.message : 'Failed to create employee');
     }
   };
 
@@ -490,6 +550,134 @@ const EmployeeManagement: React.FC = () => {
           </div>
         </div>
       </Card>
+
+      {/* Add Employee Modal */}
+      {showAddEmployee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Add New Employee</h3>
+            
+            <form onSubmit={handleCreateEmployee} className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  required
+                  value={newEmployee.name}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter employee full name"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  required
+                  value={newEmployee.email}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="employee@securenet.ai"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1">
+                  Department *
+                </label>
+                <select
+                  id="department"
+                  required
+                  value={newEmployee.department}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, department: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Engineering">Engineering</option>
+                  <option value="Sales">Sales</option>
+                  <option value="Customer Success">Customer Success</option>
+                  <option value="Operations">Operations</option>
+                  <option value="Executive">Executive</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Finance">Finance</option>
+                  <option value="HR">Human Resources</option>
+                  <option value="Legal">Legal</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-1">
+                  Position *
+                </label>
+                <input
+                  type="text"
+                  id="position"
+                  required
+                  value={newEmployee.position}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, position: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Senior Software Engineer"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="access_level" className="block text-sm font-medium text-gray-700 mb-1">
+                  Access Level *
+                </label>
+                <select
+                  id="access_level"
+                  required
+                  value={newEmployee.access_level}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, access_level: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="standard_user">Standard User</option>
+                  <option value="department_admin">Department Admin</option>
+                  <option value="full_access">Full Access</option>
+                  <option value="restricted">Restricted</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="hire_date" className="block text-sm font-medium text-gray-700 mb-1">
+                  Hire Date *
+                </label>
+                <input
+                  type="date"
+                  id="hire_date"
+                  required
+                  value={newEmployee.hire_date}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, hire_date: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAddEmployee(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  Add Employee
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -183,21 +183,38 @@ class PostgreSQLDatabase:
     # ===== USER MANAGEMENT =====
     
     async def create_user(self, username: str, email: str, password_hash: str, 
-                         role: UserRole, organization_id: str) -> int:
+                         role, organization_id: str) -> int:
         """Create a new user"""
         async with self.get_session() as session:
+            # Handle both string and enum role values
+            if isinstance(role, str):
+                # Convert string to enum if needed
+                role_value = role.lower()  # Ensure lowercase
+                if role_value == "platform_founder":
+                    role_enum = UserRole.PLATFORM_FOUNDER
+                elif role_value == "platform_owner":
+                    role_enum = UserRole.PLATFORM_OWNER
+                elif role_value == "security_admin":
+                    role_enum = UserRole.SECURITY_ADMIN
+                elif role_value == "soc_analyst":
+                    role_enum = UserRole.SOC_ANALYST
+                else:
+                    role_enum = UserRole.SOC_ANALYST  # default
+            else:
+                role_enum = role  # Already an enum
+            
             user = User(
                 username=username,
                 email=email,
                 password_hash=password_hash,
-                role=role,
+                role=role_enum,
                 organization_id=organization_id
             )
             
             session.add(user)
             await session.flush()
             
-            logger.info(f"Created user: {username} with role: {role.value}")
+            logger.info(f"Created user: {username} with role: {role_enum.value}")
             return user.id
     
     async def get_user_by_username(self, username: str) -> Optional[Dict]:

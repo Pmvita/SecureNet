@@ -81,26 +81,12 @@ async def create_default_users_postgresql(db):
         for user_data in users:
             password_hash = pwd_context.hash(user_data["password"])
             
-            # Import UserRole enum
-            from database.models import UserRole
-            
-            # Get the correct enum value
-            if user_data["role"] == "platform_founder":
-                role_enum = UserRole.PLATFORM_FOUNDER
-            elif user_data["role"] == "platform_owner":
-                role_enum = UserRole.PLATFORM_OWNER
-            elif user_data["role"] == "security_admin":
-                role_enum = UserRole.SECURITY_ADMIN
-            elif user_data["role"] == "soc_analyst":
-                role_enum = UserRole.SOC_ANALYST
-            else:
-                role_enum = UserRole.SOC_ANALYST  # default fallback
-            
+            # Pass role as string to avoid SQLAlchemy enum conversion issues
             await db.create_user(
                 username=user_data["username"],
                 email=user_data["email"],
                 password_hash=password_hash,
-                role=role_enum,
+                role=user_data["role"],  # Pass string directly
                 organization_id=org_id
             )
             

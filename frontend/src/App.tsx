@@ -36,6 +36,7 @@ const FounderDashboard = React.lazy(() => import('./pages/founder/FounderDashboa
 const FinancialControl = React.lazy(() => import('./pages/founder/FinancialControl').then(module => ({ default: module.FinancialControl })));
 const SystemAdministration = React.lazy(() => import('./pages/founder/SystemAdministration').then(module => ({ default: module.SystemAdministration })));
 const EmployeeManagement = React.lazy(() => import('./pages/founder/EmployeeManagement'));
+const DocumentationViewer = React.lazy(() => import('./pages/founder/DocumentationViewer'));
 import LoadingSpinner from './components/LoadingSpinner';
 import {
   ChartBarIcon,
@@ -274,6 +275,16 @@ const AppRoutes: React.FC = () => {
                     <ProtectedRoute requiredPermissions={['founder_unlimited_access']}>
                       <Suspense fallback={<LoadingSpinner />}>
                         <EmployeeManagement />
+                      </Suspense>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="founder/documentation"
+                  element={
+                    <ProtectedRoute requiredPermissions={['founder_unlimited_access']}>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <DocumentationViewer />
                       </Suspense>
                     </ProtectedRoute>
                   }
