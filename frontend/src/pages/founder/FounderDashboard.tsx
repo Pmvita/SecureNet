@@ -151,6 +151,20 @@ interface OrganizationalControlCardProps {
   onClick: () => void;
 }
 
+interface EmergencyResponse {
+  status: string;
+  data: {
+    message: string;
+    reset_id?: string;
+    override_id?: string;
+    maintenance_id?: string;
+    recovery_id?: string;
+    estimated_completion?: string;
+    expires_at?: string;
+    estimated_duration?: number;
+  };
+}
+
 const OrganizationalControlCard: React.FC<OrganizationalControlCardProps> = ({
   title,
   description,
@@ -656,25 +670,82 @@ export const FounderDashboard: React.FC = () => {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Button
-                  onClick={() => alert('System reset initiated...')}
+                  onClick={async () => {
+                    if (confirm('⚠️ CRITICAL: Are you sure you want to initiate an emergency system reset?')) {
+                      try {
+                        const response = await apiClient.post<EmergencyResponse>('/api/founder/emergency/system-reset', {
+                          reset_type: 'soft',
+                          preserve_data: true,
+                          reason: 'Founder emergency system reset'
+                        });
+                        alert(`✅ ${(response.data as any).message}\nReset ID: ${(response.data as any).reset_id}`);
+                      } catch (error) {
+                        alert('❌ Failed to initiate system reset');
+                        console.error('Emergency system reset error:', error);
+                      }
+                    }
+                  }}
                   className="bg-red-600 hover:bg-red-700 p-4 rounded-lg"
                 >
                   System Reset
                 </Button>
                 <Button
-                  onClick={() => alert('Emergency override activated...')}
+                  onClick={async () => {
+                    if (confirm('⚠️ CRITICAL: Are you sure you want to activate emergency authentication override?')) {
+                      try {
+                        const response = await apiClient.post<EmergencyResponse>('/api/founder/emergency/override-authentication', {
+                          duration_minutes: 15,
+                          systems: ['all'],
+                          reason: 'Founder emergency authentication override'
+                        });
+                        alert(`✅ ${(response.data as any).message}\nOverride ID: ${(response.data as any).override_id}\nExpires: ${new Date((response.data as any).expires_at).toLocaleString()}`);
+                      } catch (error) {
+                        alert('❌ Failed to activate emergency override');
+                        console.error('Emergency override error:', error);
+                      }
+                    }
+                  }}
                   className="bg-orange-600 hover:bg-orange-700 p-4 rounded-lg"
                 >
                   Emergency Override
                 </Button>
                 <Button
-                  onClick={() => alert('Maintenance mode enabled...')}
+                  onClick={async () => {
+                    if (confirm('⚠️ CRITICAL: Are you sure you want to enable maintenance mode?')) {
+                      try {
+                        const response = await apiClient.post<EmergencyResponse>('/api/founder/emergency/maintenance-mode', {
+                          enabled: true,
+                          duration_minutes: 30,
+                          message: 'Emergency maintenance in progress - Founder initiated',
+                          reason: 'Founder emergency maintenance'
+                        });
+                        alert(`✅ ${(response.data as any).message}\nMaintenance ID: ${(response.data as any).maintenance_id}\nEstimated Duration: ${(response.data as any).estimated_duration} minutes`);
+                      } catch (error) {
+                        alert('❌ Failed to enable maintenance mode');
+                        console.error('Emergency maintenance error:', error);
+                      }
+                    }
+                  }}
                   className="bg-yellow-600 hover:bg-yellow-700 p-4 rounded-lg"
                 >
                   Maintenance Mode
                 </Button>
                 <Button
-                  onClick={() => alert('Database recovery initiated...')}
+                  onClick={async () => {
+                    if (confirm('⚠️ CRITICAL: Are you sure you want to initiate emergency database recovery?')) {
+                      try {
+                        const response = await apiClient.post<EmergencyResponse>('/api/founder/emergency/database-recovery', {
+                          recovery_type: 'latest_backup',
+                          backup_timestamp: 'latest',
+                          reason: 'Founder emergency database recovery'
+                        });
+                        alert(`✅ ${(response.data as any).message}\nRecovery ID: ${(response.data as any).recovery_id}\nEstimated Completion: ${(response.data as any).estimated_completion}`);
+                      } catch (error) {
+                        alert('❌ Failed to initiate database recovery');
+                        console.error('Emergency database recovery error:', error);
+                      }
+                    }
+                  }}
                   className="bg-purple-600 hover:bg-purple-700 p-4 rounded-lg"
                 >
                   Database Recovery
