@@ -49,18 +49,12 @@ async def create_default_users_postgresql(db):
                 "username": "PierreMvita",
                 "email": "pierre@securenet.ai",
                 "password": "FounderAccess2025!",
-                "role": "platform_founder"
+                "role": "platform_owner"
             },
             {
                 "username": "founder",
                 "email": "founder@securenet.ai",
                 "password": "SecureNetFounder2025!",
-                "role": "platform_founder"
-            },
-            {
-                "username": "ceo",
-                "email": "ceo@securenet.ai", 
-                "password": "superadmin123",
                 "role": "platform_owner"
             },
             {
@@ -118,7 +112,6 @@ async def main():
             logger.info("✅ Successfully seeded default users:")
             logger.info("   🏆 FOUNDER: pierre@securenet.ai / FounderAccess2025! (Pierre Mvita)")
             logger.info("   🏆 FOUNDER BACKUP: founder@securenet.ai / SecureNetFounder2025!")
-            logger.info("   👑 Platform Owner: ceo@securenet.ai / superadmin123")
             logger.info("   🔵 Security Admin: admin@secureorg.com / platform123") 
             logger.info("   🟢 SOC Analyst: user@secureorg.com / enduser123")
             logger.info("")

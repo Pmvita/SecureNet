@@ -22,6 +22,7 @@ import {
   CreditCardIcon,
   ClipboardDocumentListIcon,
   StarIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../features/auth/context/AuthContext';
@@ -348,13 +349,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                       <UserIcon className="w-4 h-4 text-white" />
                     </div>
-                    <div className="hidden sm:block text-left">
+                    <div className="hidden sm:block text-center">
                       <p className="text-sm font-medium text-white">{user?.username || 'User'}</p>
-                      <p className="text-xs text-gray-400 flex items-center gap-1">
+                      <p className="text-xs text-gray-400 flex items-center justify-center gap-1">
                         {(user?.role?.toLowerCase() === 'platform_founder' || user?.role?.toLowerCase() === 'founder') && (
                           <>
                             <StarIcon className="w-3 h-3 text-gold-400" />
-                            <span>🏆 FOUNDER - UNLIMITED ACCESS</span>
+                            <span>FOUNDER - UNLIMITED ACCESS</span>
                           </>
                         )}
                         {user?.role?.toLowerCase() === 'platform_owner' && (
@@ -415,105 +416,143 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
                   {/* User Dropdown */}
                   {userMenuOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-56 bg-gray-800 rounded-xl border border-gray-700 shadow-2xl">
-                      <div className="p-4 border-b border-gray-700">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                            <UserIcon className="w-5 h-5 text-white" />
+                    <div className="absolute right-0 top-full mt-2 w-72 bg-gray-800/95 backdrop-blur-sm rounded-2xl border border-gray-700/50 shadow-2xl">
+                      {/* User Profile Section */}
+                      <div className="p-6 border-b border-gray-700/50">
+                        <div className="flex items-start space-x-4">
+                          {/* Enhanced Avatar */}
+                          <div className="relative">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                              <UserIcon className="w-6 h-6 text-white" />
+                            </div>
+                            {/* Online Status Indicator */}
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-gray-800 rounded-full"></div>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-white">{user?.username || 'User'}</p>
-                            <p className="text-xs text-gray-400">{user?.email || 'user@securenet.com'}</p>
-                            <p className="text-xs text-blue-400 mt-1 flex items-center gap-1">
+                          
+                          {/* User Info */}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-lg font-semibold text-white truncate">{user?.username || 'User'}</h3>
+                            <p className="text-sm text-gray-400 truncate">{user?.email || 'user@securenet.com'}</p>
+                            
+                            {/* Role Badge */}
+                            <div className="mt-3">
                               {(user?.role?.toLowerCase() === 'platform_founder' || user?.role?.toLowerCase() === 'founder') && (
-                                <>
-                                  <StarIcon className="w-3 h-3 text-gold-400" />
-                                  <span>🏆 FOUNDER - UNLIMITED ACCESS</span>
-                                </>
+                                <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 rounded-lg">
+                                  <StarIcon className="w-3 h-3 text-amber-400 mr-2" />
+                                  <span className="text-xs font-medium text-amber-300">FOUNDER - UNLIMITED ACCESS</span>
+                                </div>
                               )}
                               {user?.role?.toLowerCase() === 'platform_owner' && (
-                                <>
-                                  <StarIcon className="w-3 h-3 text-yellow-400" />
-                                  <span>🏢 Platform Owner (CISO)</span>
-                                </>
+                                <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-lg">
+                                  <StarIcon className="w-3 h-3 text-blue-400 mr-2" />
+                                  <span className="text-xs font-medium text-blue-300">Platform Owner (CISO)</span>
+                                </div>
                               )}
                               {user?.role?.toLowerCase() === 'security_admin' && (
-                                <>
-                                  <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
-                                  <span>🛡️ Security Admin (SOC Manager)</span>
-                                </>
+                                <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-indigo-500/20 to-blue-500/20 border border-indigo-500/30 rounded-lg">
+                                  <Cog6ToothIcon className="w-3 h-3 text-indigo-400 mr-2" />
+                                  <span className="text-xs font-medium text-indigo-300">Security Admin (SOC Manager)</span>
+                                </div>
                               )}
                               {user?.role?.toLowerCase() === 'soc_analyst' && (
-                                <>
-                                  <UserIcon className="w-3 h-3 text-green-400" />
-                                  <span>🔍 SOC Analyst (Security Analyst)</span>
-                                </>
+                                <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-lg">
+                                  <UserIcon className="w-3 h-3 text-green-400 mr-2" />
+                                  <span className="text-xs font-medium text-green-300">SOC Analyst (Security Analyst)</span>
+                                </div>
                               )}
                               {user?.role?.toLowerCase() === 'superadmin' && (
-                                <>
-                                  <StarIcon className="w-3 h-3 text-yellow-400" />
-                                  <span>Super Admin</span>
-                                </>
+                                <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-lg">
+                                  <StarIcon className="w-3 h-3 text-yellow-400 mr-2" />
+                                  <span className="text-xs font-medium text-yellow-300">Super Admin</span>
+                                </div>
                               )}
                               {user?.role?.toLowerCase() === 'manager' && (
-                                <>
-                                  <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
-                                  <span>Manager</span>
-                                </>
+                                <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 rounded-lg">
+                                  <Cog6ToothIcon className="w-3 h-3 text-blue-400 mr-2" />
+                                  <span className="text-xs font-medium text-blue-300">Manager</span>
+                                </div>
                               )}
                               {user?.role?.toLowerCase() === 'analyst' && (
-                                <>
-                                  <UserIcon className="w-3 h-3 text-green-400" />
-                                  <span>Analyst</span>
-                                </>
+                                <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-green-500/20 to-teal-500/20 border border-green-500/30 rounded-lg">
+                                  <UserIcon className="w-3 h-3 text-green-400 mr-2" />
+                                  <span className="text-xs font-medium text-green-300">Analyst</span>
+                                </div>
                               )}
                               {user?.role?.toLowerCase() === 'platform_admin' && (
-                                <>
-                                  <Cog6ToothIcon className="w-3 h-3 text-blue-400" />
-                                  <span>Platform Admin</span>
-                                </>
+                                <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-lg">
+                                  <Cog6ToothIcon className="w-3 h-3 text-purple-400 mr-2" />
+                                  <span className="text-xs font-medium text-purple-300">Platform Admin</span>
+                                </div>
                               )}
                               {user?.role?.toLowerCase() === 'end_user' && (
-                                <>
-                                  <UserIcon className="w-3 h-3 text-green-400" />
-                                  <span>End User</span>
-                                </>
+                                <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 rounded-lg">
+                                  <UserIcon className="w-3 h-3 text-gray-400 mr-2" />
+                                  <span className="text-xs font-medium text-gray-300">End User</span>
+                                </div>
                               )}
-                              {user?.role?.toLowerCase() === 'admin' && <span>Administrator</span>}
-                              {!user?.role && <span>User</span>}
-                              {user?.organization_name && ` • ${user.organization_name}`}
-                            </p>
-                            {user?.last_login && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Last login: {new Date(user.last_login).toLocaleString()}
+                              {user?.role?.toLowerCase() === 'admin' && (
+                                <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-red-500/20 to-pink-500/20 border border-red-500/30 rounded-lg">
+                                  <span className="text-xs font-medium text-red-300">Administrator</span>
+                                </div>
+                              )}
+                              {!user?.role && (
+                                <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-gray-500/20 to-slate-500/20 border border-gray-500/30 rounded-lg">
+                                  <span className="text-xs font-medium text-gray-300">User</span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Organization */}
+                            {user?.organization_name && (
+                              <p className="text-xs text-gray-500 mt-2 flex items-center">
+                                <span className="w-1 h-1 bg-gray-500 rounded-full mr-2"></span>
+                                {user.organization_name}
                               </p>
+                            )}
+                            
+                            {/* Last Login */}
+                            {user?.last_login && (
+                              <div className="mt-3 p-2 bg-gray-700/30 rounded-lg">
+                                <p className="text-xs text-gray-400 flex items-center">
+                                  <ClockIcon className="w-3 h-3 mr-1.5" />
+                                  Last login: {new Date(user.last_login).toLocaleString()}
+                                </p>
+                              </div>
                             )}
                           </div>
                         </div>
                       </div>
-                      <div className="py-2">
+                      
+                      {/* Action Buttons */}
+                      <div className="p-2">
                         <button 
                           onClick={() => {
                             startTransition(() => setUserMenuOpen(false));
                             navigate('/profile');
                           }}
-                          className="w-full flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+                          className="w-full flex items-center px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-xl transition-all duration-200 group"
                         >
-                          <UserCircleIcon className="w-4 h-4 mr-3" />
-                          Profile Settings
+                          <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center mr-3 group-hover:bg-blue-500/30 transition-colors">
+                            <UserCircleIcon className="w-4 h-4 text-blue-400" />
+                          </div>
+                          <span className="font-medium">Profile Settings</span>
                         </button>
                         <button 
                           onClick={() => {
                             startTransition(() => setUserMenuOpen(false));
                             navigate('/preferences');
                           }}
-                          className="w-full flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+                          className="w-full flex items-center px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-xl transition-all duration-200 group"
                         >
-                          <Cog6ToothIcon className="w-4 h-4 mr-3" />
-                          Preferences
+                          <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center mr-3 group-hover:bg-purple-500/30 transition-colors">
+                            <Cog6ToothIcon className="w-4 h-4 text-purple-400" />
+                          </div>
+                          <span className="font-medium">Preferences</span>
                         </button>
                       </div>
-                      <div className="py-2 border-t border-gray-700">
+                      
+                      {/* Sign Out Section */}
+                      <div className="p-2 border-t border-gray-700/50">
                         <button 
                           onClick={async () => {
                             startTransition(() => setUserMenuOpen(false));
@@ -523,10 +562,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                               console.error('Logout failed:', error);
                             }
                           }}
-                          className="w-full flex items-center px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-gray-700 transition-colors"
+                          className="w-full flex items-center px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all duration-200 group"
                         >
-                          <ArrowRightOnRectangleIcon className="w-4 h-4 mr-3" />
-                          Sign Out
+                          <div className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center mr-3 group-hover:bg-red-500/30 transition-colors">
+                            <ArrowRightOnRectangleIcon className="w-4 h-4 text-red-400" />
+                          </div>
+                          <span className="font-medium">Sign Out</span>
                         </button>
                       </div>
                     </div>

@@ -10,7 +10,7 @@
 ### **👑 Founder Account**
 **Pierre Mvita** - Founder, CEO, and Chief Technology Officer of SecureNet
 - **Username**: `PierreMvita`
-- **Password**: `FounderAccess2025!`
+- **Password**: `Founder123!`
 - **Role**: `platform_founder` (Ultimate Access Level)
 - **Email**: `pierre@securenet.ai`
 - **Access Level**: **UNLIMITED** - Complete platform control

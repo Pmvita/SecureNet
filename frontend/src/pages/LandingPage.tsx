@@ -246,6 +246,86 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
+      {/* About Section */}
+      <section id="about" className="py-24 bg-dark-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              About SecureNet
+            </h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+              AI-powered cybersecurity platform designed for the modern enterprise
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h3 className="text-2xl font-bold text-white mb-6">
+                Transforming Cybersecurity Through AI
+              </h3>
+              <p className="text-gray-300 mb-6 leading-relaxed">
+                SecureNet is the next-generation cybersecurity platform that combines artificial intelligence, 
+                machine learning, and advanced analytics to provide comprehensive network defense. Our platform 
+                is built for security teams who need real-time threat detection, automated response capabilities, 
+                and deep insights into their security posture.
+              </p>
+              <p className="text-gray-300 mb-6 leading-relaxed">
+                Founded by cybersecurity experts and AI researchers, SecureNet delivers enterprise-grade 
+                security solutions that scale with your organization. We understand that modern threats 
+                require modern solutions, which is why we've built a platform that learns, adapts, and 
+                evolves with your security needs.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link
+                  to="/signup"
+                  className="btn-primary flex items-center justify-center"
+                >
+                  Get Started Today
+                  <ArrowRightIcon className="ml-2 h-4 w-4" />
+                </Link>
+                <button className="bg-gray-700 text-gray-300 hover:bg-gray-600 px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center">
+                  <PlayIcon className="mr-2 h-4 w-4" />
+                  Watch Demo
+                </button>
+              </div>
+            </div>
+            
+            <div className="glass-card p-8">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="text-center">
+                  <div className="bg-primary-500/20 rounded-lg p-4 mb-4">
+                    <UsersIcon className="h-8 w-8 text-primary-500 mx-auto" />
+                  </div>
+                  <h4 className="font-semibold text-white mb-2">500+</h4>
+                  <p className="text-gray-400 text-sm">Organizations Protected</p>
+                </div>
+                <div className="text-center">
+                  <div className="bg-primary-500/20 rounded-lg p-4 mb-4">
+                    <ShieldCheckIcon className="h-8 w-8 text-primary-500 mx-auto" />
+                  </div>
+                  <h4 className="font-semibold text-white mb-2">99.9%</h4>
+                  <p className="text-gray-400 text-sm">Threat Detection Rate</p>
+                </div>
+                <div className="text-center">
+                  <div className="bg-primary-500/20 rounded-lg p-4 mb-4">
+                    <GlobeAltIcon className="h-8 w-8 text-primary-500 mx-auto" />
+                  </div>
+                  <h4 className="font-semibold text-white mb-2">50+</h4>
+                  <p className="text-gray-400 text-sm">Countries Served</p>
+                </div>
+                <div className="text-center">
+                  <div className="bg-primary-500/20 rounded-lg p-4 mb-4">
+                    <CogIcon className="h-8 w-8 text-primary-500 mx-auto" />
+                  </div>
+                  <h4 className="font-semibold text-white mb-2">24/7</h4>
+                  <p className="text-gray-400 text-sm">Security Monitoring</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Section */}
       <section id="pricing" className="py-24 bg-dark-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
