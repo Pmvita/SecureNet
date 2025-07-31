@@ -243,7 +243,7 @@ if start_backend; then
     echo ""
     print_info "🔐 Enterprise Role-Based Access Control (RBAC)"
     echo ""
-    echo "  🏢 Platform Owner (CISO):           ceo / superadmin123"
+    echo "  🏢 Platform Owner (CISO):           See Founder Access Guide"
     echo "     • Strategic oversight, compliance management, global tenant administration"
     echo ""
     echo "  🛡️ Security Admin (SOC Manager):    admin / platform123"

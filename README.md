@@ -192,6 +192,9 @@ python start_enterprise.py --check           # Validation only
 python start_enterprise.py --validate-roles  # Role validation
 python start_enterprise.py --health-check    # System health check
 
+# Complete enterprise environment
+./start_enterprise.sh                         # Full enterprise setup with security checks
+
 # Complete production environment (legacy compatibility)
 ./start_production.sh                        # Full production setup with security checks
 ```
@@ -649,48 +652,3 @@ Built for cybersecurity professionals, SOC teams, and enterprise security operat
 *Transforming cybersecurity through artificial intelligence*
 
 </div>
-
-## 🏆 **Enterprise Deployment Instructions**
-
-**SecureNet Holdings v2.2.0-enterprise** is designed for enterprise-scale deployment with comprehensive validation, health monitoring, and CI/CD integration.
-
-### 🚀 **Production Startup Process**
-
-1. **Enterprise Validation**: `python start_enterprise.py --check`
-2. **Role Validation**: `python start_enterprise.py --validate-roles`  
-3. **Compliance Audit**: `python start_enterprise.py --compliance-audit`
-4. **Full Production Startup**: `python start_enterprise.py`
-
-### 🔍 **CI/CD Validation Pipeline**
-
-SecureNet provides comprehensive CI/CD integration with proper exit codes:
-
-```bash
-# Comprehensive production boot test
-python scripts/ops/test_production_boot.py
-# Exit code 0: All validations passed (deploy approved)
-# Exit code 1: Validation failures (deployment blocked)
-
-# Quick validation (no server startup)
-python scripts/ops/test_production_boot.py --quick
-
-# Enterprise-only tests
-python scripts/ops/test_production_boot.py --enterprise-only
-```
-
-### 🩺 **Health Check Endpoints**
-
-Production health monitoring endpoints for enterprise operations:
-
-- **`GET /api/health`** - Primary health status endpoint
-- **`GET /api/system/status`** - Detailed system information
-- **`GET /docs`** - API documentation availability
-- **`GET /metrics`** - Prometheus metrics (enterprise)
-
-### 📋 **Enterprise Compliance Standards**
-
-- **SOC 2 Type II Certified** - Annual third-party audits
-- **ISO/IEC 27001 Compliant** - Information security management
-- **CSE CIRA Certified** - Canadian cybersecurity standards
-- **NIST Framework Aligned** - Cybersecurity risk management
-
