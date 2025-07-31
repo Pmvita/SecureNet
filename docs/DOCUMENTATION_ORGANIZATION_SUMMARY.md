@@ -138,8 +138,7 @@ docs/integration/
 ### **📊 For Operations & Monitoring Teams**
 **Path**: System Status → Monitoring → Performance
 1. [📊 System Status](system/SYSTEM-STATUS.md) - Operational metrics
-2. [📈 Monitoring Setup](monitoring/) - Comprehensive monitoring configuration
-3. [⚡ Performance Tuning](system/performance-tuning.md) - Optimization guides
+2. [🔧 System Configuration](system/README.md) - System setup and configuration
 
 ---
 

@@ -51,9 +51,9 @@ SUBSCRIPTION_PLANS = {
         features=["Basic network scanning", "Email alerts", "7-day log retention"]
     ),
     "pro": SubscriptionPlan(
-        name="Professional",
-        price_monthly=99.0,
-        price_yearly=990.0,
+        name="Pro",
+        price_monthly=149.0,
+        price_yearly=1490.0,
         device_limit=50,
         scan_limit=500,
         log_retention_days=30,
@@ -82,6 +82,26 @@ SUBSCRIPTION_PLANS = {
             "Dedicated support",
             "Compliance reporting",
             "On-premise deployment"
+        ]
+    ),
+    "msp": SubscriptionPlan(
+        name="MSP Bundle",
+        price_monthly=999.0,
+        price_yearly=9990.0,
+        device_limit=-1,  # unlimited
+        scan_limit=-1,    # unlimited
+        log_retention_days=-1,  # unlimited
+        features=[
+            "Unlimited devices",
+            "Unlimited scanning",
+            "Unlimited log retention",
+            "Multi-tenant management",
+            "White-label platform",
+            "Reseller capabilities",
+            "Dedicated account manager",
+            "Custom integrations",
+            "Priority support",
+            "Revenue sharing"
         ]
     )
 }

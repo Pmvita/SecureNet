@@ -8,6 +8,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { DashboardLayout } from './components/layout/DashboardLayout';
+import LandingPage from './pages/LandingPage';
 
 // Auth pages
 const SignupPage = React.lazy(() => import('./features/auth/pages/SignupPage').then(module => ({ default: module.SignupPage })));
@@ -64,7 +65,7 @@ const AppRoutes: React.FC = () => {
   // Navigation items for the sidebar - role-based
   const getNavigationItems = () => {
     const baseItems = [
-      { path: '/', label: 'Dashboard', icon: 'ChartBarIcon' },
+      { path: '/dashboard', label: 'Dashboard', icon: 'ChartBarIcon' },
       { path: '/logs', label: 'Logs', icon: 'DocumentTextIcon' },
       { path: '/security', label: 'Security', icon: 'ShieldCheckIcon' },
       { path: '/network', label: 'Network', icon: 'GlobeAltIcon' },
@@ -120,11 +121,19 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
+      {/* Landing Page Route */}
+      <Route 
+        path="/" 
+        element={
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />
+        } 
+      />
+      
       {/* Login Route */}
       <Route 
         path="/login" 
         element={
-          isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
         } 
       />
       
@@ -154,16 +163,24 @@ const AppRoutes: React.FC = () => {
       
       {/* Protected Dashboard Routes */}
       <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout navigationItems={getNavigationItems()}>
+              <Suspense fallback={<LoadingSpinner />}>
+                <DashboardPage />
+              </Suspense>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
         path="/*"
         element={
           <ProtectedRoute>
             <DashboardLayout navigationItems={getNavigationItems()}>
               <Routes>
-                <Route index element={
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <DashboardPage />
-                  </Suspense>
-                } />
                 <Route path="logs" element={
                   <Suspense fallback={<LoadingSpinner />}>
                     <LogsPage />

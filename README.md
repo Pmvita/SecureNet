@@ -16,9 +16,55 @@
 
 <div align="center">
 
-[⭐ **Star this repo**](https://github.com/yourusername/securenet) • [📖 **View Documentation**](./docs/installation/INSTALLATION.md) • [🚀 **System Status**](./docs/system/SYSTEM-STATUS.md) • [🎯 **Launch Roadmap**](./docs/project/PRODUCTION_LAUNCH_ROADMAP.md)
+[⭐ **Star this repo**](https://github.com/yourusername/securenet) • [📖 **View Documentation**](./docs/installation/INSTALLATION.md) • [🚀 **System Status**](./docs/system/SYSTEM-STATUS.md) • [🎯 **Launch Roadmap**](./docs/project/PRODUCTION_LAUNCH_ROADMAP.md) • [👥 **Customer Onboarding**](./docs/features/CUSTOMER_ONBOARDING_GUIDE.md)
 
 </div>
+
+---
+
+## 📚 **Documentation Hub**
+
+### **🚀 Getting Started**
+- [📖 **Installation Guide**](./docs/setup/STARTUP_GUIDE.md) - Complete setup instructions
+- [⚡ **Quick Start**](./docs/setup/START_DIRECT.md) - Direct startup methods
+- [🔧 **Production Setup**](./docs/setup/PRODUCTION_QUICK_REFERENCE.md) - Production deployment
+- [🐳 **Docker Setup**](./docs/setup/DEV_MODE_GUIDE.md) - Containerized deployment
+
+### **🏢 Enterprise Features**
+- [🏆 **Enterprise Certification**](./docs/certification/ENTERPRISE_CERTIFICATION.md) - Official certification
+- [👥 **User Management**](./docs/reference/ENTERPRISE_USER_MANAGEMENT.md) - RBAC and user administration
+- [💰 **Customer Onboarding**](./docs/features/CUSTOMER_ONBOARDING_GUIDE.md) - Subscription and billing
+- [📋 **Production Launch**](./docs/setup/PRODUCTION_LAUNCH_CHECKLIST.md) - Go/No-Go validation
+
+### **🛡️ Security & Compliance**
+- [🔒 **Security Features**](./docs/features/FEATURES.md) - AI/ML threat detection capabilities
+- [📋 **Compliance Frameworks**](./docs/compliance/COMPLIANCE_FRAMEWORKS.md) - SOC 2, ISO 27001, GDPR
+- [📊 **Security Hardening**](./docs/compliance/security-hardening.md) - Security configuration
+- [🔍 **Audit Reports**](./docs/audit/FINAL_AUDIT_REPORT.md) - Security audit results
+
+### **🏗️ Architecture & Development**
+- [🏗️ **System Architecture**](./docs/architecture/ENTERPRISE-ARCHITECTURE.md) - Technical architecture
+- [📡 **API Reference**](./docs/api/API-Reference.md) - Complete API documentation
+- [🎨 **Frontend Architecture**](./docs/architecture/FRONTEND-ARCHITECTURE.md) - React/TypeScript structure
+- [🔧 **Integration Guides**](./docs/integration/README.md) - Library and tool integration
+
+### **📊 Operations & Monitoring**
+- [📊 **System Status**](./docs/system/SYSTEM-STATUS.md) - Operational metrics and health
+- [🧪 **Testing Framework**](./docs/testing/README.md) - Testing procedures and tools
+- [📈 **Performance Tuning**](./docs/system/README.md) - System optimization
+- [🔍 **Monitoring Setup**](./docs/monitoring/README.md) - Monitoring and alerting
+
+### **📋 Project Management**
+- [🎯 **Production Roadmap**](./docs/project/PRODUCTION_LAUNCH_ROADMAP.md) - Strategic development plan
+- [📅 **Sprint Planning**](./docs/project/SPRINT_PLANNING.md) - Development sprints
+- [📋 **Project Governance**](./docs/project/PROJECT_GOVERNANCE.md) - Development processes
+- [📝 **Release Notes**](./docs/release/RELEASE_NOTES_v2.2.0-enterprise.md) - Latest updates
+
+### **🤝 Contributing & Support**
+- [🤝 **Contributing Guidelines**](./docs/contributing/CONTRIBUTING.md) - Development workflow
+- [📖 **Documentation Hub**](./docs/README.md) - Complete documentation index
+- [🐛 **Issue Reporting**](https://github.com/yourusername/securenet/issues) - Bug reports and feedback
+- [💬 **Community Discussions**](https://github.com/pmvita/securenet/discussions) - Community support
 
 ---
 
@@ -336,82 +382,6 @@ SecureNet now offers **two deployment options** to meet different operational ne
 
 ---
 
-## 📚 **Documentation Hub**
-
-> **📖 Complete Documentation**: [docs/README.md](./docs/README.md) - Comprehensive documentation index
-
-### **🏁 Quick Start Documentation**
-| Documentation | Description | Status |
-|---------------|-------------|--------|
-| **[📖 Installation Guide](./docs/installation/INSTALLATION.md)** | Complete setup instructions for backend + frontend | ✅ Ready |
-| **[🚀 Startup Guide](./docs/setup/STARTUP_GUIDE.md)** | Complete instructions for both original and enhanced versions | ✅ Ready |
-| **[🗄️ PostgreSQL Setup](./docs/setup/POSTGRESQL_SETUP.md)** | Comprehensive PostgreSQL installation and configuration guide | ✅ Ready |
-| **[🔧 Production Config](./docs/setup/production_config.txt)** | Environment configuration template and setup guide | ✅ Ready |
-
-### **🏆 Enterprise & Certification**
-| Documentation | Description | Status |
-|---------------|-------------|--------|
-| **[🏆 Enterprise Certification](./docs/certification/ENTERPRISE_CERTIFICATION.md)** | Official certification document (SN-ENT-2024-001) | ✅ Certified |
-| **[📋 Final Audit Report](./docs/audit/FINAL_AUDIT_REPORT.md)** | Complete audit results (100% score) | ✅ Ready |
-| **[🚀 Release Notes v2.2.0-enterprise](./docs/release/RELEASE_NOTES_v2.2.0-enterprise.md)** | Latest release details and features | ✅ Ready |
-| **[📊 GitHub Release Summary](./docs/release/GITHUB_RELEASE_SUMMARY.md)** | GitHub release content | ✅ Ready |
-
-### **🔐 Security & Compliance**
-| Documentation | Description | Status |
-|---------------|-------------|--------|
-| **[🛡️ Security Features](./docs/features/FEATURES.md)** | ML threat detection, predictive analytics, behavioral analysis | ✅ Ready |
-| **[🔒 Compliance Frameworks](./docs/compliance/COMPLIANCE_FRAMEWORKS.md)** | SOC 2, ISO 27001, GDPR, NIST, FedRAMP compliance details | ✅ Ready |
-| **[🔥 CVE Integration](./docs/features/CVE-INTEGRATION-SUMMARY.md)** | NIST NVD API sync, vulnerability scoring, CISA KEV | ✅ Ready |
-
-### **🏗️ Architecture & Development**
-| Documentation | Description | Status |
-|---------------|-------------|--------|
-| **[🏗️ Frontend Architecture](./docs/architecture/FRONTEND-ARCHITECTURE.md)** | Component structure, design system, technical details | ✅ Ready |
-| **[📡 API Reference](./docs/api/API-Reference.md)** | REST endpoints, WebSocket connections, authentication | ✅ Ready |
-| **[🤝 Contributing Guide](./docs/contributing/CONTRIBUTING.md)** | Contribution guidelines and development workflow | ✅ Ready |
-| **[📋 Changelog](./docs/project/CHANGELOG.md)** | Version history and release notes | ✅ Ready |
-
-### **🔧 Operations & Monitoring**
-| Documentation | Description | Status |
-|---------------|-------------|--------|
-| **[📊 System Status](./docs/system/SYSTEM-STATUS.md)** | Operational metrics, performance data, uptime monitoring | ✅ Ready |
-| **[⚡ Enhanced Features](./docs/reference/ENHANCED_FEATURES.md)** | Feature comparison and enhanced capabilities reference | ✅ Ready |
-| **[🗄️ Database Migration](./docs/migration/POSTGRESQL_MIGRATION_SUMMARY.md)** | Database migration and setup guide | ✅ Ready |
-
-### **🏢 Enterprise Documentation**
-| Documentation | Description | Status |
-|---------------|-------------|--------|
-| **[👥 Enterprise User Management](./docs/reference/ENTERPRISE_USER_MANAGEMENT.md)** | Complete user groups, account expiration, and access control guide | ✅ Ready |
-| **[🏢 Enterprise Audit Report](./docs/enterprise/ENTERPRISE-AUDIT-REPORT.md)** | Enterprise audit details and assessment | ✅ Ready |
-| **[📋 Enterprise Readiness Summary](./docs/enterprise/ENTERPRISE-READINESS-SUMMARY.md)** | Readiness assessment for enterprise deployment | ✅ Ready |
-| **[🚀 Development Roadmap](./docs/project/DEVELOPMENT_ROADMAP.md)** | Complete 3-phase development cycle and future plans | ✅ Ready |
-| **[👥 Project Governance](./docs/project/PROJECT_GOVERNANCE.md)** | Ownership, licensing, IP portfolio, and corporate structure | ✅ Ready |
-
-### **🎯 Production Launch Preparation (Phase 3.5)**
-
-| Documentation | Description | Status |
-|---------------|-------------|--------|
-| **[🚀 Production Launch Roadmap](./docs/project/PRODUCTION_LAUNCH_ROADMAP.md)** | 8-10 week sprint plan for production launch preparation | 🚧 **ACTIVE** |
-| **[📅 Sprint Planning Guide](./docs/project/SPRINT_PLANNING.md)** | Immediate actionable sprint tasks and daily breakdowns | 🚧 **ACTIVE** |
-| **[📋 Production Launch Checklist](./docs/setup/PRODUCTION_LAUNCH_CHECKLIST.md)** | Go/No-Go launch validation criteria and executive scorecard | 🚧 **ACTIVE** |
-
-### **🧪 Audit & Validation Reports**
-| Documentation | Description | Status |
-|---------------|-------------|--------|
-| **[🔍 Final Hardening Audit](./docs/audit/FINAL_HARDENING_AUDIT_REPORT.md)** | Security hardening validation results | ✅ Ready |
-| **[⚡ Runtime Validation Report](./docs/audit/RUNTIME_VALIDATION_REPORT.md)** | Runtime performance and validation | ✅ Ready |
-| **[🛡️ System Integrity Report](./docs/audit/SYSTEM_INTEGRITY_REPORT.md)** | System integrity and security validation | ✅ Ready |
-| **[📋 Post-Resolution Audit](./docs/audit/POST_RESOLUTION_AUDIT_REPORT.md)** | Post-resolution audit and verification | ✅ Ready |
-
-### **🎨 Visual & Integration Guides**
-| Documentation | Description | Status |
-|---------------|-------------|--------|
-| **[🖼️ Screenshots](./docs/SCREENSHOTS.md)** | Visual documentation, dashboard views, interface guide | ✅ Ready |
-| **[🔧 Integration Docs](./docs/integration/)** | Phase-based library integration guides and tooling | ✅ Ready |
-| **[🎨 Frontend Integration Hub](./docs/integration/frontend/README.md)** | Frontend enhancement roadmap and guides | ✅ Ready |
-
----
-
 ### **📁 Complete Documentation Structure**
 
 ```
@@ -614,20 +584,24 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed development workflow and c
 ## 📞 **Support & Community**
 
 ### **📖 Getting Help**
-- **Setup Issues**: See [Installation Guide](./docs/installation/INSTALLATION.md)
-- **Feature Questions**: Check [Features Documentation](./docs/features/FEATURES.md)
-- **API Help**: Reference [API Documentation](./docs/api/API-Reference.md)
-- **System Status**: Monitor [Operational Metrics](./docs/system/SYSTEM-STATUS.md)
+- **🚀 Setup Issues**: [Installation Guide](./docs/setup/STARTUP_GUIDE.md) • [Quick Start](./docs/setup/START_DIRECT.md)
+- **🔧 Configuration**: [Production Setup](./docs/setup/PRODUCTION_QUICK_REFERENCE.md) • [Environment Config](./docs/setup/ENV_CONFIGURATION_STATUS.md)
+- **🏢 Enterprise**: [User Management](./docs/reference/ENTERPRISE_USER_MANAGEMENT.md) • [Customer Onboarding](./docs/features/CUSTOMER_ONBOARDING_GUIDE.md)
+- **🛡️ Security**: [Security Features](./docs/features/FEATURES.md) • [Compliance](./docs/compliance/COMPLIANCE_FRAMEWORKS.md)
+- **📡 API Help**: [API Reference](./docs/api/API-Reference.md) • [Integration Guides](./docs/integration/README.md)
+- **📊 System Status**: [Operational Metrics](./docs/system/SYSTEM-STATUS.md) • [Performance Tuning](./docs/system/README.md)
 
 ### **🐛 Issues & Feedback**
 - **Bug Reports**: [GitHub Issues](https://github.com/yourusername/securenet/issues)
 - **Feature Requests**: [GitHub Discussions](https://github.com/yourusername/securenet/discussions)
 - **Security Issues**: Email security@securenet.ai
+- **Documentation Issues**: [Documentation Hub](./docs/README.md)
 
-### **💬 Community**
+### **💬 Community & Resources**
 - **Discussions**: [GitHub Discussions](https://github.com/pmvita/securenet/discussions)
-- **Updates**: Follow development in [Roadmap](./docs/project/TODO.md)
-- **Documentation**: Contribute to [docs improvement](./CONTRIBUTING.md)
+- **Development Updates**: [Production Roadmap](./docs/project/PRODUCTION_LAUNCH_ROADMAP.md) • [Sprint Planning](./docs/project/SPRINT_PLANNING.md)
+- **Contributing**: [Contributing Guidelines](./docs/contributing/CONTRIBUTING.md) • [Development Workflow](./docs/project/PROJECT_GOVERNANCE.md)
+- **Release Notes**: [Latest Release](./docs/release/RELEASE_NOTES_v2.2.0-enterprise.md) • [Changelog](./docs/project/CHANGELOG.md)
 
 ---
 

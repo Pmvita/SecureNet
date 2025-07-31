@@ -60,9 +60,10 @@ notifications (organization_id, user_id, title, message, severity)
 ### **Subscription Plans**
 | Plan | Price/Month | Devices | Scans | Log Retention | Features |
 |------|-------------|---------|-------|---------------|----------|
-| **Free** | $0 | 5 | 10 | 7 days | Basic scanning, Email alerts |
-| **Pro** | $99 | 50 | 500 | 30 days | ML detection, Integrations, API access |
-| **Enterprise** | $499 | 1000 | 10,000 | 365 days | Full features, Compliance, Support |
+| Free | $0 | 5 | 10/month | 7 days | Basic scanning, email alerts |
+| Pro | $149 | 50 | 500/month | 30 days | Advanced scanning, ML detection, integrations |
+| Enterprise | $499 | 1000+ | Unlimited | 1 year | Full suite, white-label, compliance |
+| MSP Bundle | $999 | Unlimited | Unlimited | Unlimited | Multi-tenant, reseller capabilities |
 
 ### **Billing Infrastructure**
 - ✅ **Usage tracking** for all billable resources
@@ -272,7 +273,7 @@ GET  /api/insights/recommendations          # AI security recommendations
 ## 📊 **BUSINESS IMPACT**
 
 ### **Revenue Model**
-- **Subscription Tiers**: $0, $99, $499/month
+- **Subscription Tiers**: $0, $149, $499, $999/month
 - **Usage-Based Billing**: Overage charges for excess usage
 - **Enterprise Features**: Compliance, support, custom limits
 - **Scalable Pricing**: Grows with customer usage
@@ -281,6 +282,7 @@ GET  /api/insights/recommendations          # AI security recommendations
 - **SMB Market**: Free tier for small businesses
 - **Mid-Market**: Pro tier with advanced features
 - **Enterprise**: Full-featured tier with compliance
+- **MSP Market**: Bundle tier for service providers
 - **Competitive**: Pricing aligned with market leaders
 
 ### **Growth Potential**
