@@ -432,16 +432,7 @@ const AppRoutes: React.FC = () => {
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="founder/documentation"
-                  element={
-                    <ProtectedRoute requiredPermissions={['founder_unlimited_access']}>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <DocumentationViewer />
-                      </Suspense>
-                    </ProtectedRoute>
-                  }
-                />
+
                 
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
