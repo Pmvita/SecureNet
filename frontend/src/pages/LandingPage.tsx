@@ -209,7 +209,7 @@ const LandingPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-dark-200 dark:text-gray-100">
+    <div className="min-h-screen bg-gray-950 text-gray-100">
       {/* Navigation */}
       <nav className="glass-card border-b border-gray-800/50 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
