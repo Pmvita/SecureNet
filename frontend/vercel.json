@@ -4,15 +4,10 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "devCommand": "npm run dev",
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api-placeholder.html",
-      "status": 503
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
@@ -53,13 +48,18 @@
   ],
   "redirects": [
     {
+      "source": "/api/(.*)",
+      "destination": "/",
+      "permanent": false
+    },
+    {
       "source": "/admin",
-      "destination": "/coming-soon",
+      "destination": "/",
       "permanent": false
     },
     {
       "source": "/dashboard",
-      "destination": "/coming-soon", 
+      "destination": "/", 
       "permanent": false
     },
     {
