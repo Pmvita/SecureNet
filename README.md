@@ -558,6 +558,12 @@ SecureNet supports multiple deployment environments to meet diverse organization
 - **Google Cloud Platform (GCP)** - Compute Engine, GKE, Cloud Run
 - **Multi-cloud redundancy** for high availability and disaster recovery
 
+### **🌐 Frontend/Marketing Deployment**
+- **Vercel Platform** - Static frontend deployment for marketing and user acquisition
+- **Coming Soon Pages** - Early access collection with email signup
+- **Independent Branch** - Separate deployment from main platform
+- **📚 [Vercel Deployment Guide](./docs/vercel-deployment/README.md)** - Complete setup and branch management
+
 ### **🔄 Hybrid Cloud**
 - **SOC/Compliance zone** support with data residency controls
 - **Edge deployment** for distributed security operations
