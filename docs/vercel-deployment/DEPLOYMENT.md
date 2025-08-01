@@ -10,6 +10,186 @@ Before deploying, ensure you have:
 - ✅ `Vercel-Branch` ready with frontend-only code
 - ✅ Domain name (optional, for custom domain)
 
+## 🔄 Branch Switching Workflow
+
+Since you'll be working on **two different versions** of SecureNet, here's the complete workflow for switching between branches:
+
+### 🌐 Working on Vercel-Branch (Marketing Site)
+
+#### Switch to Vercel-Branch and Pull Latest
+```bash
+# Check current branch
+git branch
+
+# Switch to Vercel-Branch
+git checkout Vercel-Branch
+
+# Pull latest changes from remote
+git pull origin Vercel-Branch
+
+# Verify you're on the right branch
+git branch
+# * Vercel-Branch  <-- You should see this
+#   main
+```
+
+#### Work on Marketing Site
+```bash
+# Navigate to frontend (if needed)
+cd frontend
+
+# Start development server
+npm run dev
+# ✅ Opens http://localhost:5173 with landing page
+
+# Make your changes to:
+# - frontend/src/pages/LandingPage.tsx
+# - frontend/src/App.tsx (routing)
+# - frontend/public/ (static assets)
+# - frontend/vercel.json (deployment config)
+```
+
+#### Commit and Push Changes
+```bash
+# Add your changes
+git add .
+
+# Commit with descriptive message
+git commit -m "update: improve landing page hero section"
+
+# Push to Vercel-Branch (triggers automatic deployment)
+git push origin Vercel-Branch
+
+# ✅ Vercel automatically deploys your changes
+```
+
+### 🏢 Working on Main Branch (Full-Stack Enterprise)
+
+#### Switch to Main Branch and Pull Latest
+```bash
+# Switch to main branch
+git checkout main
+
+# Pull latest changes from remote
+git pull origin main
+
+# Verify you're on the right branch
+git branch
+#   Vercel-Branch
+# * main  <-- You should see this
+```
+
+#### Work on Enterprise Platform
+```bash
+# Start backend (in one terminal)
+./start_enterprise.sh
+# OR
+./start_production.sh
+
+# Start frontend (in another terminal)
+cd frontend
+npm run dev
+# ✅ Opens http://localhost:5173 with full platform
+
+# Make your changes to:
+# - Backend: api/, database/, src/
+# - Frontend: full feature set
+# - Documentation: docs/
+```
+
+#### Commit and Push Changes
+```bash
+# Add your changes
+git add .
+
+# Commit with descriptive message
+git commit -m "feat: add new enterprise security dashboard"
+
+# Push to main branch
+git push origin main
+
+# ✅ Updates main branch (for internal/staging deployment)
+```
+
+### 🔄 Daily Development Pattern
+
+#### Morning Routine
+```bash
+# Check what branch you're on
+git status
+git branch
+
+# Fetch all latest changes
+git fetch --all
+
+# See what's new on both branches
+git log --oneline -5 main
+git log --oneline -5 Vercel-Branch
+```
+
+#### Switching Between Projects
+```bash
+# Working on marketing site? 
+git checkout Vercel-Branch
+git pull origin Vercel-Branch
+cd frontend && npm run dev
+
+# Working on enterprise platform?
+git checkout main  
+git pull origin main
+./start_enterprise.sh
+```
+
+### 🚨 Important Safety Checks
+
+#### Before Making Changes
+```bash
+# ALWAYS check current branch first
+git branch
+git status
+
+# Make sure you're in the right place:
+# Vercel-Branch = Marketing site work
+# main = Enterprise platform work
+```
+
+#### Before Committing
+```bash
+# Double-check what you're committing
+git status
+git diff
+
+# Make sure commit message matches the branch:
+# Vercel-Branch: "update: improve signup form"
+# main: "feat: add enterprise audit logs"
+```
+
+### 🎯 Quick Reference Commands
+
+```bash
+# Switch to marketing site work
+git checkout Vercel-Branch && git pull origin Vercel-Branch
+
+# Switch to enterprise platform work  
+git checkout main && git pull origin main
+
+# Check current status
+git branch && git status
+
+# Push marketing changes (auto-deploys to Vercel)
+git add . && git commit -m "update: marketing site" && git push origin Vercel-Branch
+
+# Push enterprise changes
+git add . && git commit -m "feat: enterprise feature" && git push origin main
+```
+
+### ⚠️ Common Pitfalls to Avoid
+
+1. **Wrong Branch:** Always run `git branch` before making changes
+2. **Stale Code:** Always `git pull` before starting work
+3. **Mixed Commits:** Don't mix marketing and enterprise changes in one commit
+4. **Force Push:** Never use `git push --force` on shared branches
+
 ## 🚀 Deployment Methods
 
 ### Method 1: GitHub Integration (Recommended)
