@@ -41,57 +41,90 @@ class PlanUpgradeRequest(BaseModel):
 
 # Subscription plan definitions
 SUBSCRIPTION_PLANS = {
-    "free": SubscriptionPlan(
-        name="Free",
-        price_monthly=0.0,
-        price_yearly=0.0,
-        device_limit=5,
-        scan_limit=10,
-        log_retention_days=7,
-        features=["Basic network scanning", "Email alerts", "7-day log retention"]
-    ),
-    "pro": SubscriptionPlan(
-        name="Pro",
-        price_monthly=149.0,
-        price_yearly=1490.0,
-        device_limit=50,
-        scan_limit=500,
+    "starter": SubscriptionPlan(
+        name="Starter",
+        price_monthly=99.0,
+        price_yearly=990.0,
+        device_limit=25,
+        scan_limit=100,
         log_retention_days=30,
         features=[
-            "Advanced vulnerability scanning", 
-            "ML anomaly detection",
-            "Slack/Teams integration",
+            "AI-powered threat detection",
+            "Basic network scanning",
+            "Email alerts",
             "30-day log retention",
-            "Custom dashboards",
-            "API access"
+            "5 users included"
         ]
     ),
-    "enterprise": SubscriptionPlan(
-        name="Enterprise",
-        price_monthly=499.0,
-        price_yearly=4990.0,
-        device_limit=1000,
+    "professional": SubscriptionPlan(
+        name="Professional",
+        price_monthly=299.0,
+        price_yearly=2990.0,
+        device_limit=250,
+        scan_limit=1000,
+        log_retention_days=90,
+        features=[
+            "Advanced AI threat detection",
+            "Advanced vulnerability scanning",
+            "ML anomaly detection",
+            "Slack/Teams integration",
+            "90-day log retention",
+            "Custom dashboards",
+            "API access",
+            "Priority support",
+            "Compliance reporting"
+        ]
+    ),
+    "business": SubscriptionPlan(
+        name="Business",
+        price_monthly=799.0,
+        price_yearly=7990.0,
+        device_limit=2500,
         scan_limit=10000,
         log_retention_days=365,
         features=[
+            "Enterprise AI threat detection",
             "Unlimited vulnerability scanning",
             "Advanced ML threat detection",
             "Full integrations suite",
             "1-year log retention",
             "White-label options",
+            "24/7 support",
+            "Custom integrations",
+            "Advanced analytics",
+            "Dedicated account manager"
+        ]
+    ),
+    "enterprise": SubscriptionPlan(
+        name="Enterprise",
+        price_monthly=1999.0,
+        price_yearly=19990.0,
+        device_limit=5000,
+        scan_limit=50000,
+        log_retention_days=730,
+        features=[
+            "Full enterprise security suite",
+            "Unlimited vulnerability scanning",
+            "Advanced ML threat detection",
+            "Full integrations suite",
+            "2-year log retention",
+            "White-label options",
             "Dedicated support",
-            "Compliance reporting",
-            "On-premise deployment"
+            "Custom development",
+            "SLA guarantees",
+            "On-premise deployment",
+            "Compliance automation"
         ]
     ),
     "msp": SubscriptionPlan(
         name="MSP Bundle",
-        price_monthly=999.0,
-        price_yearly=9990.0,
+        price_monthly=2999.0,
+        price_yearly=29990.0,
         device_limit=-1,  # unlimited
         scan_limit=-1,    # unlimited
         log_retention_days=-1,  # unlimited
         features=[
+            "Complete MSP solution",
             "Unlimited devices",
             "Unlimited scanning",
             "Unlimited log retention",

@@ -5,7 +5,6 @@ import axios from 'axios';
 
   // Development mode bypass - force real API mode
   const DEV_MODE = import.meta.env.VITE_MOCK_DATA === 'true';
-  console.log('useNetwork: DEV_MODE =', DEV_MODE, 'VITE_MOCK_DATA =', import.meta.env.VITE_MOCK_DATA);
 
 export interface NetworkDevice {
   id: string;
@@ -117,7 +116,7 @@ type NetworkResponse = {
 
 export const useNetwork = (options: UseNetworkOptions = {}) => {
   const queryClient = useQueryClient();
-  const { refreshInterval = 30000 } = options;
+  const { refreshInterval = 60000 } = options; // Reduced from 30s to 60s to reduce API load
 
   const {
     data: apiResponse,
@@ -129,7 +128,6 @@ export const useNetwork = (options: UseNetworkOptions = {}) => {
     queryFn: async () => {
       // In development mode, return mock data
       if (DEV_MODE) {
-        console.log('useNetwork: Using mock data (DEV_MODE = true)');
         return {
           status: 'success',
           data: {
@@ -178,34 +176,27 @@ export const useNetwork = (options: UseNetworkOptions = {}) => {
       }
 
       try {
-        console.log('useNetwork: Making real API request (DEV_MODE = false)');
         const response = await apiClient.get<ApiResponse<NetworkResponseData>>('/api/network');
-        console.log('useNetwork: Raw API response =', response);
         
         if (!response) {
-          console.error('useNetwork: No response received');
           throw new Error('No response received from the network endpoint');
         }
         
         if (!response.data) {
-          console.error('useNetwork: No data in response');
           throw new Error('No data received from the network endpoint');
         }
         
         if (response.status !== 'success') {
-          console.error('useNetwork: Request failed with status', response.status);
           throw new Error('Network request failed');
         }
         
-        console.log('useNetwork: API request successful, response.data =', response.data);
         return response;
-      } catch (error) {
-        console.error('useNetwork: Error caught', error);
+              } catch (error) {
         if (error instanceof Error) {
           throw error;
         }
         if (axios.isAxiosError(error)) {
-          console.error('useNetwork: Axios error', error.response?.data, error.message);
+          console.error('Network API Error:', error.response?.data?.message || error.message);
           throw new Error(error.response?.data?.message || error.message || 'Network request failed');
         }
         throw new Error('Failed to fetch network data');
@@ -218,10 +209,6 @@ export const useNetwork = (options: UseNetworkOptions = {}) => {
   // For mock data, apiResponse.data contains the NetworkResponseData directly
   // For real API, apiResponse.data also contains the NetworkResponseData directly (thanks to API client)
   const responseData = apiResponse?.data as NetworkResponseData;
-  console.log('useNetwork: Full API response =', apiResponse);
-  console.log('useNetwork: Extracted responseData =', responseData);
-  console.log('useNetwork: ResponseData type =', typeof responseData);
-  console.log('useNetwork: ResponseData keys =', responseData ? Object.keys(responseData) : 'none');
   
   // Add safety checks to ensure devices is always an array
   const devices = (responseData?.devices && Array.isArray(responseData.devices)) 
@@ -269,11 +256,6 @@ export const useNetwork = (options: UseNetworkOptions = {}) => {
     sum + traffic.packets_in + traffic.packets_out, 0
   );
   
-  console.log('useNetwork: trafficData length =', trafficData.length);
-  console.log('useNetwork: totalTrafficBytes calculated =', totalTrafficBytes);
-  console.log('useNetwork: totalTrafficPackets =', totalTrafficPackets);
-  console.log('useNetwork: responseData.stats =', responseData?.stats);
-  
   // Calculate bandwidth usage in Mbps (assume data is over recent period)
   const bandwidthMbps = totalTrafficBytes > 0 ? (totalTrafficBytes / 1024 / 1024) : 0;
   
@@ -300,9 +282,6 @@ export const useNetwork = (options: UseNetworkOptions = {}) => {
     ),
     traffic: trafficData // Include real traffic data
   };
-
-  console.log('useNetwork: Final calculated metrics =', metrics);
-  console.log('useNetwork: devices count =', devices.length);
 
   const blockConnection = useMutation({
     mutationFn: async (connectionId: string) => {

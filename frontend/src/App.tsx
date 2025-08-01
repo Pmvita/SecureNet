@@ -24,6 +24,7 @@ const SettingsPage = React.lazy(() => import('./features/settings/pages/Settings
 const ProfilePage = React.lazy(() => import('./features/profile/pages/ProfilePage').then(module => ({ default: module.ProfilePage })));
 const PreferencesPage = React.lazy(() => import('./features/preferences/pages/PreferencesPage').then(module => ({ default: module.PreferencesPage })));
 const NotificationsPage = React.lazy(() => import('./features/notifications/pages/NotificationsPage').then(module => ({ default: module.NotificationsPage })));
+const BillingPage = React.lazy(() => import('./features/billing/pages/BillingPage'));
 
 // Admin pages - separate chunk
 const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
@@ -38,7 +39,33 @@ const FinancialControl = React.lazy(() => import('./pages/founder/FinancialContr
 const SystemAdministration = React.lazy(() => import('./pages/founder/SystemAdministration').then(module => ({ default: module.SystemAdministration })));
 const EmployeeManagement = React.lazy(() => import('./pages/founder/EmployeeManagement'));
 const DocumentationViewer = React.lazy(() => import('./pages/founder/DocumentationViewer'));
+
+// Platform monitoring pages - founder only
+const PlatformSecurityPage = React.lazy(() => import('./pages/platform/PlatformSecurityPage'));
+const PlatformInfrastructurePage = React.lazy(() => import('./pages/platform/PlatformInfrastructurePage'));
+const PlatformAnalyticsPage = React.lazy(() => import('./pages/platform/PlatformAnalyticsPage'));
+const FounderPlatformOverview = React.lazy(() => import('./pages/FounderPlatformOverview'));
+
+// Additional founder pages
+const CompanyManagement = React.lazy(() => import('./pages/founder/CompanyManagement'));
+const LegalCompliance = React.lazy(() => import('./pages/founder/LegalCompliance'));
+const EmergencyControls = React.lazy(() => import('./pages/founder/EmergencyControls'));
+const PlatformDocumentation = React.lazy(() => import('./pages/founder/PlatformDocumentation'));
 import LoadingSpinner from './components/LoadingSpinner';
+
+// Conditional Dashboard Component
+const ConditionalDashboard: React.FC = () => {
+  const { user } = useAuth();
+  const userRole = user?.role?.toLowerCase();
+  
+  // Show founder platform overview for platform_founder
+  if (userRole === 'platform_founder' || userRole === 'founder') {
+    return <FounderPlatformOverview />;
+  }
+  
+  // Show regular operational dashboard for all other users
+  return <DashboardPage />;
+};
 import {
   ChartBarIcon,
   DocumentTextIcon,
@@ -50,6 +77,7 @@ import {
   UsersIcon,
   BuildingOfficeIcon,
   CreditCardIcon,
+  CurrencyDollarIcon,
   ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import { AppErrorBoundary } from './components/error/AppErrorBoundary';
@@ -64,32 +92,49 @@ const AppRoutes: React.FC = () => {
   
   // Navigation items for the sidebar - role-based
   const getNavigationItems = () => {
+    // Get user role in lowercase for consistent comparison
+    const userRole = user?.role?.toLowerCase();
+
+    // Founder navigation - Strategic platform-wide view
+    if (userRole === 'platform_founder' || userRole === 'founder') {
+      return [
+        // Strategic Command Center
+        { path: '/founder', label: 'Executive Command Center', icon: 'StarIcon' },
+        { path: '/founder/financial', label: 'Financial Control', icon: 'CurrencyDollarIcon' },
+        { path: '/founder/system', label: 'System Administration', icon: 'Cog6ToothIcon' },
+        
+        // Platform Administration  
+        { path: '/admin', label: 'Platform Administration', icon: 'BuildingOfficeIcon' },
+        { path: '/admin/users', label: 'User Management', icon: 'UsersIcon' },
+        { path: '/admin/tenants', label: 'Organization Management', icon: 'BuildingOfficeIcon' },
+        { path: '/admin/billing', label: 'Revenue Management', icon: 'CreditCardIcon' },
+        { path: '/admin/audit', label: 'Audit & Compliance', icon: 'ClipboardDocumentListIcon' },
+        
+        // Platform Monitoring (Strategic Overview)
+        { path: '/dashboard', label: 'Platform Overview', icon: 'ChartBarIcon' },
+        { path: '/platform/security', label: 'Platform Security', icon: 'ShieldCheckIcon' },
+        { path: '/platform/infrastructure', label: 'Infrastructure Health', icon: 'GlobeAltIcon' },
+        { path: '/platform/analytics', label: 'Business Intelligence', icon: 'DocumentTextIcon' },
+        
+        // Company & Personal Management
+        { path: '/founder/company', label: 'Company Management', icon: 'BuildingOfficeIcon' },
+        { path: '/founder/legal', label: 'Legal & Compliance', icon: 'ClipboardDocumentListIcon' },
+        { path: '/founder/emergency', label: 'Emergency Controls', icon: 'ExclamationTriangleIcon' },
+        { path: '/settings', label: 'Account Settings', icon: 'Cog6ToothIcon' },
+        { path: '/founder/documentation', label: 'Platform Documentation', icon: 'DocumentTextIcon' },
+      ];
+    }
+
+    // Standard operational items for non-founder users
     const baseItems = [
       { path: '/dashboard', label: 'Dashboard', icon: 'ChartBarIcon' },
       { path: '/logs', label: 'Logs', icon: 'DocumentTextIcon' },
       { path: '/security', label: 'Security', icon: 'ShieldCheckIcon' },
       { path: '/network', label: 'Network', icon: 'GlobeAltIcon' },
       { path: '/anomalies', label: 'Anomalies', icon: 'ExclamationTriangleIcon' },
+      { path: '/billing', label: 'Billing', icon: 'CreditCardIcon' },
       { path: '/settings', label: 'Settings', icon: 'Cog6ToothIcon' },
     ];
-
-    // Get user role in lowercase for consistent comparison
-    const userRole = user?.role?.toLowerCase();
-
-    // Add founder navigation items for ultimate access
-    if (userRole === 'platform_founder' || userRole === 'founder') {
-      return [
-        ...baseItems,
-              { path: '/founder', label: 'Executive Command Center', icon: 'StarIcon' },
-      { path: '/founder/financial', label: 'Financial Control', icon: 'CreditCardIcon' },
-      { path: '/founder/system', label: 'System Administration', icon: 'Cog6ToothIcon' },
-        { path: '/admin', label: 'Admin Dashboard', icon: 'StarIcon' },
-        { path: '/admin/users', label: 'Users', icon: 'UsersIcon' },
-        { path: '/admin/tenants', label: 'Tenants', icon: 'BuildingOfficeIcon' },
-        { path: '/admin/billing', label: 'Billing', icon: 'CreditCardIcon' },
-        { path: '/admin/audit', label: 'Audit Logs', icon: 'ClipboardDocumentListIcon' },
-      ];
-    }
 
     // Add admin navigation items for users with system_admin permissions
     // Check for both new and legacy roles (case-insensitive)
@@ -168,7 +213,7 @@ const AppRoutes: React.FC = () => {
           <ProtectedRoute>
             <DashboardLayout navigationItems={getNavigationItems()}>
               <Suspense fallback={<LoadingSpinner />}>
-                <DashboardPage />
+                <ConditionalDashboard />
               </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
@@ -209,9 +254,26 @@ const AppRoutes: React.FC = () => {
                     </ProtectedRoute>
                   }
                 />
-                <Route path="profile" element={<ProfilePage />} />
-                <Route path="preferences" element={<PreferencesPage />} />
-                <Route path="notifications" element={<NotificationsPage />} />
+                <Route path="profile" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ProfilePage />
+                  </Suspense>
+                } />
+                <Route path="preferences" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PreferencesPage />
+                  </Suspense>
+                } />
+                <Route path="notifications" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <NotificationsPage />
+                  </Suspense>
+                } />
+                <Route path="billing" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <BillingPage />
+                  </Suspense>
+                } />
                 
                 {/* Admin Routes - Only accessible by superadmin */}
                 <Route
@@ -282,6 +344,80 @@ const AppRoutes: React.FC = () => {
                     <ProtectedRoute requiredPermissions={['founder_system_administration']}>
                       <Suspense fallback={<LoadingSpinner />}>
                         <SystemAdministration />
+                      </Suspense>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Platform Monitoring Routes - Founder Only */}
+                <Route
+                  path="platform/security"
+                  element={
+                    <ProtectedRoute requiredPermissions={['founder_unlimited_access']}>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <PlatformSecurityPage />
+                      </Suspense>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="platform/infrastructure"
+                  element={
+                    <ProtectedRoute requiredPermissions={['founder_unlimited_access']}>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <PlatformInfrastructurePage />
+                      </Suspense>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="platform/analytics"
+                  element={
+                    <ProtectedRoute requiredPermissions={['founder_unlimited_access']}>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <PlatformAnalyticsPage />
+                      </Suspense>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Additional Founder Management Routes */}
+                <Route
+                  path="founder/company"
+                  element={
+                    <ProtectedRoute requiredPermissions={['founder_unlimited_access']}>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <CompanyManagement />
+                      </Suspense>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="founder/legal"
+                  element={
+                    <ProtectedRoute requiredPermissions={['founder_unlimited_access']}>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <LegalCompliance />
+                      </Suspense>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="founder/emergency"
+                  element={
+                    <ProtectedRoute requiredPermissions={['founder_unlimited_access']}>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <EmergencyControls />
+                      </Suspense>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="founder/documentation"
+                  element={
+                    <ProtectedRoute requiredPermissions={['founder_unlimited_access']}>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <PlatformDocumentation />
                       </Suspense>
                     </ProtectedRoute>
                   }

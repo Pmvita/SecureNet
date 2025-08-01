@@ -44,52 +44,77 @@ const LandingPage: React.FC = () => {
 
   const pricingPlans = [
     {
-      name: "Free",
-      price: "$0",
+      name: "Starter",
+      price: "$99",
       period: "/month",
       description: "Perfect for small teams getting started",
       features: [
-        "5 devices",
-        "10 scans per month",
-        "7-day log retention",
-        "Basic network scanning",
-        "Email alerts"
+        "5 users included",
+        "25 devices",
+        "5GB storage",
+        "5,000 API calls/month",
+        "500 alerts/month",
+        "AI-powered threat detection",
+        "Email support",
+        "30-day log retention"
       ],
-      cta: "Get Started Free",
+      cta: "Start Free Trial",
       popular: false
     },
     {
-      name: "Pro",
-      price: "$149",
+      name: "Professional",
+      price: "$299",
       period: "/month",
       description: "Ideal for growing security teams",
       features: [
-        "50 devices",
-        "500 scans per month",
-        "30-day log retention",
-        "Advanced vulnerability scanning",
-        "ML anomaly detection",
-        "Slack/Teams integration",
-        "Custom dashboards",
-        "API access"
+        "50 users",
+        "250 devices",
+        "25GB storage",
+        "25,000 API calls/month",
+        "2,500 alerts/month",
+        "Advanced AI threat detection",
+        "Priority support",
+        "Compliance reporting",
+        "90-day log retention"
       ],
       cta: "Start Free Trial",
       popular: true
     },
     {
-      name: "Enterprise",
-      price: "$499",
+      name: "Business",
+      price: "$799",
       period: "/month",
       description: "For large organizations with advanced needs",
       features: [
-        "1000+ devices",
-        "Unlimited scanning",
-        "1-year log retention",
-        "Advanced ML threat detection",
-        "Full integrations suite",
-        "White-label options",
+        "500 users",
+        "2,500 devices",
+        "100GB storage",
+        "100,000 API calls/month",
+        "10,000 alerts/month",
+        "Enterprise AI threat detection",
+        "24/7 support",
+        "Custom integrations",
+        "Advanced analytics",
+        "Dedicated account manager"
+      ],
+      cta: "Contact Sales",
+      popular: false
+    },
+    {
+      name: "Enterprise",
+      price: "$1,999",
+      period: "/month",
+      description: "For enterprise organizations",
+      features: [
+        "1,000 users",
+        "5,000 devices",
+        "500GB storage",
+        "500,000 API calls/month",
+        "50,000 alerts/month",
+        "Full enterprise security suite",
         "Dedicated support",
-        "Compliance reporting",
+        "Custom development",
+        "SLA guarantees",
         "On-premise deployment"
       ],
       cta: "Contact Sales",
@@ -97,20 +122,20 @@ const LandingPage: React.FC = () => {
     },
     {
       name: "MSP Bundle",
-      price: "$999",
+      price: "$2,999",
       period: "/month",
       description: "For Managed Service Providers",
       features: [
-        "Unlimited devices",
-        "Unlimited scanning",
-        "Unlimited log retention",
-        "Multi-tenant management",
-        "White-label platform",
-        "Reseller capabilities",
-        "Dedicated account manager",
-        "Custom integrations",
-        "Priority support",
-        "Revenue sharing"
+        "1,000 users",
+        "10,000 devices",
+        "1TB storage",
+        "1,000,000 API calls/month",
+        "100,000 alerts/month",
+        "Complete MSP solution",
+        "White-label options",
+        "Partner dashboard",
+        "Revenue sharing",
+        "Custom integrations"
       ],
       cta: "Contact Sales",
       popular: false
@@ -142,7 +167,7 @@ const LandingPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-dark-200 text-gray-100">
+    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-dark-200 dark:text-gray-100">
       {/* Navigation */}
       <nav className="glass-card border-b border-gray-800/50 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -247,7 +272,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* About Section */}
-      <section id="about" className="py-24 bg-dark-200">
+      <section id="about" className="py-24 bg-gray-100 dark:bg-dark-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
@@ -327,7 +352,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-24 bg-dark-200">
+      <section id="pricing" className="py-24 bg-gray-100 dark:bg-dark-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">

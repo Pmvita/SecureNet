@@ -92,27 +92,33 @@ gtag('event', 'sign_up', {
 ### **Plan Structure**
 
 #### **Free Plan**
-- **Price**: $0/month
+- **Price**: $99/month ($990/year - 17% savings)
 - **Target**: Small teams, evaluation
 - **Limits**: 5 devices, 10 scans/month, 7-day retention
 - **Features**: Basic scanning, email alerts, community support
 
 #### **Pro Plan** ⭐ **Most Popular**
-- **Price**: $149/month ($1,490/year - 17% savings)
+- **Price**: $299/month ($2,990/year - 17% savings)
 - **Target**: Growing security teams
 - **Limits**: 50 devices, 500 scans/month, 30-day retention
 - **Features**: Advanced scanning, ML detection, integrations, API access
 
-#### **Enterprise Plan**
-- **Price**: $499/month ($4,990/year - 17% savings)
+#### **Business Plan**
+- **Price**: $799/month ($7,990/year - 17% savings)
 - **Target**: Large organizations
-- **Limits**: 1000+ devices, unlimited scanning, 1-year retention
+- **Limits**: 500 devices, 2,500 scans/month, 30-day retention
+- **Features**: Full suite, compliance reporting, advanced analytics
+
+#### **Enterprise Plan**
+- **Price**: $1,999/month ($19,990/year - 17% savings)
+- **Target**: Large organizations
+- **Limits**: 1000+ devices, 5,000 scans/month, 1-year retention
 - **Features**: Full suite, white-label, dedicated support, compliance
 
 #### **MSP Bundle**
-- **Price**: $999/month ($9,990/year - 17% savings)
+- **Price**: $2,999/month ($29,990/year - 17% savings)
 - **Target**: Managed Service Providers
-- **Limits**: Unlimited devices, unlimited scanning, unlimited retention
+- **Limits**: 1000+ devices, 10,000 scans/month, 1-year retention
 - **Features**: Multi-tenant management, white-label platform, reseller capabilities, revenue sharing
 
 ### **Pricing Strategy**
@@ -123,11 +129,11 @@ gtag('event', 'sign_up', {
 - **Annual Discount**: 17% savings for commitment
 
 #### **Competitive Analysis**
-| Feature | SecureNet Pro | Competitor A | Competitor B |
-|---------|---------------|--------------|--------------|
+| Feature | SecureNet Professional | Competitor A | Competitor B |
+|---------|----------------------|--------------|--------------|
 | AI Detection | ✅ | ❌ | ⚠️ |
-| Device Limit | 50 | 25 | 100 |
-| Price/Month | $149 | $150 | $200 |
+| Device Limit | 250 | 25 | 100 |
+| Price/Month | $299 | $150 | $200 |
 | **Value Score** | **9.5/10** | **6/10** | **7/10** |
 
 ---

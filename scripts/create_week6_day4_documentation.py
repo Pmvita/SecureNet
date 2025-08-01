@@ -424,7 +424,7 @@ A: All data is encrypted in transit using TLS 1.3 and at rest using AES-256 encr
 ## Billing Questions
 
 **Q: What pricing plans are available?**
-A: SecureNet offers Free ($0), Pro ($99/month), and Enterprise ($499/month) plans. See our pricing page for details.
+A: SecureNet offers Starter ($99/month), Professional ($299/month), Business ($799/month), Enterprise ($1,999/month), and MSP Bundle ($2,999/month) plans. See our pricing page for details.
 
 **Q: Can I change my plan?**
 A: Yes, you can upgrade or downgrade your plan at any time from the billing section.

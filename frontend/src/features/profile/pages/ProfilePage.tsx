@@ -322,35 +322,108 @@ interface ApiKeysModalProps {
 }
 
 const ApiKeysModal: React.FC<ApiKeysModalProps> = ({ isOpen, onClose }) => {
-  const [apiKeys, setApiKeys] = useState([
-    { id: '1', name: 'Production API', key: 'sk_prod_...', created: '2025-06-01', lastUsed: '2025-06-12' },
-    { id: '2', name: 'Development API', key: 'sk_dev_...', created: '2025-05-15', lastUsed: '2025-06-10' },
-  ]);
+  const { showToast } = useToast();
+  const [apiKeys, setApiKeys] = useState<Array<{
+    id: string;
+    name: string;
+    key: string;
+    created_at: string;
+    last_used?: string;
+  }>>([]);
   const [newKeyName, setNewKeyName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Load API keys on modal open
+  useEffect(() => {
+    if (isOpen) {
+      loadApiKeys();
+    }
+  }, [isOpen]);
+
+  const loadApiKeys = async () => {
+    try {
+      setIsLoading(true);
+      const response = await apiClient.get('/api/user/api-keys');
+      const responseData = response.data as { status: string; data: Array<any> };
+      
+      if (responseData.status === 'success') {
+        setApiKeys(responseData.data);
+      } else {
+        throw new Error('Failed to load API keys');
+      }
+    } catch (error) {
+      console.error('Failed to load API keys:', error);
+      showToast({
+        type: 'error',
+        message: 'Failed to load API keys',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleCreateKey = async () => {
     if (!newKeyName.trim()) return;
     
-    setIsCreating(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newKey = {
-      id: Date.now().toString(),
-      name: newKeyName,
-      key: `sk_${Date.now()}_...`,
-      created: new Date().toISOString().split('T')[0],
-      lastUsed: 'Never',
-    };
-    
-    setApiKeys([...apiKeys, newKey]);
-    setNewKeyName('');
-    setIsCreating(false);
+    try {
+      setIsCreating(true);
+      const response = await apiClient.post('/api/user/api-keys', {
+        name: newKeyName.trim()
+      });
+      const responseData = response.data as { status: string; data: any };
+      
+      if (responseData.status === 'success') {
+        const newKey = responseData.data;
+        setApiKeys([...apiKeys, newKey]);
+        setNewKeyName('');
+        showToast({
+          type: 'success',
+          message: 'API key created successfully',
+        });
+      } else {
+        throw new Error('Failed to create API key');
+      }
+    } catch (error) {
+      console.error('Failed to create API key:', error);
+      showToast({
+        type: 'error',
+        message: 'Failed to create API key',
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  const handleDeleteKey = (id: string) => {
-    setApiKeys(apiKeys.filter(key => key.id !== id));
+  const handleDeleteKey = async (id: string) => {
+    try {
+      const response = await apiClient.delete(`/api/user/api-keys/${id}`);
+      const responseData = response.data as { status: string; data: { message: string } };
+      
+      if (responseData.status === 'success') {
+        setApiKeys(apiKeys.filter(key => key.id !== id));
+        showToast({
+          type: 'success',
+          message: 'API key deleted successfully',
+        });
+      } else {
+        throw new Error('Failed to delete API key');
+      }
+    } catch (error) {
+      console.error('Failed to delete API key:', error);
+      showToast({
+        type: 'error',
+        message: 'Failed to delete API key',
+      });
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    showToast({
+      type: 'success',
+      message: 'API key copied to clipboard',
+    });
   };
 
   if (!isOpen) return null;
@@ -379,6 +452,7 @@ const ApiKeysModal: React.FC<ApiKeysModalProps> = ({ isOpen, onClose }) => {
                 onChange={(e) => setNewKeyName(e.target.value)}
                 placeholder="Enter key name (e.g., Production API)"
                 className="flex-1 px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onKeyPress={(e) => e.key === 'Enter' && handleCreateKey()}
               />
               <button
                 onClick={handleCreateKey}
@@ -393,26 +467,49 @@ const ApiKeysModal: React.FC<ApiKeysModalProps> = ({ isOpen, onClose }) => {
           {/* Existing API keys */}
           <div className="space-y-3">
             <h4 className="text-white font-medium">Your API Keys</h4>
-            {apiKeys.map((key) => (
-              <div key={key.id} className="bg-gray-700 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h5 className="text-white font-medium">{key.name}</h5>
-                    <p className="text-gray-400 text-sm font-mono">{key.key}</p>
-                    <div className="flex space-x-4 text-xs text-gray-500 mt-1">
-                      <span>Created: {key.created}</span>
-                      <span>Last used: {key.lastUsed}</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteKey(key.id)}
-                    className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
-                  >
-                    Delete
-                  </button>
-                </div>
+            {isLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto"></div>
+                <p className="text-gray-400 mt-2">Loading API keys...</p>
               </div>
-            ))}
+            ) : apiKeys.length === 0 ? (
+              <div className="text-center py-8">
+                <DocumentTextIcon className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400">No API keys found</p>
+                <p className="text-sm text-gray-500">Create your first API key to get started</p>
+              </div>
+            ) : (
+              apiKeys.map((key) => (
+                <div key={key.id} className="bg-gray-700 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h5 className="text-white font-medium">{key.name}</h5>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <p className="text-gray-400 text-sm font-mono">{key.key}</p>
+                        <button
+                          onClick={() => copyToClipboard(key.key)}
+                          className="text-blue-400 hover:text-blue-300 text-xs"
+                          title="Copy to clipboard"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                      <div className="flex space-x-4 text-xs text-gray-500 mt-2">
+                        <span>Created: {new Date(key.created_at).toLocaleDateString()}</span>
+                        <span>Last used: {key.last_used ? new Date(key.last_used).toLocaleDateString() : 'Never'}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteKey(key.id)}
+                      className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors ml-4"
+                      title="Delete API key"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           <div className="flex justify-end pt-4">
@@ -435,30 +532,94 @@ interface SessionsModalProps {
 }
 
 const SessionsModal: React.FC<SessionsModalProps> = ({ isOpen, onClose }) => {
-  const [sessions] = useState([
-    {
-      id: '1',
-      device: 'MacBook Pro',
-      browser: 'Chrome 120.0',
-      location: 'San Francisco, CA',
-      ip: '192.168.1.100',
-      lastActive: '2025-06-12T19:50:00Z',
-      current: true,
-    },
-    {
-      id: '2',
-      device: 'iPhone 15',
-      browser: 'Safari Mobile',
-      location: 'San Francisco, CA',
-      ip: '192.168.1.105',
-      lastActive: '2025-06-12T15:30:00Z',
-      current: false,
-    },
-  ]);
+  const { showToast } = useToast();
+  const [sessions, setSessions] = useState<Array<{
+    id: string;
+    device: string;
+    browser: string;
+    location: string;
+    ip: string;
+    last_active: string;
+    current: boolean;
+  }>>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleTerminateSession = (sessionId: string) => {
-    // In a real implementation, you'd call an API to terminate the session
-    console.log('Terminating session:', sessionId);
+  // Load sessions on modal open
+  useEffect(() => {
+    if (isOpen) {
+      loadSessions();
+    }
+  }, [isOpen]);
+
+  const loadSessions = async () => {
+    try {
+      setIsLoading(true);
+      const response = await apiClient.get('/api/user/sessions');
+      const responseData = response.data as { status: string; data: Array<any> };
+      
+      if (responseData.status === 'success') {
+        setSessions(responseData.data);
+      } else {
+        throw new Error('Failed to load sessions');
+      }
+    } catch (error) {
+      console.error('Failed to load sessions:', error);
+      showToast({
+        type: 'error',
+        message: 'Failed to load active sessions',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTerminateSession = async (sessionId: string) => {
+    try {
+      const response = await apiClient.delete(`/api/user/sessions/${sessionId}`);
+      const responseData = response.data as { status: string; data: { message: string } };
+      
+      if (responseData.status === 'success') {
+        setSessions(sessions.filter(session => session.id !== sessionId));
+        showToast({
+          type: 'success',
+          message: 'Session terminated successfully',
+        });
+      } else {
+        throw new Error('Failed to terminate session');
+      }
+    } catch (error) {
+      console.error('Failed to terminate session:', error);
+      showToast({
+        type: 'error',
+        message: 'Failed to terminate session',
+      });
+    }
+  };
+
+  const getDeviceIcon = (device: string) => {
+    if (device.toLowerCase().includes('macbook') || device.toLowerCase().includes('laptop')) {
+      return '💻';
+    } else if (device.toLowerCase().includes('iphone') || device.toLowerCase().includes('mobile')) {
+      return '📱';
+    } else if (device.toLowerCase().includes('ipad') || device.toLowerCase().includes('tablet')) {
+      return '📱';
+    } else if (device.toLowerCase().includes('desktop') || device.toLowerCase().includes('pc')) {
+      return '🖥️';
+    }
+    return '🖥️';
+  };
+
+  const getBrowserIcon = (browser: string) => {
+    if (browser.toLowerCase().includes('chrome')) {
+      return '🌐';
+    } else if (browser.toLowerCase().includes('safari')) {
+      return '🌐';
+    } else if (browser.toLowerCase().includes('firefox')) {
+      return '🦊';
+    } else if (browser.toLowerCase().includes('edge')) {
+      return '🌐';
+    }
+    return '🌐';
   };
 
   if (!isOpen) return null;
@@ -477,35 +638,53 @@ const SessionsModal: React.FC<SessionsModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         <div className="space-y-3">
-          {sessions.map((session) => (
-            <div key={session.id} className="bg-gray-700 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <h5 className="text-white font-medium">{session.device}</h5>
-                    {session.current && (
-                      <span className="px-2 py-1 bg-green-600 text-white text-xs rounded-full">
-                        Current
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-sm text-gray-400 space-y-1">
-                    <p>{session.browser} • {session.location}</p>
-                    <p>IP: {session.ip}</p>
-                    <p>Last active: {new Date(session.lastActive).toLocaleString()}</p>
-                  </div>
-                </div>
-                {!session.current && (
-                  <button
-                    onClick={() => handleTerminateSession(session.id)}
-                    className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
-                  >
-                    Terminate
-                  </button>
-                )}
-              </div>
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto"></div>
+              <p className="text-gray-400 mt-2">Loading active sessions...</p>
             </div>
-          ))}
+          ) : sessions.length === 0 ? (
+            <div className="text-center py-8">
+              <ClockIcon className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-400">No active sessions found</p>
+              <p className="text-sm text-gray-500">You are not currently signed in on any devices</p>
+            </div>
+          ) : (
+            sessions.map((session) => (
+              <div key={session.id} className="bg-gray-700 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <span className="text-lg">{getDeviceIcon(session.device)}</span>
+                      <h5 className="text-white font-medium">{session.device}</h5>
+                      {session.current && (
+                        <span className="px-2 py-1 bg-green-600 text-white text-xs rounded-full">
+                          Current
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-400 space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <span>{getBrowserIcon(session.browser)}</span>
+                        <p>{session.browser} • {session.location}</p>
+                      </div>
+                      <p>IP Address: {session.ip}</p>
+                      <p>Last active: {new Date(session.last_active).toLocaleString()}</p>
+                    </div>
+                  </div>
+                  {!session.current && (
+                    <button
+                      onClick={() => handleTerminateSession(session.id)}
+                      className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+                      title="Terminate this session"
+                    >
+                      Terminate
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         <div className="flex justify-end pt-4">
@@ -1087,49 +1266,17 @@ export const ProfilePage: React.FC = () => {
         isEnabled={is2FAEnabled}
       />
 
-      {/* API Keys Modal - TODO: Implement */}
-      {showApiKeysModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">API Keys</h3>
-              <button
-                onClick={() => setShowApiKeysModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="text-center py-8">
-              <KeyIcon className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400">API Keys management coming soon</p>
-              <p className="text-sm text-gray-500">Create and manage your API access keys</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* API Keys Modal */}
+      <ApiKeysModal
+        isOpen={showApiKeysModal}
+        onClose={() => setShowApiKeysModal(false)}
+      />
 
-      {/* Sessions Modal - TODO: Implement */}
-      {showSessionsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Active Sessions</h3>
-              <button
-                onClick={() => setShowSessionsModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="text-center py-8">
-              <ClockIcon className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400">Session management coming soon</p>
-              <p className="text-sm text-gray-500">View and manage your active sessions</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Sessions Modal */}
+      <SessionsModal
+        isOpen={showSessionsModal}
+        onClose={() => setShowSessionsModal(false)}
+      />
     </div>
   );
 }; 

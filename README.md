@@ -298,6 +298,27 @@ npm run dev
 ```
 
 ### **5. Access SecureNet**
+
+#### **🏠 Local Development**
+```bash
+# Access the application
+# Frontend: http://localhost:5173
+# Backend: http://localhost:8000
+```
+
+#### **🚀 Cloud Deployment (Phase 2)**
+```bash
+# Deploy to AWS cloud infrastructure
+cd terraform
+./deploy.sh
+
+# Access your production application
+# Load Balancer: http://[your-load-balancer-url]
+# Estimated cost: ~$90/month
+```
+
+**📖 [Phase 2 Quick Start Guide](docs/setup/PHASE2_QUICK_START.md)**
+**📚 [Full Cloud Deployment Guide](docs/setup/PHASE2_CLOUD_MVP_GUIDE.md)**
 - **🎯 Dashboard**: http://localhost:5173
 - **🔧 API**: http://localhost:8000
 - **📚 API Docs**: http://localhost:8000/docs

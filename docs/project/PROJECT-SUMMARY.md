@@ -110,9 +110,11 @@ cve_data (id, description, severity, score, reference_urls)
 ## 💰 Business Model (SaaS)
 
 ### Subscription Plans
-- **Free**: $0/month, 5 devices, basic scanning
-- **Pro**: $99/month, 50 devices, ML detection, integrations
-- **Enterprise**: $499/month, 1000 devices, full features, compliance
+- **Starter**: $99/month, 5 users, 25 devices, basic scanning
+- **Professional**: $299/month, 50 users, 250 devices, ML detection, integrations
+- **Business**: $799/month, 500 users, 2,500 devices, full features, compliance
+- **Enterprise**: $1,999/month, 1,000 users, 5,000 devices, full features, compliance
+- **MSP Bundle**: $2,999/month, 1,000 users, 10,000 devices, multi-tenant, reseller capabilities
 
 ### Usage Tracking
 - Device count, scan frequency, log volume, API requests

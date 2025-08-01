@@ -302,6 +302,66 @@ except Exception as e:
     success "✅ Post-startup configuration completed"
 }
 
+# Configure frontend for production mode
+configure_frontend() {
+    info "🎨 Configuring frontend for production mode..."
+    
+    # Create frontend .env file with production settings
+    if [ ! -f "frontend/.env" ]; then
+        info "Creating frontend .env file..."
+        cat > frontend/.env << EOF
+# SecureNet Frontend Environment Configuration
+
+# Production Mode - Disable mock data
+VITE_MOCK_DATA=false
+
+# API Configuration
+VITE_API_BASE_URL=http://localhost:8000
+
+# Environment
+VITE_ENVIRONMENT=production
+EOF
+        success "✅ Frontend .env file created"
+    else
+        # Update existing .env file to ensure VITE_MOCK_DATA=false
+        if grep -q "VITE_MOCK_DATA=true" frontend/.env; then
+            info "Updating VITE_MOCK_DATA to false..."
+            sed -i.bak 's/VITE_MOCK_DATA=true/VITE_MOCK_DATA=false/' frontend/.env
+        elif ! grep -q "VITE_MOCK_DATA=false" frontend/.env; then
+            info "Adding VITE_MOCK_DATA=false to frontend/.env..."
+            echo "VITE_MOCK_DATA=false" >> frontend/.env
+        fi
+        success "✅ Frontend .env file configured"
+    fi
+    
+    # Build frontend for production
+    info "🔨 Building frontend for production..."
+    cd frontend
+    if npm run build; then
+        success "✅ Frontend production build completed"
+    else
+        error "❌ Frontend build failed"
+        return 1
+    fi
+    cd ..
+    
+    # Start frontend in production mode
+    info "🚀 Starting frontend in production mode..."
+    cd frontend
+    nohup npm run start:prod > ../logs/frontend.log 2>&1 &
+    FRONTEND_PID=$!
+    echo $FRONTEND_PID > ../.frontend.pid
+    cd ..
+    
+    # Wait for frontend to start
+    sleep 5
+    if curl -f -s http://localhost:5173 > /dev/null; then
+        success "✅ Frontend started successfully on http://localhost:5173"
+    else
+        warn "⚠️  Frontend may not be ready yet, check logs/frontend.log"
+    fi
+}
+
 # Display service information
 display_service_info() {
     echo -e "${GREEN}"
@@ -315,6 +375,7 @@ EOF
     echo -e "${NC}"
     
     echo -e "${BLUE}📱 Main Application:${NC}"
+    echo -e "   • Frontend:    http://localhost:5173"
     echo -e "   • API:         http://localhost:8000"
     echo -e "   • Health:      http://localhost:8000/health"
     echo -e "   • Docs:        http://localhost:8000/api/docs"
@@ -350,6 +411,18 @@ EOF
 # Cleanup function for graceful shutdown
 cleanup() {
     info "🛑 Shutting down SecureNet Enterprise..."
+    
+    # Stop frontend if running
+    if [ -f ".frontend.pid" ]; then
+        FRONTEND_PID=$(cat .frontend.pid)
+        if kill -0 $FRONTEND_PID 2>/dev/null; then
+            info "Stopping frontend process..."
+            kill $FRONTEND_PID
+            rm -f .frontend.pid
+        fi
+    fi
+    
+    # Stop Docker services
     docker-compose -f "$COMPOSE_FILE" down
     success "✅ Shutdown complete"
 }
@@ -371,6 +444,9 @@ main() {
     start_services
     setup_database
     post_startup_config
+    
+    # Configure frontend for production
+    configure_frontend
     
     display_service_info
     

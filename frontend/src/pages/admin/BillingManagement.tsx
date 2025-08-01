@@ -162,8 +162,11 @@ const BillingManagement: React.FC = () => {
           >
             <option value="all">All Plans</option>
             <option value="starter">Starter ($29/mo)</option>
-            <option value="professional">Professional ($99/mo)</option>
-            <option value="enterprise">Enterprise ($299/mo)</option>
+                            <option value="starter">Starter ($99/mo)</option>
+                <option value="professional">Professional ($299/mo)</option>
+                <option value="business">Business ($799/mo)</option>
+                <option value="enterprise">Enterprise ($1,999/mo)</option>
+                <option value="msp_bundle">MSP Bundle ($2,999/mo)</option>
           </select>
         </div>
       </div>

@@ -30,84 +30,108 @@ interface SubscriptionPlan {
 
 const subscriptionPlans: SubscriptionPlan[] = [
   {
-    id: 'free',
-    name: 'Free',
-    price: 0,
-    priceYearly: 0,
+    id: 'starter',
+    name: 'Starter',
+    price: 99,
+    priceYearly: 990,
     description: 'Perfect for small teams getting started',
     features: [
-      '5 devices',
-      '10 scans per month',
-      '7-day log retention',
-      'Basic network scanning',
-      'Email alerts',
-      'Community support'
+      '5 users included',
+      '25 devices',
+      '5GB storage',
+      '5,000 API calls/month',
+      '500 alerts/month',
+      'AI-powered threat detection',
+      'Email support',
+      '30-day log retention'
     ],
-    deviceLimit: 5,
-    scanLimit: 10,
-    logRetention: 7
+    deviceLimit: 25,
+    scanLimit: 100,
+    logRetention: 30
   },
   {
-    id: 'pro',
-    name: 'Pro',
-    price: 149,
-    priceYearly: 1490,
+    id: 'professional',
+    name: 'Professional',
+    price: 299,
+    priceYearly: 2990,
     description: 'Ideal for growing security teams',
     features: [
-      '50 devices',
-      '500 scans per month',
-      '30-day log retention',
-      'Advanced vulnerability scanning',
-      'ML anomaly detection',
-      'Slack/Teams integration',
-      'Custom dashboards',
-      'API access',
-      'Priority support'
+      '50 users',
+      '250 devices',
+      '25GB storage',
+      '25,000 API calls/month',
+      '2,500 alerts/month',
+      'Advanced AI threat detection',
+      'Priority support',
+      'Compliance reporting',
+      '90-day log retention'
     ],
     popular: true,
-    deviceLimit: 50,
-    scanLimit: 500,
-    logRetention: 30
+    deviceLimit: 250,
+    scanLimit: 1000,
+    logRetention: 90
+  },
+  {
+    id: 'business',
+    name: 'Business',
+    price: 799,
+    priceYearly: 7990,
+    description: 'For large organizations with advanced needs',
+    features: [
+      '500 users',
+      '2,500 devices',
+      '100GB storage',
+      '100,000 API calls/month',
+      '10,000 alerts/month',
+      'Enterprise AI threat detection',
+      '24/7 support',
+      'Custom integrations',
+      'Advanced analytics',
+      'Dedicated account manager'
+    ],
+    deviceLimit: 2500,
+    scanLimit: 10000,
+    logRetention: 365
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    price: 499,
-    priceYearly: 4990,
-    description: 'For large organizations with advanced needs',
+    price: 1999,
+    priceYearly: 19990,
+    description: 'For enterprise organizations',
     features: [
-      '1000+ devices',
-      'Unlimited scanning',
-      '1-year log retention',
-      'Advanced ML threat detection',
-      'Full integrations suite',
-      'White-label options',
+      '1,000 users',
+      '5,000 devices',
+      '500GB storage',
+      '500,000 API calls/month',
+      '50,000 alerts/month',
+      'Full enterprise security suite',
       'Dedicated support',
-      'Compliance reporting',
-      'On-premise deployment',
-      'Custom integrations'
+      'Custom development',
+      'SLA guarantees',
+      'On-premise deployment'
     ],
-    deviceLimit: 1000,
-    scanLimit: -1, // unlimited
-    logRetention: 365
+    deviceLimit: 5000,
+    scanLimit: 50000,
+    logRetention: 730
   },
   {
     id: 'msp',
     name: 'MSP Bundle',
-    price: 999,
-    priceYearly: 9990,
+    price: 2999,
+    priceYearly: 29990,
     description: 'For Managed Service Providers',
     features: [
-      'Unlimited devices',
-      'Unlimited scanning',
-      'Unlimited log retention',
-      'Multi-tenant management',
-      'White-label platform',
-      'Reseller capabilities',
-      'Dedicated account manager',
-      'Custom integrations',
-      'Priority support',
-      'Revenue sharing'
+      '1,000 users',
+      '10,000 devices',
+      '1TB storage',
+      '1,000,000 API calls/month',
+      '100,000 alerts/month',
+      'Complete MSP solution',
+      'White-label options',
+      'Partner dashboard',
+      'Revenue sharing',
+      'Custom integrations'
     ],
     deviceLimit: -1, // unlimited
     scanLimit: -1, // unlimited
@@ -130,7 +154,7 @@ export const SignupPage: React.FC = () => {
     phone: ''
   });
   
-  const [selectedPlan, setSelectedPlan] = useState<string>('pro');
+  const [selectedPlan, setSelectedPlan] = useState<string>('professional');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [currentStep, setCurrentStep] = useState<'plan' | 'details' | 'billing'>('plan');
   const [loading, setLoading] = useState(false);
@@ -545,7 +569,10 @@ export const SignupPage: React.FC = () => {
                 ${billingCycle === 'monthly' ? (getSelectedPlanData()?.price ?? 0) : (getSelectedPlanData()?.priceYearly ?? 0)} / {billingCycle === 'monthly' ? 'month' : 'year'}
               </p>
               <p className="text-gray-400 text-sm mt-1">
-                {billingCycle === 'yearly' && getSelectedPlanData()?.price && getSelectedPlanData()?.price > 0 && (
+                {billingCycle === 'yearly' && (() => {
+                  const plan = getSelectedPlanData();
+                  return plan && plan.price > 0;
+                })() && (
                   <span className="text-green-400">Save 17% with annual billing</span>
                 )}
               </p>
@@ -603,7 +630,7 @@ export const SignupPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-200 via-dark-100 to-dark-200 text-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 text-gray-900 dark:from-dark-200 dark:via-dark-100 dark:to-dark-200 dark:text-gray-100">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
       

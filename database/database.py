@@ -4847,7 +4847,7 @@ class Database:
             'platform_owner': [
                 'manage_users', 'manage_organizations', 'view_audit_logs',
                 'manage_settings', 'view_logs', 'manage_security',
-                'manage_network', 'view_anomalies', 'manage_billing'
+                'manage_network', 'view_anomalies', 'manage_billing', 'system_admin'
             ],
             'security_admin': [
                 'manage_org_users', 'manage_settings', 'view_logs',

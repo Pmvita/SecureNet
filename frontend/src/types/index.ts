@@ -8,6 +8,30 @@ export type ScanStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cance
 export type NotificationChannel = 'email' | 'slack' | 'webhook';
 export type Theme = 'light' | 'dark' | 'system';
 
+// Multi-tenant types
+export enum TenantTier {
+  STARTER = 'starter',
+  PROFESSIONAL = 'professional',
+  BUSINESS = 'business',
+  ENTERPRISE = 'enterprise',
+  MSP = 'msp'
+}
+
+export enum TenantStatus {
+  ACTIVE = 'active',
+  SUSPENDED = 'suspended',
+  PENDING = 'pending',
+  CANCELLED = 'cancelled'
+}
+
+export enum ResourceType {
+  USERS = 'users',
+  DEVICES = 'devices',
+  STORAGE_GB = 'storage_gb',
+  API_CALLS = 'api_calls',
+  ALERTS_PER_MONTH = 'alerts_per_month'
+}
+
 // API response types
 export interface PaginatedResponse<T> {
   items: T[];

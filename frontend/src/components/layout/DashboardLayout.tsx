@@ -122,13 +122,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Enhanced Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full bg-gradient-to-b from-gray-900 to-gray-950 border-r border-gray-800 transition-all duration-300 z-40 ${
+      <aside className={`fixed left-0 top-0 h-full bg-gradient-to-b from-gray-100 to-gray-200 border-r border-gray-300 transition-all duration-300 z-40 dark:from-gray-900 dark:to-gray-950 dark:border-gray-800 ${
         sidebarCollapsed ? 'w-16' : 'w-64'
       }`}>
         {/* Sidebar Header */}
-        <div className="p-4 border-b border-gray-800">
+        <div className="p-4 border-b border-gray-300 dark:border-gray-800">
           <div className="flex items-center justify-between">
             {!sidebarCollapsed && (
               <div className="flex items-center space-x-3">
@@ -136,14 +136,14 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                   <ShieldCheckIcon className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold text-white">SecureNet</h1>
-                  <p className="text-xs text-gray-400">Security Operations</p>
+                  <h1 className="text-lg font-bold text-gray-900 dark:text-white">SecureNet</h1>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Security Operations</p>
                 </div>
               </div>
             )}
             <button
               onClick={() => startTransition(() => setSidebarCollapsed(!sidebarCollapsed))}
-              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-300 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800"
               aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {sidebarCollapsed ? (
@@ -204,8 +204,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
         {/* Sidebar Footer */}
         {!sidebarCollapsed && (
-          <div className="p-4 border-t border-gray-800">
-            <div className="flex items-center justify-between text-xs text-gray-400">
+          <div className="p-4 border-t border-gray-300 dark:border-gray-800">
+            <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
               <span>v2.1.0</span>
               <div className="flex items-center space-x-1">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -219,15 +219,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       {/* Main Content */}
       <div className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
         {/* Enhanced Top Bar */}
-        <header className="sticky top-0 z-30 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800">
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-300 dark:bg-gray-900/95 dark:border-gray-800">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               {/* Breadcrumb */}
               <div className="flex items-center space-x-2">
-                <h2 className="text-xl font-semibold text-white">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   {navigationItems.find((item) => item.path === location.pathname)?.label || 'Dashboard'}
                 </h2>
-                <div className="hidden sm:flex items-center text-sm text-gray-400">
+                <div className="hidden sm:flex items-center text-sm text-gray-600 dark:text-gray-400">
                   <span>/</span>
                   <span className="ml-2">Security Operations Center</span>
                 </div>
@@ -246,7 +246,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                       setTheme('dark');
                     }
                   }}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-300 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800"
                   title={`Current: ${theme} theme - Click to cycle`}
                 >
                   {actualTheme === 'dark' ? (
@@ -260,7 +260,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 <div className="relative" ref={notificationsRef}>
                   <button
                     onClick={() => startTransition(() => setNotificationsOpen(!notificationsOpen))}
-                    className="relative p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+                    className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-300 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800"
                     title="Notifications"
                   >
                     <BellIcon className="w-5 h-5" />
@@ -273,11 +273,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
                   {/* Notifications Dropdown */}
                   {notificationsOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-80 bg-gray-800 rounded-xl border border-gray-700 shadow-2xl">
-                      <div className="p-4 border-b border-gray-700">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <h3 className="text-lg font-semibold text-white">Notifications</h3>
+                    <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl border border-gray-300 shadow-2xl dark:bg-gray-800 dark:border-gray-700">
+                                              <div className="p-4 border-b border-gray-300 dark:border-gray-700">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
                             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} 
                                  title={isConnected ? 'Connected' : 'Disconnected'} />
                           </div>
@@ -416,9 +416,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
                   {/* User Dropdown */}
                   {userMenuOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-72 bg-gray-800/95 backdrop-blur-sm rounded-2xl border border-gray-700/50 shadow-2xl">
+                    <div className="absolute right-0 top-full mt-2 w-72 bg-white/95 backdrop-blur-sm rounded-2xl border border-gray-300/50 shadow-2xl dark:bg-gray-800/95 dark:border-gray-700/50">
                       {/* User Profile Section */}
-                      <div className="p-6 border-b border-gray-700/50">
+                                              <div className="p-6 border-b border-gray-300/50 dark:border-gray-700/50">
                         <div className="flex items-start space-x-4">
                           {/* Enhanced Avatar */}
                           <div className="relative">
@@ -431,8 +431,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                           
                           {/* User Info */}
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-semibold text-white truncate">{user?.username || 'User'}</h3>
-                            <p className="text-sm text-gray-400 truncate">{user?.email || 'user@securenet.com'}</p>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{user?.username || 'User'}</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{user?.email || 'user@securenet.com'}</p>
                             
                             {/* Role Badge */}
                             <div className="mt-3">
@@ -502,23 +502,23 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                               )}
                             </div>
                             
-                            {/* Organization */}
-                            {user?.organization_name && (
-                              <p className="text-xs text-gray-500 mt-2 flex items-center">
-                                <span className="w-1 h-1 bg-gray-500 rounded-full mr-2"></span>
-                                {user.organization_name}
-                              </p>
-                            )}
+                                                         {/* Organization */}
+                             {user?.organization_name && (
+                               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center">
+                                 <span className="w-1 h-1 bg-gray-500 dark:bg-gray-400 rounded-full mr-2"></span>
+                                 {user.organization_name}
+                               </p>
+                             )}
                             
-                            {/* Last Login */}
-                            {user?.last_login && (
-                              <div className="mt-3 p-2 bg-gray-700/30 rounded-lg">
-                                <p className="text-xs text-gray-400 flex items-center">
-                                  <ClockIcon className="w-3 h-3 mr-1.5" />
-                                  Last login: {new Date(user.last_login).toLocaleString()}
-                                </p>
-                              </div>
-                            )}
+                                                         {/* Last Login */}
+                             {user?.last_login && (
+                               <div className="mt-3 p-2 bg-gray-100/50 rounded-lg dark:bg-gray-700/30">
+                                 <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center">
+                                   <ClockIcon className="w-3 h-3 mr-1.5" />
+                                   Last login: {new Date(user.last_login).toLocaleString()}
+                                 </p>
+                               </div>
+                             )}
                           </div>
                         </div>
                       </div>
@@ -530,7 +530,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                             startTransition(() => setUserMenuOpen(false));
                             navigate('/profile');
                           }}
-                          className="w-full flex items-center px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-xl transition-all duration-200 group"
+                          className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100/50 rounded-xl transition-all duration-200 group dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700/50"
                         >
                           <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center mr-3 group-hover:bg-blue-500/30 transition-colors">
                             <UserCircleIcon className="w-4 h-4 text-blue-400" />
@@ -542,7 +542,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                             startTransition(() => setUserMenuOpen(false));
                             navigate('/preferences');
                           }}
-                          className="w-full flex items-center px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-xl transition-all duration-200 group"
+                          className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100/50 rounded-xl transition-all duration-200 group dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700/50"
                         >
                           <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center mr-3 group-hover:bg-purple-500/30 transition-colors">
                             <Cog6ToothIcon className="w-4 h-4 text-purple-400" />
@@ -552,7 +552,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                       </div>
                       
                       {/* Sign Out Section */}
-                      <div className="p-2 border-t border-gray-700/50">
+                      <div className="p-2 border-t border-gray-300/50 dark:border-gray-700/50">
                         <button 
                           onClick={async () => {
                             startTransition(() => setUserMenuOpen(false));
@@ -562,7 +562,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                               console.error('Logout failed:', error);
                             }
                           }}
-                          className="w-full flex items-center px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all duration-200 group"
+                          className="w-full flex items-center px-4 py-3 text-sm text-red-600 hover:text-red-700 hover:bg-red-500/10 rounded-xl transition-all duration-200 group dark:text-red-400 dark:hover:text-red-300"
                         >
                           <div className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center mr-3 group-hover:bg-red-500/30 transition-colors">
                             <ArrowRightOnRectangleIcon className="w-4 h-4 text-red-400" />
@@ -579,7 +579,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         </header>
 
         {/* Page Content */}
-        <main className="p-6">
+        <main className="p-6 bg-gray-50 dark:bg-gray-950">
           {children}
         </main>
       </div>

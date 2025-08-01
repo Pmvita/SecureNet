@@ -942,14 +942,14 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 Product 1:
 - Name: "Executive User License"
 - Description: "Full organization access, user provisioning, compliance reports"
-- Price: $499/month
+- Price: $1,999/month
 - Billing: Recurring monthly
 - Price ID: price_executive_monthly
 
 Product 2:
 - Name: "SOC Analyst License"  
 - Description: "Security monitoring, incident response, threat analysis"
-- Price: $149/month
+- Price: $299/month
 - Billing: Recurring monthly
 - Price ID: price_soc_analyst_monthly
 
@@ -2174,8 +2174,8 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 **License-Based Pricing Strategy Rationale**:
 | License Type | **Price** | **Target User** | **Justification** |
 |--------------|-----------|-----------------|-------------------|
-| **Executive User** | **$499/mo** | CEOs, CISOs, IT Directors | Premium pricing for full org access, compliance reporting |
-| **SOC Analyst** | **$149/mo** | Security analysts, SOC operators | Competitive with enterprise security tools per analyst |
+| **Executive User** | **$1,999/mo** | CEOs, CISOs, IT Directors | Premium pricing for full org access, compliance reporting |
+| **SOC Analyst** | **$299/mo** | Security analysts, SOC operators | Competitive with enterprise security tools per analyst |
 | **Basic User** | **$49/mo** | End users, basic monitoring | Entry-level access, read-only dashboards |
 
 **Revenue Model Benefits**:

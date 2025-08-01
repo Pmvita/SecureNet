@@ -60,10 +60,11 @@ notifications (organization_id, user_id, title, message, severity)
 ### **Subscription Plans**
 | Plan | Price/Month | Devices | Scans | Log Retention | Features |
 |------|-------------|---------|-------|---------------|----------|
-| Free | $0 | 5 | 10/month | 7 days | Basic scanning, email alerts |
-| Pro | $149 | 50 | 500/month | 30 days | Advanced scanning, ML detection, integrations |
-| Enterprise | $499 | 1000+ | Unlimited | 1 year | Full suite, white-label, compliance |
-| MSP Bundle | $999 | Unlimited | Unlimited | Unlimited | Multi-tenant, reseller capabilities |
+| Starter | $99 | 5 | 25/month | 30 days | Basic scanning, email alerts |
+| Professional | $299 | 50 | 250/month | 30 days | Advanced scanning, ML detection, integrations |
+| Business | $799 | 500 | 2,500/month | 30 days | Full suite, compliance reporting |
+| Enterprise | $1,999 | 1000+ | 5,000/month | 1 year | Full suite, white-label, compliance |
+| MSP Bundle | $2,999 | 1000+ | 10,000/month | 1 year | Multi-tenant, reseller capabilities |
 
 ### **Billing Infrastructure**
 - ✅ **Usage tracking** for all billable resources
@@ -273,7 +274,7 @@ GET  /api/insights/recommendations          # AI security recommendations
 ## 📊 **BUSINESS IMPACT**
 
 ### **Revenue Model**
-- **Subscription Tiers**: $0, $149, $499, $999/month
+- **Subscription Tiers**: $99, $299, $799, $1,999, $2,999/month
 - **Usage-Based Billing**: Overage charges for excess usage
 - **Enterprise Features**: Compliance, support, custom limits
 - **Scalable Pricing**: Grows with customer usage

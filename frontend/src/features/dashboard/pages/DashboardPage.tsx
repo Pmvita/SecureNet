@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
@@ -34,6 +34,8 @@ import {
   SignalIcon,
   WifiIcon,
   UserGroupIcon,
+  XMarkIcon,
+  InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 
 // Status indicators
@@ -72,32 +74,38 @@ const severityConfig = {
 export function DashboardPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [alertsDropdownOpen, setAlertsDropdownOpen] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
+  const [error, setError] = useState<string | null>(null);
+  const [isAutoRefresh, setIsAutoRefresh] = useState(true);
   const alertsButtonRef = useRef<HTMLDivElement>(null);
   
-  // Fetch data from all services
-  const { data: logsData, isLoading: logsLoading } = useLogs({ 
+  // Fetch data from all services with error handling
+  const { data: logsData, isLoading: logsLoading, error: logsError } = useLogs({ 
     page: 1, 
     pageSize: 5,
-    refreshInterval: 30000 
+    refreshInterval: isAutoRefresh ? 30000 : 0
   });
   
   const { 
     metrics: networkMetrics, 
     devices, 
     connections,
-    isLoading: networkLoading 
-  } = useNetwork({ refreshInterval: 30000 });
+    isLoading: networkLoading,
+    error: networkError
+  } = useNetwork({ refreshInterval: isAutoRefresh ? 30000 : 0 });
   
   const { 
     metrics: securityMetrics, 
     recentScans, 
     recentFindings,
-    isLoading: securityLoading 
+    isLoading: securityLoading,
+    error: securityError
   } = useSecurity();
   
   const { 
     anomalies, 
     metrics: anomalyMetrics,
+    error: anomaliesError,
     isLoading: anomaliesLoading 
   } = useAnomalies();
 
@@ -205,30 +213,75 @@ export function DashboardPage() {
     }));
   }, [devices]);
 
-  const handleRefresh = () => {
+  // Auto-refresh functionality
+  useEffect(() => {
+    if (isAutoRefresh) {
+      const interval = setInterval(() => {
+        setLastUpdateTime(new Date());
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAutoRefresh]);
+
+  // Error handling
+  useEffect(() => {
+    const errors = [logsError, networkError, securityError, anomaliesError].filter(Boolean);
+    if (errors.length > 0) {
+      setError(`Some data failed to load: ${errors.join(', ')}`);
+    } else {
+      setError(null);
+    }
+  }, [logsError, networkError, securityError, anomaliesError]);
+
+  const handleRefresh = useCallback(() => {
     setRefreshKey(prev => prev + 1);
-    window.location.reload();
-  };
+    setLastUpdateTime(new Date());
+    setError(null);
+  }, []);
+
+  const toggleAutoRefresh = useCallback(() => {
+    setIsAutoRefresh(prev => !prev);
+  }, []);
 
   const isLoading = logsLoading || networkLoading || securityLoading || anomaliesLoading;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 lg:space-y-8">
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <ExclamationTriangleIcon className="h-5 w-5 text-red-400 flex-shrink-0" />
+            <div>
+              <p className="text-sm text-red-400 font-medium">Data Loading Error</p>
+              <p className="text-xs text-red-300">{error}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setError(null)}
+            className="text-red-400 hover:text-red-300 transition-colors"
+          >
+            <XMarkIcon className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-          <p className="text-gray-400 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Dashboard</h1>
+          <p className="text-gray-400 mt-1 text-sm sm:text-base">
             Real-time security monitoring and network analysis
           </p>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
           <Button
             variant="secondary"
-            className="flex items-center space-x-2 relative"
+            size="sm"
+            className="flex items-center gap-2 relative"
           >
             <BellIcon className="h-4 w-4" />
-            <span>Alerts</span>
+            <span className="hidden sm:inline">Alerts</span>
             {securityAlerts.length > 0 && (
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                 {securityAlerts.length}
@@ -236,41 +289,55 @@ export function DashboardPage() {
             )}
           </Button>
           <Button
+            variant={isAutoRefresh ? "primary" : "secondary"}
+            size="sm"
+            onClick={toggleAutoRefresh}
+            className="flex items-center gap-2"
+          >
+            <SignalIcon className={`h-4 w-4 ${isAutoRefresh ? 'animate-pulse' : ''}`} />
+            <span className="hidden sm:inline">Auto</span>
+          </Button>
+          <Button
             onClick={handleRefresh}
             disabled={isLoading}
-            className="flex items-center space-x-2"
+            size="sm"
+            className="flex items-center gap-2"
           >
             <ArrowPathIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         {/* Active Threats */}
-        <Card className="bg-gray-900 border-gray-700">
-          <div className="p-6">
+        <Card className="bg-gray-900 border-gray-700 hover:border-gray-600 transition-colors">
+          <div className="p-4 lg:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-400 uppercase tracking-wide">Active Threats</p>
-                <p className="text-3xl font-bold text-white mt-2">
-                  {securityMetrics?.critical_findings || 0}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs lg:text-sm font-medium text-gray-400 uppercase tracking-wide">Active Threats</p>
+                <p className="text-2xl lg:text-3xl font-bold text-white mt-1 lg:mt-2">
+                  {securityLoading ? (
+                    <div className="h-8 w-16 bg-gray-700 animate-pulse rounded"></div>
+                  ) : (
+                    securityMetrics?.critical_findings || 0
+                  )}
                 </p>
               </div>
-              <div className={`p-3 rounded-lg ${
+              <div className={`p-2 lg:p-3 rounded-lg flex-shrink-0 ${
                 (securityMetrics?.critical_findings || 0) > 0 ? 'bg-red-500/20' : 'bg-green-500/20'
               }`}>
-                <FireIcon className={`h-6 w-6 ${
+                <FireIcon className={`h-5 w-5 lg:h-6 lg:w-6 ${
                   (securityMetrics?.critical_findings || 0) > 0 ? 'text-red-400' : 'text-green-400'
                 }`} />
               </div>
             </div>
-            <div className="mt-4 flex items-center">
-              <div className={`w-2 h-2 rounded-full mr-2 ${
+            <div className="mt-3 lg:mt-4 flex items-center">
+              <div className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${
                 (securityMetrics?.critical_findings || 0) > 0 ? 'bg-red-400 animate-pulse' : 'bg-green-400'
               }`}></div>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-gray-500 truncate">
                 {(securityMetrics?.critical_findings || 0) > 0 ? 'Requires immediate attention' : 'All systems secure'}
               </span>
             </div>
@@ -278,22 +345,26 @@ export function DashboardPage() {
         </Card>
 
         {/* Network Devices */}
-        <Card className="bg-gray-900 border-gray-700">
-          <div className="p-6">
+        <Card className="bg-gray-900 border-gray-700 hover:border-gray-600 transition-colors">
+          <div className="p-4 lg:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-400 uppercase tracking-wide">Network Devices</p>
-                <p className="text-3xl font-bold text-white mt-2">
-                  {devices?.length || 0}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs lg:text-sm font-medium text-gray-400 uppercase tracking-wide">Network Devices</p>
+                <p className="text-2xl lg:text-3xl font-bold text-white mt-1 lg:mt-2">
+                  {networkLoading ? (
+                    <div className="h-8 w-16 bg-gray-700 animate-pulse rounded"></div>
+                  ) : (
+                    devices?.length || 0
+                  )}
                 </p>
               </div>
-              <div className="p-3 bg-blue-500/20 rounded-lg">
-                <ServerIcon className="h-6 w-6 text-blue-400" />
+              <div className="p-2 lg:p-3 bg-blue-500/20 rounded-lg flex-shrink-0">
+                <ServerIcon className="h-5 w-5 lg:h-6 lg:w-6 text-blue-400" />
               </div>
             </div>
-            <div className="mt-4 flex items-center">
-              <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
-              <span className="text-xs text-gray-500">
+            <div className="mt-3 lg:mt-4 flex items-center">
+              <div className="w-2 h-2 bg-green-400 rounded-full mr-2 flex-shrink-0"></div>
+              <span className="text-xs text-gray-500 truncate">
                 {devices?.filter(d => d.status === 'online').length || 0} online
               </span>
             </div>
@@ -363,27 +434,27 @@ export function DashboardPage() {
       </div>
 
       {/* Main Content - Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
         {/* Left Column - Analytics (2/3 width) */}
         <div className="lg:col-span-2">
 
           {/* SecurityDashboard without Network Topology */}
           <div className="space-y-8">
             {/* Enhanced Header with Real-time Status */}
-            <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-xl border border-gray-700 p-6 shadow-2xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg">
-                    <ShieldCheckIcon className="h-8 w-8 text-white" />
+            <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-xl border border-gray-700 p-4 lg:p-6 shadow-2xl">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="flex items-center gap-3 lg:gap-4">
+                  <div className="p-2 lg:p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg flex-shrink-0">
+                    <ShieldCheckIcon className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
                   </div>
-                  <div>
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                       Security Analytics Dashboard
                     </h1>
-                    <p className="text-gray-400 mt-1 flex items-center gap-2">
-                      <span>Real-time security monitoring and threat analysis powered by AI</span>
+                    <p className="text-gray-400 mt-1 flex items-center gap-2 text-sm">
+                      <span className="truncate">Real-time security monitoring and threat analysis powered by AI</span>
                       {!isLoading && (
-                        <span className="flex items-center gap-1 text-green-400 text-sm">
+                        <span className="flex items-center gap-1 text-green-400 text-xs lg:text-sm flex-shrink-0">
                           <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                           Live
                         </span>
@@ -391,11 +462,11 @@ export function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-6">
+                <div className="flex items-center justify-between lg:justify-end gap-4 lg:gap-6">
                   <div className="text-right">
-                    <div className="text-sm text-gray-500">Last Updated</div>
-                    <div className="text-sm font-medium text-white">
-                      {new Date().toLocaleTimeString()}
+                    <div className="text-xs lg:text-sm text-gray-500">Last Updated</div>
+                    <div className="text-xs lg:text-sm font-medium text-white">
+                      {lastUpdateTime.toLocaleTimeString()}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -406,15 +477,19 @@ export function DashboardPage() {
               </div>
 
               {/* Real-time Summary Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                <div className="bg-gradient-to-br from-red-500/10 to-red-600/10 border border-red-500/20 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <ExclamationTriangleIcon className="h-6 w-6 text-red-400" />
-                    <div>
-                      <div className="text-2xl font-bold text-white">
-                        {securityMetrics?.critical_findings || 0}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mt-4 lg:mt-6">
+                <div className="bg-gradient-to-br from-red-500/10 to-red-600/10 border border-red-500/20 rounded-lg p-3 lg:p-4">
+                  <div className="flex items-center gap-2 lg:gap-3">
+                    <ExclamationTriangleIcon className="h-5 w-5 lg:h-6 lg:w-6 text-red-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-lg lg:text-2xl font-bold text-white">
+                        {securityLoading ? (
+                          <div className="h-6 w-8 bg-gray-700 animate-pulse rounded"></div>
+                        ) : (
+                          securityMetrics?.critical_findings || 0
+                        )}
                       </div>
-                      <div className="text-xs text-red-400">Critical Threats</div>
+                      <div className="text-xs text-red-400 truncate">Critical Threats</div>
                     </div>
                   </div>
                 </div>
@@ -458,7 +533,7 @@ export function DashboardPage() {
             </div>
 
             {/* Top Row - Key Analytics */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
               <ThreatAnalyticsChart 
                 data={threatAnalyticsData}
                 height={350} 
@@ -474,12 +549,12 @@ export function DashboardPage() {
         </div>
 
         {/* Right Column - Activity Feed (1/3 width) */}
-        <div className="space-y-8">
+        <div className="space-y-6 lg:space-y-8">
           {/* Recent Security Events */}
-          <Card className="bg-gray-900 border-gray-700">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
+          <Card className="bg-gray-900 border-gray-700 hover:border-gray-600 transition-colors">
+            <div className="p-4 lg:p-6">
+              <h3 className="text-base lg:text-lg font-semibold text-white mb-3 lg:mb-4 flex items-center gap-2">
+                <ExclamationTriangleIcon className="h-4 w-4 lg:h-5 lg:w-5 text-red-400" />
                 Security Events
               </h3>
               <div className="space-y-3">
@@ -539,7 +614,7 @@ export function DashboardPage() {
                 ) : (
                   <div className="text-center py-6">
                     <CheckCircleIcon className="h-8 w-8 text-green-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">No active anomalies</p>
+                    <div className="text-sm text-gray-400">No active anomalies</div>
                   </div>
                 )}
               </div>
@@ -549,14 +624,14 @@ export function DashboardPage() {
       </div>
 
       {/* Full Width Bottom Charts Section */}
-      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="bg-gray-900 border-gray-700">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <ChartBarIcon className="h-5 w-5 text-green-400" />
+      <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+        <Card className="bg-gray-900 border-gray-700 hover:border-gray-600 transition-colors">
+          <div className="p-4 lg:p-6">
+            <h3 className="text-base lg:text-lg font-semibold text-white mb-3 lg:mb-4 flex items-center gap-2">
+              <ChartBarIcon className="h-4 w-4 lg:h-5 lg:w-5 text-green-400" />
               Device Distribution
             </h3>
-            <div className="h-[400px]">
+            <div className="h-[300px] lg:h-[400px]">
               <DeviceDistributionPie 
                 data={deviceDistributionData}
                 height={400} 

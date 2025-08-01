@@ -51,6 +51,7 @@ from api.endpoints.api_billing import router as billing_router
 from api.endpoints.api_metrics import router as metrics_router
 from api.endpoints.api_insights import router as insights_router
 from api.endpoints.api_admin import router as admin_router
+from api.endpoints.api_network import router as network_router
 
 # Import new Week 2 Day 2 performance modules
 from utils.week2_day2_performance import (
@@ -147,6 +148,7 @@ app.include_router(billing_router)
 app.include_router(metrics_router)
 app.include_router(insights_router)
 app.include_router(admin_router)
+app.include_router(network_router)
 
 # Security middleware
 @app.middleware("http")

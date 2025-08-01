@@ -17,7 +17,7 @@ const ROLE_PERMISSIONS = {
   platform_founder: ['*'], // Wildcard - unlimited access to everything
   founder: ['*'], // Backup founder account
   // New role names
-  platform_owner: ['system_admin', 'manage_settings', 'manage_users', 'manage_organizations', 'view_audit_logs'],
+  platform_owner: ['system_admin', 'manage_settings', 'manage_users', 'manage_organizations', 'view_audit_logs', 'manage_billing'],
   security_admin: ['manage_settings', 'manage_org_users', 'view_org_data'],
   soc_analyst: ['view_dashboard', 'view_logs', 'view_network'],
   // Legacy role names for backward compatibility

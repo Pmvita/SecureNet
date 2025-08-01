@@ -171,6 +171,9 @@ prometheus-fastapi-instrumentator>=6.1.0
 wandb>=0.15.0
 apscheduler>=3.10.0
 
+# Billing System Dependencies
+stripe>=12.0.0
+
 # Note: Removed problematic packages for Python 3.13 compatibility:
 # - python-ldap (requires system libraries)
 # - python-saml (Python 2 syntax issues)
