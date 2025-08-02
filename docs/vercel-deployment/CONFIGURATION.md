@@ -272,14 +272,14 @@ Update `frontend/index.html`:
   
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://securenet.ai/" />
+  <meta property="og:url" content="https://securenet-ai.vercel.app/" />
   <meta property="og:title" content="SecureNet - Enterprise Security Platform" />
   <meta property="og:description" content="Revolutionary AI-powered network security monitoring and management platform." />
   <meta property="og:image" content="/images/og/og-image.png" />
   
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
-  <meta property="twitter:url" content="https://securenet.ai/" />
+  <meta property="twitter:url" content="https://securenet-ai.vercel.app/" />
   <meta property="twitter:title" content="SecureNet - Enterprise Security Platform" />
   <meta property="twitter:description" content="Revolutionary AI-powered network security monitoring and management platform." />
   <meta property="twitter:image" content="/images/og/twitter-card.png" />
@@ -309,7 +309,7 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 
-Sitemap: https://securenet.ai/sitemap.xml
+Sitemap: https://securenet-ai.vercel.app/sitemap.xml
 ```
 
 ### sitemap.xml
@@ -318,13 +318,13 @@ Create `frontend/public/sitemap.xml`:
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://securenet.ai/</loc>
+    <loc>https://securenet-ai.vercel.app/</loc>
     <lastmod>2024-01-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://securenet.ai/coming-soon</loc>
+    <loc>https://securenet-ai.vercel.app/coming-soon</loc>
     <lastmod>2024-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
