@@ -66,7 +66,7 @@ const CompanyManagement: React.FC = () => {
         founded_year: 2023,
         employee_count: 42,
         description: 'AI-powered network security monitoring and management platform',
-        website: 'https://securenet.ai',
+        website: 'https://securenet-ai.vercel.app',
         logo_url: '/SecureNet-logo-3.png',
         brand_colors: {
           primary: '#3B82F6',
